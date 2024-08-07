@@ -37,8 +37,8 @@ statement
 
 
 iteration_stmt: while_stmt | for_stmt;
-while_stmt: 'while' '(' expression ')' statement;
-for_stmt: 'for' '(' (expression)? ';' (expression)? ';' (expression)? ')' statement;
+while_stmt: 'while' '(' condition ')' statement;
+for_stmt: 'for' '(' (expression)? ';' (condition)? ';' (expression)? ')' statement;
 
 
 jump_stmt: break_stmt | continue_stmt | return_stmt;
@@ -60,24 +60,25 @@ stringConstant : STRING_LITERAL ;
 nullConstant : 'null' ;
 arrayConstant : '{' (constant (',' constant)*)? '}' ;
 
-if_stmt : 'if' '(' expression ')' statement ('else' statement)?;
+if_stmt : 'if' '(' condition ')' statement ('else' statement)?;
 
 expression_stmt : expression ';' ;
 
 arglist : expression (',' expression)*;
 
 //--------------------expression--------------------
+condition: expression ; // must be bool type
 expression
     : primary_expression
-    | <assoc = right>('~' | '!') expression
-    | <assoc = right>('-' | '+') expression
-    | <assoc = right>('++' | '--') expression
-    | expression ('++' | '--')
-    | expression ('*' | '/' | '%') expression
-    | expression ('+' | '-') expression
-    | expression ('<<' | '>>') expression
-    | expression ('<' | '>' | '<=' | '>=') expression
-    | expression ('==' | '!=') expression
+    | <assoc = right> op = ('~' | '!') expression
+    | <assoc = right> op = ('-' | '+') expression
+    | <assoc = right> op = ('++' | '--') expression
+    | expression op = ('++' | '--')
+    | expression op = ('*' | '/' | '%') expression
+    | expression op = ('+' | '-') expression
+    | expression op = ('<<' | '>>') expression
+    | expression op = ('<' | '>' | '<=' | '>=') expression
+    | expression op = ('==' | '!=') expression
     | expression '&' expression
     | expression '^' expression
     | expression '|' expression
