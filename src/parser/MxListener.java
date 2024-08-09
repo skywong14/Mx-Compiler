@@ -1,4 +1,5 @@
 // Generated from C:/Users/skywa/IdeaProjects/Mx-Compiler/src/parser/Mx.g4 by ANTLR 4.13.1
+package parser;
 import org.antlr.v4.runtime.tree.ParseTreeListener;
 
 /**
@@ -16,42 +17,6 @@ public interface MxListener extends ParseTreeListener {
 	 * @param ctx the parse tree
 	 */
 	void exitFile_input(MxParser.File_inputContext ctx);
-	/**
-	 * Enter a parse tree produced by the {@code class}
-	 * labeled alternative in {@link MxParser#declarations}.
-	 * @param ctx the parse tree
-	 */
-	void enterClass(MxParser.ClassContext ctx);
-	/**
-	 * Exit a parse tree produced by the {@code class}
-	 * labeled alternative in {@link MxParser#declarations}.
-	 * @param ctx the parse tree
-	 */
-	void exitClass(MxParser.ClassContext ctx);
-	/**
-	 * Enter a parse tree produced by the {@code function}
-	 * labeled alternative in {@link MxParser#declarations}.
-	 * @param ctx the parse tree
-	 */
-	void enterFunction(MxParser.FunctionContext ctx);
-	/**
-	 * Exit a parse tree produced by the {@code function}
-	 * labeled alternative in {@link MxParser#declarations}.
-	 * @param ctx the parse tree
-	 */
-	void exitFunction(MxParser.FunctionContext ctx);
-	/**
-	 * Enter a parse tree produced by the {@code variable}
-	 * labeled alternative in {@link MxParser#declarations}.
-	 * @param ctx the parse tree
-	 */
-	void enterVariable(MxParser.VariableContext ctx);
-	/**
-	 * Exit a parse tree produced by the {@code variable}
-	 * labeled alternative in {@link MxParser#declarations}.
-	 * @param ctx the parse tree
-	 */
-	void exitVariable(MxParser.VariableContext ctx);
 	/**
 	 * Enter a parse tree produced by {@link MxParser#function_declaration}.
 	 * @param ctx the parse tree

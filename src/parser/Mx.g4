@@ -1,11 +1,6 @@
 grammar Mx;
 
-file_input: (declarations)* EOF ;
-
-declarations: class_declaration                 # class
-            | function_declaration              # function
-            | variable_declaration              # variable
-            ;
+file_input: (class_declaration | function_declaration | variable_declaration)* EOF ;
 
 function_declaration : type IDENTIFIER trailer compound_stmt ;
 
@@ -94,7 +89,7 @@ primary_expression
     | '(' expression ')'
     | IDENTIFIER
     | IDENTIFIER '(' arglist? ')'
-    | primary_expression '[' expression ']'
+    | primary_expression ('[' expression ']')+ // array access
     | primary_expression '.' IDENTIFIER
     | primary_expression '.' IDENTIFIER '(' arglist? ')'
     | new_expression
@@ -105,7 +100,7 @@ new_expression
     ;
 array_type
     : basic_type ('[' expression ']')+ ( '[' ']' )*
-    | basic_type '[' ']' ('[' ']' )*
+    | basic_type ('[' ']')+
     ;
 //--------------------------------------------------
 formatted_string

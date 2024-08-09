@@ -1,4 +1,5 @@
 // Generated from C:/Users/skywa/IdeaProjects/Mx-Compiler/src/parser/Mx.g4 by ANTLR 4.13.1
+package parser;
 import org.antlr.v4.runtime.tree.ParseTreeVisitor;
 
 /**
@@ -15,27 +16,6 @@ public interface MxVisitor<T> extends ParseTreeVisitor<T> {
 	 * @return the visitor result
 	 */
 	T visitFile_input(MxParser.File_inputContext ctx);
-	/**
-	 * Visit a parse tree produced by the {@code class}
-	 * labeled alternative in {@link MxParser#declarations}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitClass(MxParser.ClassContext ctx);
-	/**
-	 * Visit a parse tree produced by the {@code function}
-	 * labeled alternative in {@link MxParser#declarations}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitFunction(MxParser.FunctionContext ctx);
-	/**
-	 * Visit a parse tree produced by the {@code variable}
-	 * labeled alternative in {@link MxParser#declarations}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitVariable(MxParser.VariableContext ctx);
 	/**
 	 * Visit a parse tree produced by {@link MxParser#function_declaration}.
 	 * @param ctx the parse tree
