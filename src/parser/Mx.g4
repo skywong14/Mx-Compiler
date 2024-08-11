@@ -15,25 +15,24 @@ single_variable_declaration : IDENTIFIER ('=' expression)? ;
 
 compound_stmt : '{' statement* '}' ; //  '{' and '}': new_scope
 
-trailer: '(' (declaration_arglist)? ')' ;
+trailer: '(' (parameter_list)? ')' ;
 
-declaration_arglist: declaration_arg (',' declaration_arg)* ;
-declaration_arg: type IDENTIFIER ;
+parameter_list: parameter (',' parameter)* ;
+parameter: type IDENTIFIER ;
 
 statement
     : ';' // empty statement
     | expression_stmt
     | compound_stmt
     | if_stmt // if and if-else
-    | iteration_stmt // for and while
+    | while_stmt
+    | for_stmt
     | jump_stmt // break, continue, return
     | variable_declaration // variable declaration
     ;
 
-
-iteration_stmt: while_stmt | for_stmt;
-while_stmt: 'while' '(' condition ')' statement;
-for_stmt: 'for' '(' (expression)? ';' (condition)? ';' (expression)? ')' statement;
+while_stmt: 'while' '(' expression ')' statement;
+for_stmt: 'for' '(' (expression)? ';' (expression)? ';' (expression)? ')' statement;
 
 
 jump_stmt: break_stmt | continue_stmt | return_stmt;
@@ -55,14 +54,13 @@ stringConstant : STRING_LITERAL ;
 nullConstant : 'null' ;
 arrayConstant : '{' (constant (',' constant)*)? '}' ;
 
-if_stmt : 'if' '(' condition ')' statement ('else' statement)?;
+if_stmt : 'if' '(' expression ')' statement ('else' statement)?;
 
 expression_stmt : expression ';' ;
 
 arglist : expression (',' expression)*;
 
 //--------------------expression--------------------
-condition: expression ; // must be bool type
 expression
     : primary_expression
     | <assoc = right> op = ('~' | '!') expression
@@ -131,6 +129,14 @@ Int: 'int' ;
 Bool: 'bool' ;
 Void: 'void' ;
 String: 'string' ;
+If : 'if' ;
+Else: 'else' ;
+For : 'for' ;
+While : 'while' ;
+This : 'this' ;
+Return : 'return' ;
+Break : 'break' ;
+Continue : 'continue' ;
 LeftParen : '(';
 RightParen : ')';
 LeftBracket : '[';

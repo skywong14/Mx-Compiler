@@ -3,22 +3,22 @@ package semantic.ASTNodes;
 import java.util.ArrayList;
 
 public class ProgramNode extends ASTNode {
-    private ArrayList<ClassDeclarationNode> classes;
-    private ArrayList<FunctionDeclarationNode> functions;
-    private ArrayList<VariableDeclarationNode> variables;
+    private ArrayList<ClassNode> classes;
+    private ArrayList<FunctionNode> functions;
+    private ArrayList<VariableNode> variables;
 
     public ProgramNode() {
         this.classes = new ArrayList<>();
         this.functions = new ArrayList<>();
         this.variables = new ArrayList<>();
     }
-    public void addFunction(FunctionDeclarationNode function) {
+    public void addFunction(FunctionNode function) {
         functions.add(function);
     }
-    public void addClass(ClassDeclarationNode class_) {
+    public void addClass(ClassNode class_) {
         classes.add(class_);
     }
-    public void addVariable(VariableDeclarationNode variable_) {
+    public void addVariable(VariableNode variable_) {
         variables.add(variable_);
     }
 

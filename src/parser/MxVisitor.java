@@ -71,29 +71,23 @@ public interface MxVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitTrailer(MxParser.TrailerContext ctx);
 	/**
-	 * Visit a parse tree produced by {@link MxParser#declaration_arglist}.
+	 * Visit a parse tree produced by {@link MxParser#parameter_list}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitDeclaration_arglist(MxParser.Declaration_arglistContext ctx);
+	T visitParameter_list(MxParser.Parameter_listContext ctx);
 	/**
-	 * Visit a parse tree produced by {@link MxParser#declaration_arg}.
+	 * Visit a parse tree produced by {@link MxParser#parameter}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitDeclaration_arg(MxParser.Declaration_argContext ctx);
+	T visitParameter(MxParser.ParameterContext ctx);
 	/**
 	 * Visit a parse tree produced by {@link MxParser#statement}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
 	T visitStatement(MxParser.StatementContext ctx);
-	/**
-	 * Visit a parse tree produced by {@link MxParser#iteration_stmt}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitIteration_stmt(MxParser.Iteration_stmtContext ctx);
 	/**
 	 * Visit a parse tree produced by {@link MxParser#while_stmt}.
 	 * @param ctx the parse tree
@@ -184,12 +178,6 @@ public interface MxVisitor<T> extends ParseTreeVisitor<T> {
 	 * @return the visitor result
 	 */
 	T visitArglist(MxParser.ArglistContext ctx);
-	/**
-	 * Visit a parse tree produced by {@link MxParser#condition}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitCondition(MxParser.ConditionContext ctx);
 	/**
 	 * Visit a parse tree produced by {@link MxParser#expression}.
 	 * @param ctx the parse tree

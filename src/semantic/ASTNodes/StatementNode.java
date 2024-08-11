@@ -1,5 +1,7 @@
 package semantic.ASTNodes;
 
-public class StatementNode extends ASTNode{
-
+public abstract class StatementNode extends ASTNode{
+    public StatementNode() {
+        super();
+    }
 }

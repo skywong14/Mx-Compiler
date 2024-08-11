@@ -2,10 +2,10 @@ package semantic.ASTNodes;
 
 import java.util.ArrayList;
 
-public class CompoundStatementNode extends ASTNode{
+public class CompoundStmtNode extends StatementNode{
     private ArrayList<StatementNode> statements;
 
-    public CompoundStatementNode() {
+    public CompoundStmtNode() {
         this.statements = new ArrayList<>();
     }
 

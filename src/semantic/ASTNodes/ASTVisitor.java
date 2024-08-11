@@ -5,25 +5,22 @@ public interface ASTVisitor {
     void visit(ProgramNode it);
 
     // 访问类声明
-    void visit(ClassDeclarationNode it);
+    void visit(ClassNode it);
+
+    // 访问构造函数
+    void visit(ConstructorNode it);
 
     // 访问函数声明
-    void visit(FunctionDeclarationNode it);
+    void visit(FunctionNode it);
 
     // 访问变量声明
-    void visit(VariableDeclarationNode it);
+    void visit(VariableNode it);
 
     // 访问复合语句
-    void visit(CompoundStatementNode it);
-
-    // 访问构造函数声明
-    void visit(ConstructorDeclarationNode it);
+    void visit(CompoundStmtNode it);
 
     // 访问跳转语句
-    void visit(JumpStatementNode it);
-
-    // 访问迭代语句
-    void visit(IterationStatementNode it);
+    void visit(JumpStmtNode it);
 
     // 访问条件语句
     void visit(IfStatementNode it);
@@ -49,8 +46,15 @@ public interface ASTVisitor {
     // 访问基本类型
     void visit(BasicTypeNode it);
 
-    // 访问声明参数
-    void visit(DeclarationArgumentNode it);
+    // 访问形参
+    void visit(ParameterNode it);
+    // 访问形参列表
+    void visit(ParameterListNode it);
+
+    // 访问实参
+    void visit(ArgNode it);
+    // 访问实参列表
+    void visit(ArgListNode it);
 
     // 访问标识符
     void visit(IdentifierNode it);
@@ -61,4 +65,10 @@ public interface ASTVisitor {
     void visit(StringConstantNode it);
     void visit(NullConstantNode it);
     void visit(ArrayConstantNode it);
+
+    // 访问类型
+    void visit(TypeNode it);
+
+    // EmptyStmt
+    void visit(EmptyStmt it);
 }

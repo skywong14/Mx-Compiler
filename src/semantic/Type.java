@@ -1,56 +1,38 @@
 package semantic;
 
+import semantic.ASTNodes.ExpressionNode;
+
+import java.util.ArrayList;
 import java.util.Objects;
 
 public class Type {
     // int, boolean, string, class, array
     // string, class, array type are all reference type in fact
-    public enum TypeEnum {
-        INT, BOOL, STRING, CLASS, ARRAY, UNKNOWN
-    }
-    String className;
-    TypeEnum type, basicType;
-    int dimension;
-    public Type() {
-        type = TypeEnum.UNKNOWN;
-    }
-    public Type(TypeEnum basicType_, boolean is_array, int dimension, String className_) {
+
+    String basicType;
+    boolean is_array;
+    int dimension; // 0: {}, any dimention is ok
+
+    public Type(String basicType_, boolean is_array_, int dimension_) {
         this.basicType = basicType_;
-        this.className = className_;
-        if (is_array) type = TypeEnum.ARRAY;
-        else type = basicType_;
-        this.dimension = dimension; // 0: {}, any dimention is ok
-    }
-    public Type(TypeEnum basicType_) {
-        this(basicType_, false, 0, "");
-    }
-    public Type(Type otherType) {
-        this.basicType = otherType.basicType;
-        this.type = otherType.type;
-        this.dimension = otherType.dimension;
-        this.className = otherType.className;
+        this.is_array = is_array_;
+        this.dimension = dimension_;
     }
 
     public String toString() {
-        if (type == TypeEnum.ARRAY) {
-            return "Type{type='" + type + "', basicType='" + basicType +
-                    "', dimension='" + dimension + "', className='" + className + "'}";
-        } else {
-            return "Type{type='" + type + "}";
+        String res = basicType;
+        if (is_array) {
+            if (dimension == 0)  res += "{}";
+            else res += "[]".repeat(dimension);
         }
+        return res;
     }
     public boolean equals(Type otherType) {
-        if (this.type != otherType.type) return false;
-        if (this.type == TypeEnum.ARRAY) {
-            if (this.dimension != otherType.dimension) return false;
-            if (this.basicType != otherType.basicType) return false;
-            if (this.basicType == TypeEnum.CLASS) {
-                return this.className.equals(otherType.className);
-            }
-        }
-        if (this.type == TypeEnum.CLASS) {
-            return this.className.equals(otherType.className);
-        }
-        return true;
+        if (this.is_array != otherType.is_array) return false;
+        if (!this.is_array) return this.basicType.equals(otherType.basicType);
+        // is_array
+        if (!this.basicType.equals(otherType.basicType)) return false;
+        if (this.dimension == 0 || otherType.dimension == 0) return true;
+        return this.dimension == otherType.dimension;
     }
 }
