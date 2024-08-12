@@ -138,6 +138,16 @@ public interface MxListener extends ParseTreeListener {
 	 */
 	void exitStatement(MxParser.StatementContext ctx);
 	/**
+	 * Enter a parse tree produced by {@link MxParser#empty_stmt}.
+	 * @param ctx the parse tree
+	 */
+	void enterEmpty_stmt(MxParser.Empty_stmtContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link MxParser#empty_stmt}.
+	 * @param ctx the parse tree
+	 */
+	void exitEmpty_stmt(MxParser.Empty_stmtContext ctx);
+	/**
 	 * Enter a parse tree produced by {@link MxParser#while_stmt}.
 	 * @param ctx the parse tree
 	 */

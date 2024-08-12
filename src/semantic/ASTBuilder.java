@@ -1,5 +1,6 @@
 package semantic;
 
+import com.sun.source.tree.ArrayAccessTree;
 import org.antlr.v4.runtime.tree.ParseTree;
 import parser.MxBaseVisitor;
 import parser.MxParser;
@@ -103,7 +104,7 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
         if (ctx.compound_stmt() != null) {
             return visit(ctx.compound_stmt());
         } else if (ctx.expression_stmt() != null) {
-            return visit(ctx.expression_stmt().expression());
+            return visit(ctx.expression_stmt());
         } else if (ctx.if_stmt() != null) {
             return visit(ctx.if_stmt());
         } else if (ctx.for_stmt() != null) {
@@ -114,9 +115,22 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
             return visit(ctx.jump_stmt());
         } else if (ctx.variable_declaration() != null) {
             return visit(ctx.variable_declaration());
-        } else {
-            return new EmptyStmt(); // emptyStmt
+        } else if (ctx.empty_stmt() != null) {
+            return new EmptyStmtNode();
         }
+        throw new RuntimeException("Unknown statement type");
+//        return null; // should be unreachable
+    }
+
+    @Override
+    public ASTNode visitCompound_stmt(MxParser.Compound_stmtContext ctx) {
+        CompoundStmtNode compoundStmtNode = new CompoundStmtNode();
+        for (ParseTree child : ctx.children) {
+            if (child instanceof MxParser.StatementContext) {
+                compoundStmtNode.addStatement((StatementNode) visit(child));
+            }
+        }
+        return compoundStmtNode;
     }
 
     @Override
@@ -124,13 +138,13 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
         if (ctx.Else() == null) {
             return new IfStatementNode(
                     (ExpressionNode) visit(ctx.expression()),
-                    (CompoundStmtNode) visit(ctx.statement(0)),
+                    (StatementNode) visit(ctx.statement(0)),
                     null);
         } else {
             return new IfStatementNode(
                     (ExpressionNode) visit(ctx.expression()),
-                    (CompoundStmtNode) visit(ctx.statement(0)),
-                    (CompoundStmtNode) visit(ctx.statement(1)));
+                    (StatementNode) visit(ctx.statement(0)),
+                    (StatementNode) visit(ctx.statement(1)));
         }
     }
 
@@ -146,6 +160,190 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
             return new JumpStmtNode("break", null);
         } else {
             return new JumpStmtNode("continue", null);
+        }
+    }
+
+    @Override
+    public ASTNode visitFor_stmt(MxParser.For_stmtContext ctx) {
+        // for_stmt: 'for' '(' (empty_stmt | expression_stmt | variable_declaration) expression ';' (expression)? ')' statement;
+        ExpressionNode second_expr = null;
+        if (ctx.expression().size() == 2)
+            second_expr = (ExpressionNode) visit(ctx.expression(1));
+        if (ctx.empty_stmt() != null){
+            return new ForStmtNode(new EmptyStmtNode(), (ExpressionNode) visit(ctx.expression(0)),
+                       second_expr, (StatementNode) visit(ctx.statement()));
+        } else if (ctx.expression_stmt() != null) {
+            return new ForStmtNode((ExpressionStmtNode) visit(ctx.expression_stmt()),
+                    (ExpressionNode) visit(ctx.expression(0)),
+                    second_expr, (StatementNode) visit(ctx.statement()));
+        } else if (ctx.variable_declaration() != null) {
+            return new ForStmtNode((VariableNode) visit(ctx.variable_declaration()),
+                    (ExpressionNode) visit(ctx.expression(0)),
+                    second_expr, (StatementNode) visit(ctx.statement()));
+        }
+        throw new RuntimeException("Unknown for_stmt type");
+    }
+
+    @Override
+    public ASTNode visitWhile_stmt(MxParser.While_stmtContext ctx) {
+        return new WhileStmtNode((ExpressionNode) visit(ctx.expression()), (StatementNode) visit(ctx.statement()));
+    }
+
+    @Override
+    public ASTNode visitVariable_declaration(MxParser.Variable_declarationContext ctx) {
+        TypeNode type = (TypeNode) visit(ctx.type());
+        VariableNode variable = new VariableNode(type);
+        for (ParseTree child : ctx.variable_declaration_list().children) {
+            if (child instanceof MxParser.Single_variable_declarationContext child_ctx) {
+                variable.addName(child_ctx.IDENTIFIER().toString());
+                if (((MxParser.Single_variable_declarationContext) child).expression() != null) {
+                    variable.addValue((ExpressionNode) visit(child_ctx.expression()));
+                } else {
+                    variable.addValue(null);
+                }
+            }
+        }
+        return variable;
+    }
+
+    @Override
+    public ASTNode visitExpression_stmt(MxParser.Expression_stmtContext ctx) {
+        return new ExpressionStmtNode((ExpressionNode) visit(ctx.expression()));
+    }
+
+    @Override
+    public ASTNode visitExpression(MxParser.ExpressionContext ctx) {
+        if (ctx.primary_expression() != null) {
+            return visit(ctx.primary_expression());
+        }
+        if (ctx.LeftParen() != null && ctx.RightParen() != null) {
+            return visit(ctx.expression().getFirst());
+        }
+
+        if (ctx.opLeft != null) {
+            if (ctx.opLeft.getText().equals("~") || ctx.opLeft.getText().equals("!")) {
+                return new UnaryExprNode(ctx.opLeft.getText(), (ExpressionNode) visit(ctx.expression().getFirst()), true);
+            } else if (ctx.opLeft.getText().equals("-") || ctx.opLeft.getText().equals("+")) {
+                return new UnaryExprNode(ctx.opLeft.getText(), (ExpressionNode) visit(ctx.expression().getFirst()), true);
+            } else if (ctx.opLeft.getText().equals("++") || ctx.opLeft.getText().equals("--")) {
+                return new UnaryExprNode(ctx.opLeft.getText(), (ExpressionNode) visit(ctx.expression().getFirst()), true);
+            }
+        }
+        if (ctx.op != null) {
+            if (ctx.op.getText().equals("++") || ctx.op.getText().equals("--")) {
+                return new UnaryExprNode(ctx.op.getText(), (ExpressionNode) visit(ctx.expression().get(0)), false);
+            } else if (ctx.op.getText().equals("?")) {
+                // TernaryExprNode
+                return new TernaryExprNode((ExpressionNode) visit(ctx.expression().get(0)),
+                        (ExpressionNode) visit(ctx.expression().get(1)),
+                        (ExpressionNode) visit(ctx.expression().get(2)));
+            } else {
+                return new BinaryExprNode(ctx.op.getText(), (ExpressionNode) visit(ctx.expression().get(0)),
+                        (ExpressionNode) visit(ctx.expression().get(1)));
+            }
+        }
+        throw new RuntimeException("Unknown expression type");
+    }
+
+    @Override
+    public ASTNode visitPrimary_expression(MxParser.Primary_expressionContext ctx) {
+
+        if (ctx.formatted_string() != null) {
+            // formatted_string
+            return visit(ctx.formatted_string());
+        } else if (ctx.This() != null) {
+            // this
+            return new IdentifierNode(ctx.IDENTIFIER().toString());
+        } else if (ctx.constant() != null) {
+            // constant
+            return visit(ctx.constant());
+        } else if (ctx.IDENTIFIER() != null && ctx.LeftParen() == null && ctx.RightParen() == null) {
+            // IDENTIFIER (variable)
+            return new IdentifierNode(ctx.IDENTIFIER().toString());
+        } else if (ctx.IDENTIFIER() != null && ctx.LeftParen() != null && ctx.RightParen() != null) {
+            // function_call or method_call
+            if (ctx.arglist() != null)
+                return new FunctionCallNode(ctx.IDENTIFIER().toString(), (ArgListNode) visit(ctx.arglist()));
+            else
+                return new FunctionCallNode(ctx.IDENTIFIER().toString(), null);
+        } else if (ctx.LeftBracket() != null) {
+            // array_access
+            ArrayAccessNode arrayAccessNode = new ArrayAccessNode((PrimaryExpressionNode) visit(ctx.primary_expression()));
+            for (ParseTree child : ctx.children) {
+                if (child instanceof MxParser.ExpressionContext) {
+                    arrayAccessNode.addExpression((ExpressionNode) visit(child));
+                }
+            }
+        } else if (ctx.Dot() != null) {
+            // member_access
+            if (ctx.LeftParen() != null) {
+                // method_call
+                if (ctx.arglist() != null)
+                    return new MemberAccessNode((PrimaryExpressionNode) visit(ctx.primary_expression()), ctx.IDENTIFIER().toString(), true, (ArgListNode) visit(ctx.arglist()));
+                else
+                    return new MemberAccessNode((PrimaryExpressionNode) visit(ctx.primary_expression()), ctx.IDENTIFIER().toString(), true, null);
+            } else {
+                // member_access
+                return new MemberAccessNode((PrimaryExpressionNode) visit(ctx.primary_expression()), ctx.IDENTIFIER().toString(), false, null);
+            }
+        } else if (ctx.new_expression() != null) {
+            // new_expression
+            return visit(ctx.new_expression());
+        }
+        throw new RuntimeException("Unknown primary_expression type");
+    }
+
+    @Override
+    public ASTNode visitConstant(MxParser.ConstantContext ctx) {
+        if (ctx.integerConstant() != null) {
+            return new ConstantNode(ctx.integerConstant().toString(), false);
+        } else if (ctx.booleanConstant() != null) {
+            return new ConstantNode(ctx.booleanConstant().toString(), false);
+        } else if (ctx.nullConstant() != null) {
+            return new ConstantNode(ctx.nullConstant().toString(), false);
+        } else if (ctx.stringConstant() != null) {
+            return new ConstantNode(ctx.stringConstant().toString(), false);
+        } else if (ctx.arrayConstant() != null) {
+            ConstantNode constantNode = new ConstantNode("", true);
+            for (ParseTree child : ctx.arrayConstant().children) {
+                if (child instanceof MxParser.ConstantContext) {
+                    constantNode.addConstant((ConstantNode) visit(child));
+                }
+            }
+        }
+        throw new RuntimeException("Unknown constant type");
+    }
+
+    @Override
+    public ASTNode visitFormatted_string(MxParser.Formatted_stringContext ctx) {
+        if (ctx.Formatted_string_plain() != null) {
+            return new FormattedStringNode(ctx.Formatted_string_plain().toString());
+        }
+        // begin
+        int length = ctx.Formatted_string_begin().toString().length();
+        assert(length >= 3);
+        FormattedStringNode node = new FormattedStringNode(ctx.Formatted_string_begin().toString().substring(2, length - 1));
+        node.addExpression((ExpressionNode) visit(ctx.expression(0)));
+        // middle
+        int mid_size = ctx.Formatted_string_middle().size();
+        for (int i = 0; i < mid_size; i++) {
+            length = ctx.Formatted_string_middle(i).toString().length();
+            node.addPlainString(ctx.Formatted_string_middle(i).toString().substring(1, length - 1));
+            node.addExpression((ExpressionNode) visit(ctx.expression(i + 1)));
+        }
+        // end
+        length = ctx.Formatted_string_end().toString().length();
+        node.addPlainString(ctx.Formatted_string_end().toString().substring(1, length - 1));
+
+        return node;
+    }
+
+    @Override
+    public ASTNode visitNew_expression(MxParser.New_expressionContext ctx) {
+        if (ctx.array_type() != null) {
+            return new NewExprNode((TypeNode) visit(ctx.array_type()), null);
+        } else {
+            return new NewExprNode(null, ctx.IDENTIFIER().toString());
         }
     }
 }

@@ -4,9 +4,9 @@ import semantic.Type;
 
 import java.util.ArrayList;
 
-public class TypeNode extends ASTNode {
+public class TypeNode extends StatementNode {
     private Type type;
-    private ArrayList<ExpressionNode> expressions;
+    private ArrayList<ExpressionNode> expressions; // size of array
 
     public TypeNode(Type type_) {
         this.type = type_;

@@ -15,9 +15,9 @@ import java.io.InputStream;
 
 public class Main {
     public static void main(String[] args) throws Exception{
-        System.out.println("Hello, World!");
-        String name = "test.yx";
-        // 创建文件输入流
+//        String currentDir = System.getProperty("user.dir");
+//        System.out.println("Current working directory: " + currentDir);
+        String name = "test.mx";
         InputStream input = new FileInputStream(name);
         try {
             // 创建全局作用域
@@ -26,12 +26,12 @@ public class Main {
             // 词法分析器，将输入流转换为字符流
             MxLexer lexer = new MxLexer(CharStreams.fromStream(input));
 //            lexer.removeErrorListeners();
-//            lexer.addErrorListener(new MxErrorListener());
+            lexer.addErrorListener(new MxErrorListener());
 
             // 语法分析器，将词法分析器的输出转换为语法树
             MxParser parser = new MxParser(new CommonTokenStream(lexer));
 //            parser.removeErrorListeners();
-//            parser.addErrorListener(new MxErrorListener());
+            parser.addErrorListener(new MxErrorListener());
 
             // 解析程序，生成语法树的根节点
             ParseTree parseTreeRoot = parser.file_input();
@@ -40,11 +40,8 @@ public class Main {
             ASTBuilder astBuilder = new ASTBuilder();
             ASTNode programNode = astBuilder.visit(parseTreeRoot);
 
-
-//            PrintVisitor printVisitor = new PrintVisitor();
-//            astBuilder.accept(printVisitor);
-
             // 收集符号
+            ((ProgramNode)programNode).collectSymbol(globalScope);
 
             // 语义分析
 
@@ -53,7 +50,7 @@ public class Main {
             System.out.println("Success");
         } catch (Exception e) {
             // error
-            System.out.println("Error");
+            System.out.println("Error: " + e.getMessage());
             e.printStackTrace();
         }
     }

@@ -21,7 +21,7 @@ parameter_list: parameter (',' parameter)* ;
 parameter: type IDENTIFIER ;
 
 statement
-    : ';' // empty statement
+    : empty_stmt
     | expression_stmt
     | compound_stmt
     | if_stmt // if and if-else
@@ -30,9 +30,10 @@ statement
     | jump_stmt // break, continue, return
     | variable_declaration // variable declaration
     ;
+empty_stmt: ';';
 
 while_stmt: 'while' '(' expression ')' statement;
-for_stmt: 'for' '(' (expression)? ';' (expression)? ';' (expression)? ')' statement;
+for_stmt: 'for' '(' (empty_stmt | expression_stmt | variable_declaration) expression ';' (expression)? ')' statement;
 
 
 jump_stmt: break_stmt | continue_stmt | return_stmt;
@@ -63,28 +64,28 @@ arglist : expression (',' expression)*;
 //--------------------expression--------------------
 expression
     : primary_expression
-    | <assoc = right> op = ('~' | '!') expression
-    | <assoc = right> op = ('-' | '+') expression
-    | <assoc = right> op = ('++' | '--') expression
+    | '(' expression ')'
+    | <assoc = right> opLeft = ('~' | '!') expression
+    | <assoc = right> opLeft = ('-' | '+') expression
+    | <assoc = right> opLeft = ('++' | '--') expression
     | expression op = ('++' | '--')
     | expression op = ('*' | '/' | '%') expression
     | expression op = ('+' | '-') expression
     | expression op = ('<<' | '>>') expression
     | expression op = ('<' | '>' | '<=' | '>=') expression
     | expression op = ('==' | '!=') expression
-    | expression '&' expression
-    | expression '^' expression
-    | expression '|' expression
-    | expression '&&' expression
-    | expression '||' expression
-    | <assoc = right>expression '?' expression ':' expression
-    | expression '=' expression
+    | expression op = '&' expression
+    | expression op = '^' expression
+    | expression op = '|' expression
+    | expression op = '&&' expression
+    | expression op = '||' expression
+    | <assoc = right> expression op = '?' expression ':' expression
+    | expression op = '=' expression
     ;
 primary_expression
     : formatted_string
     | 'this'
     | constant
-    | '(' expression ')'
     | IDENTIFIER
     | IDENTIFIER '(' arglist? ')'
     | primary_expression ('[' expression ']')+ // array access
@@ -94,7 +95,7 @@ primary_expression
     ;
 new_expression
     : 'new' array_type
-    | 'new' IDENTIFIER '(' arglist? ')' // new class
+    | 'new' IDENTIFIER ('(' ')')?
     ;
 array_type
     : basic_type ('[' expression ']')+ ( '[' ']' )*
@@ -143,6 +144,7 @@ LeftBracket : '[';
 RightBracket : ']';
 LeftBrace : '{';
 RightBrace : '}';
+Dot : '.';
 
 Less : '<';
 LessEqual : '<=';

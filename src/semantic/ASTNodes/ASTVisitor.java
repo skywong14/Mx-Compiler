@@ -35,16 +35,13 @@ public interface ASTVisitor {
     void visit(PrimaryExpressionNode it);
 
     // 访问新建表达式
-    void visit(NewExpressionNode it);
+    void visit(NewExprNode it);
 
     // 访问数组类型
-    void visit(ArrayTypeNode it);
+    void visit(ArrayAccessNode it);
 
     // 访问格式化字符串
     void visit(FormattedStringNode it);
-
-    // 访问基本类型
-    void visit(BasicTypeNode it);
 
     // 访问形参
     void visit(ParameterNode it);
@@ -59,16 +56,18 @@ public interface ASTVisitor {
     // 访问标识符
     void visit(IdentifierNode it);
 
-    // 访问常量类型
-    void visit(BooleanConstantNode it);
-    void visit(IntegerConstantNode it);
-    void visit(StringConstantNode it);
-    void visit(NullConstantNode it);
-    void visit(ArrayConstantNode it);
-
     // 访问类型
     void visit(TypeNode it);
 
     // EmptyStmt
-    void visit(EmptyStmt it);
+    void visit(EmptyStmtNode it);
+
+    // ForStmt
+    void visit(ForStmtNode forStmtNode);
+
+    // WhileStmt
+    void visit(WhileStmtNode it);
+
+    // ExpressionStmt
+    void visit(ExpressionStmtNode it);
 }

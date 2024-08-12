@@ -8,6 +8,7 @@ import semantic.error.Error;
 public class MxErrorListener extends BaseErrorListener {
     @Override
     public void syntaxError(Recognizer<?, ?> recognizer, Object offendingSymbol, int line, int charPositionInLine, String msg, RecognitionException e) {
-        throw new Error("line " + line + ":" + charPositionInLine + " msg: " + msg);
+        // exit 1
+        System.exit(1);
     }
 }
