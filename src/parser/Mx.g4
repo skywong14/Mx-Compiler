@@ -5,10 +5,11 @@ file_input: (class_declaration | function_declaration | variable_declaration)* E
 function_declaration : type IDENTIFIER trailer compound_stmt ;
 
 class_declaration : 'class' IDENTIFIER class_body ';' ;
-class_body: '{' (variable_declaration | function_declaration | constructor_declaration)* '}';
+class_body: '{' (field_declration | function_declaration | constructor_declaration)* '}';
 
-constructor_declaration : IDENTIFIER trailer compound_stmt ;
+constructor_declaration : IDENTIFIER '(' ')' compound_stmt ;
 
+field_declration : type IDENTIFIER (',' IDENTIFIER)* ';' ;
 variable_declaration : type variable_declaration_list ';' ;
 variable_declaration_list : single_variable_declaration (',' single_variable_declaration)* ;
 single_variable_declaration : IDENTIFIER ('=' expression)? ;

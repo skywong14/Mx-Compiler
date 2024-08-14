@@ -3,11 +3,9 @@ import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
 import parser.MxLexer;
 import parser.MxParser;
-import semantic.ASTBuilder;
+import semantic.*;
 import semantic.ASTNodes.ASTNode;
 import semantic.ASTNodes.ProgramNode;
-import semantic.GlobalScope;
-import semantic.MxErrorListener;
 import semantic.error.Error;
 
 import java.io.FileInputStream;
@@ -15,14 +13,9 @@ import java.io.InputStream;
 
 public class Main {
     public static void main(String[] args) throws Exception{
-//        String currentDir = System.getProperty("user.dir");
-//        System.out.println("Current working directory: " + currentDir);
         String name = "test.mx";
         InputStream input = new FileInputStream(name);
         try {
-            // 创建全局作用域
-            GlobalScope globalScope = new GlobalScope();
-
             // 词法分析器，将输入流转换为字符流
             MxLexer lexer = new MxLexer(CharStreams.fromStream(input));
 //            lexer.removeErrorListeners();
@@ -40,10 +33,13 @@ public class Main {
             ASTBuilder astBuilder = new ASTBuilder();
             ASTNode programNode = astBuilder.visit(parseTreeRoot);
 
-            // 收集符号
+            // collect symbol
+            ScopeManager scopeManager = new ScopeManager();
+            GlobalScope globalScope = (GlobalScope) scopeManager.getCurrentScope();
             ((ProgramNode)programNode).collectSymbol(globalScope);
 
             // 语义分析
+           new SemanticChecker(scopeManager).visit((ProgramNode) programNode);
 
 
             // success

@@ -41,6 +41,12 @@ public interface MxVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitConstructor_declaration(MxParser.Constructor_declarationContext ctx);
 	/**
+	 * Visit a parse tree produced by {@link MxParser#field_declration}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitField_declration(MxParser.Field_declrationContext ctx);
+	/**
 	 * Visit a parse tree produced by {@link MxParser#variable_declaration}.
 	 * @param ctx the parse tree
 	 * @return the visitor result

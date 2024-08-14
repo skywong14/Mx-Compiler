@@ -13,7 +13,7 @@ public class ArgListNode extends ASTNode{
         values.add(value);
     }
 
-    public ArrayList<ExpressionNode> getValues() {
+    public ArrayList<ExpressionNode> getArgList() {
         return values;
     }
 

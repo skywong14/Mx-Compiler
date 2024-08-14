@@ -13,8 +13,14 @@ public interface ASTVisitor {
     // 访问函数声明
     void visit(FunctionNode it);
 
-    // 访问变量声明
+    // 访问函数调用
+    void visit(FunctionCallNode it);
+
+    // 访问变量
     void visit(VariableNode it);
+
+    // 访问变量声明
+    void visit(VariableDeclarationNode it);
 
     // 访问复合语句
     void visit(CompoundStmtNode it);
@@ -63,11 +69,14 @@ public interface ASTVisitor {
     void visit(EmptyStmtNode it);
 
     // ForStmt
-    void visit(ForStmtNode forStmtNode);
+    void visit(ForStmtNode it);
 
     // WhileStmt
     void visit(WhileStmtNode it);
 
     // ExpressionStmt
     void visit(ExpressionStmtNode it);
+
+    // FieldDeclaration
+    void visit(FieldDeclarationNode it);
 }

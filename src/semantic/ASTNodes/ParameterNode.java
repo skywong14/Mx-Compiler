@@ -1,5 +1,7 @@
 package semantic.ASTNodes;
 
+import semantic.Type;
+
 public class ParameterNode extends ASTNode{
     private String name;
     private TypeNode type;
@@ -11,12 +13,9 @@ public class ParameterNode extends ASTNode{
         this.value = null;
     }
 
-    public String getName() {
-        return name;
-    }
-    public TypeNode getType() {
-        return type;
-    }
+    public String getName() { return name; }
+    public Type getType() { return type.getType(); }
+    public TypeNode getTypeNode() { return type; }
     public void setValue(ExpressionNode value_) {
         this.value = value_;
     }

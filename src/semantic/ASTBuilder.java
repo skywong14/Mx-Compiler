@@ -1,11 +1,11 @@
 package semantic;
 
-import com.sun.source.tree.ArrayAccessTree;
 import org.antlr.v4.runtime.tree.ParseTree;
 import parser.MxBaseVisitor;
 import parser.MxParser;
 import semantic.ASTNodes.*;
 
+import java.util.ArrayList;
 import java.util.Objects;
 
 /* In MxBaseVisitor, visit(ParseTree tree) is defined as:
@@ -26,7 +26,7 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
 //                program.addFunction(child.accept(this));
                 program.addFunction((FunctionNode) visit(child));
             } else if (child instanceof MxParser.Variable_declarationContext) {
-                program.addVariable((VariableNode) visit(child));
+                program.addVariable((VariableDeclarationNode) visit(child));
             } else if (child instanceof MxParser.Class_declarationContext) {
                 program.addClass((ClassNode) visit(child));
             }
@@ -58,8 +58,8 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
         ClassNode classNode = new ClassNode(ctx.IDENTIFIER().toString());
 
         for (ParseTree child : ctx.class_body().children) {
-            if (child instanceof MxParser.Variable_declarationContext) {
-                classNode.addVariable((VariableNode) visit(child));
+            if (child instanceof MxParser.Field_declrationContext) {
+                classNode.addField((FieldDeclarationNode) visit(child));
             } else if (child instanceof MxParser.Function_declarationContext) {
                 classNode.addConstructor((ConstructorNode) visit(child));
             } else if (child instanceof MxParser.Constructor_declarationContext) {
@@ -67,6 +67,23 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
             }
         }
         return classNode;
+    }
+
+    @Override
+    public ASTNode visitConstructor_declaration(MxParser.Constructor_declarationContext ctx) {
+        return new ConstructorNode(ctx.IDENTIFIER().toString(),
+                (CompoundStmtNode) visit(ctx.compound_stmt()));
+    }
+
+
+    @Override
+    public ASTNode visitField_declration(MxParser.Field_declrationContext ctx) {
+        FieldDeclarationNode fieldDeclarationNode = new FieldDeclarationNode((TypeNode) visit(ctx.type()));
+        // field_declration : type IDENTIFIER (',' IDENTIFIER)* ';' ;
+        int sz = ctx.IDENTIFIER().size();
+        for (int i = 0; i < sz; i++)
+            fieldDeclarationNode.addName(ctx.IDENTIFIER(i).toString());
+        return fieldDeclarationNode;
     }
 
     @Override
@@ -177,7 +194,7 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
                     (ExpressionNode) visit(ctx.expression(0)),
                     second_expr, (StatementNode) visit(ctx.statement()));
         } else if (ctx.variable_declaration() != null) {
-            return new ForStmtNode((VariableNode) visit(ctx.variable_declaration()),
+            return new ForStmtNode((VariableDeclarationNode) visit(ctx.variable_declaration()),
                     (ExpressionNode) visit(ctx.expression(0)),
                     second_expr, (StatementNode) visit(ctx.statement()));
         }
@@ -192,14 +209,13 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
     @Override
     public ASTNode visitVariable_declaration(MxParser.Variable_declarationContext ctx) {
         TypeNode type = (TypeNode) visit(ctx.type());
-        VariableNode variable = new VariableNode(type);
+        VariableDeclarationNode variable = new VariableDeclarationNode(type);
         for (ParseTree child : ctx.variable_declaration_list().children) {
             if (child instanceof MxParser.Single_variable_declarationContext child_ctx) {
-                variable.addName(child_ctx.IDENTIFIER().toString());
                 if (((MxParser.Single_variable_declarationContext) child).expression() != null) {
-                    variable.addValue((ExpressionNode) visit(child_ctx.expression()));
+                    variable.addVariable(child_ctx.IDENTIFIER().toString(), (ExpressionNode) visit(child_ctx.expression()));
                 } else {
-                    variable.addValue(null);
+                    variable.addVariable(child_ctx.IDENTIFIER().toString(), null);
                 }
             }
         }
@@ -265,7 +281,7 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
             if (ctx.arglist() != null)
                 return new FunctionCallNode(ctx.IDENTIFIER().toString(), (ArgListNode) visit(ctx.arglist()));
             else
-                return new FunctionCallNode(ctx.IDENTIFIER().toString(), null);
+                return new FunctionCallNode(ctx.IDENTIFIER().toString(), new ArgListNode());
         } else if (ctx.LeftBracket() != null) {
             // array_access
             ArrayAccessNode arrayAccessNode = new ArrayAccessNode((PrimaryExpressionNode) visit(ctx.primary_expression()));

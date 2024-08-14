@@ -1,5 +1,7 @@
 package semantic.ASTNodes;
 
+import semantic.Type;
+
 import java.util.ArrayList;
 
 public class FunctionNode extends ASTNode{
@@ -18,6 +20,15 @@ public class FunctionNode extends ASTNode{
 
     public String getName() {
         return name;
+    }
+    public int getParameterSize() { return parameters.size(); }
+    public ArrayList<ParameterNode> getParameters() { return parameters; }
+    public Type getReturnType() {
+        assert(returnType != null);
+        return returnType.getType();
+    }
+    public CompoundStmtNode getBody() {
+        return body;
     }
 
     @Override

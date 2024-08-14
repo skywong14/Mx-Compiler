@@ -2,30 +2,35 @@ package semantic.ASTNodes;
 
 import semantic.Type;
 
-import java.util.ArrayList;
-
-public class VariableNode extends StatementNode{
-    private ArrayList<String> names;
+public class VariableNode extends ASTNode{
+    private String name;
     private TypeNode type;
-    private ArrayList<ExpressionNode> values;
+    private ExpressionNode value;
 
-    public VariableNode(TypeNode type_) {
-        this.names = new ArrayList<>();
-        this.values = new ArrayList<>();
+    public VariableNode(TypeNode type_, String name_) {
+        this.name = name_;
         this.type = type_;
+        this.value = null;
     }
-    public void addName(String name) {
-        names.add(name);
-    }
-    public void addValue(ExpressionNode value) {
-        values.add(value);
+    public VariableNode(TypeNode type_, String name_, ExpressionNode value_) {
+        this.name = name_;
+        this.type = type_;
+        this.value = value_;
     }
 
-    public ArrayList<String> getNames() {
-        return names;
+    public String getName() {
+        return name;
     }
-    public ArrayList<ExpressionNode> getValues() {
-        return values;
+
+    public Type getType() {
+        return type.getType();
+    }
+    public TypeNode getTypeNode() {
+        return type;
+    }
+
+    public ExpressionNode getValue() {
+        return value;
     }
 
     @Override

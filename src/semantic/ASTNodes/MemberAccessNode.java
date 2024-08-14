@@ -1,5 +1,8 @@
 package semantic.ASTNodes;
 
+import semantic.ScopeManager;
+import semantic.Type;
+
 public class MemberAccessNode extends PrimaryExpressionNode {
     private PrimaryExpressionNode primaryExpression;
     private String identifier;
@@ -20,6 +23,25 @@ public class MemberAccessNode extends PrimaryExpressionNode {
 
     public String getIdentifier() {
         return identifier;
+    }
+
+    @Override
+    public Type deduceType(ScopeManager scopeManager) {
+        if (isMethod) {
+            Type primaryType = primaryExpression.deduceType(scopeManager);
+            if (primaryType.isArray())
+                throw new RuntimeException("Array type does not have member access");
+            ClassNode classNode = scopeManager.resolveClass(primaryExpression.deduceType(scopeManager).getBasicType());
+            FunctionNode functionNode = classNode.getMethod(identifier);
+            return functionNode.getReturnType();
+        } else {
+            Type primaryType = primaryExpression.deduceType(scopeManager);
+            if (primaryType.isArray())
+                throw new RuntimeException("Array type does not have member access");
+            ClassNode classNode = scopeManager.resolveClass(primaryExpression.deduceType(scopeManager).getBasicType());
+            VariableNode variableNode = classNode.getField(identifier);
+            return variableNode.getType();
+        }
     }
 
     @Override

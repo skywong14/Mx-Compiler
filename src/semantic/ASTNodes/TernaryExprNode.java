@@ -1,5 +1,8 @@
 package semantic.ASTNodes;
 
+import semantic.ScopeManager;
+import semantic.Type;
+
 public class TernaryExprNode extends ExpressionNode{
     private ExpressionNode condition;
     private ExpressionNode trueExpr;
@@ -21,6 +24,20 @@ public class TernaryExprNode extends ExpressionNode{
 
     public ExpressionNode getFalseExpr() {
         return falseExpr;
+    }
+
+    @Override
+    public Type deduceType(ScopeManager scopeManager) {
+        Type conditionType = condition.deduceType(scopeManager);
+        Type trueType = trueExpr.deduceType(scopeManager);
+        Type falseType = falseExpr.deduceType(scopeManager);
+        if (conditionType.equals("boolean")) {
+            throw new RuntimeException("Ternary condition must be of type boolean");
+        }
+        if (trueType != falseType) {
+            throw new RuntimeException("Ternary true and false expressions must have the same type");
+        }
+        return trueType;
     }
 
     @Override
