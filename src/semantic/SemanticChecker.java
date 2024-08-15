@@ -533,19 +533,19 @@ public class SemanticChecker implements ASTVisitor {
         if (Objects.equals(operator, "+") || Objects.equals(operator, "<") || Objects.equals(operator, ">")
                 || Objects.equals(operator, "<=") || Objects.equals(operator, ">=")) {
             if (!leftType.equals("int") && !leftType.equals("string"))
-                throw new RuntimeException("[Type Mismatch]: Binary expression(+ < > <= >=) type should be int or string, but received: " + leftType.toString());
+                throw new RuntimeException("[Invalid Type]: Binary expression(+ < > <= >=) type should be int or string, but received: " + leftType.toString());
             return;
         }
 
         if (Objects.equals(operator, "-") ||
                 Objects.equals(operator, "*") || Objects.equals(operator, "/") || Objects.equals(operator, "%")) {
             if (!leftType.equals("int"))
-                throw new RuntimeException("[Type Mismatch]: Binary expression(-*/%) type should be int, but received: " + leftType.toString());
+                throw new RuntimeException("[Invalid Type]: Binary expression(-*/%) type should be int, but received: " + leftType.toString());
             return;
         }
         if (Objects.equals(operator, "&") || Objects.equals(operator, "^") || Objects.equals(operator, "|")) {
             if (!leftType.equals("int"))
-                throw new RuntimeException("[Type Mismatch]: Binary expression(+-*/%) type should be int, but received: " + leftType.toString());
+                throw new RuntimeException("[Invalid Type]: Binary expression(+-*/%) type should be int, but received: " + leftType.toString());
             return;
         }
         if (Objects.equals(operator, "==") || Objects.equals(operator, "!=")){
@@ -553,12 +553,12 @@ public class SemanticChecker implements ASTVisitor {
         }
         if (Objects.equals(operator, "&&") || Objects.equals(operator, "||")){
             if (!leftType.equals("bool"))
-                throw new RuntimeException("[Type Mismatch]: Binary expression(&&,||) type should be bool, but received: " + leftType.toString());
+                throw new RuntimeException("[Invalid Type]: Binary expression(&&,||) type should be bool, but received: " + leftType.toString());
             return;
         }
         if (Objects.equals(operator, "<<") || Objects.equals(operator, ">>")) {
             if (!leftType.equals("int"))
-                throw new RuntimeException("[Type Mismatch]: Binary expression(<<,>>) type should be int, but received: " + leftType.toString());
+                throw new RuntimeException("[Invalid Type]: Binary expression(<<,>>) type should be int, but received: " + leftType.toString());
             return;
         }
         if (Objects.equals(operator, "=")) {
