@@ -359,15 +359,20 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
         } else if (ctx.stringConstant() != null) {
             return new ConstantNode(ctx.getText(), false);
         } else if (ctx.arrayConstant() != null) {
-            ConstantNode constantNode = new ConstantNode("", true);
-            for (ParseTree child : ctx.arrayConstant().children) {
-                if (child instanceof MxParser.ConstantContext) {
-                    constantNode.addConstant((ConstantNode) visit(child));
-                }
-            }
-            return constantNode;
+            return visit(ctx.arrayConstant());
         }
         throw new RuntimeException("[Runtime Error] Unknown constant type:" + ctx.getText());
+    }
+
+    @Override
+    public ASTNode visitArrayConstant(MxParser.ArrayConstantContext ctx) {
+        ConstantNode constantNode = new ConstantNode("", true);
+        for (ParseTree child : ctx.children) {
+            if (child instanceof MxParser.ConstantContext) {
+                constantNode.addConstant((ConstantNode) visit(child));
+            }
+        }
+        return constantNode;
     }
 
     @Override
@@ -398,7 +403,6 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
     public ASTNode visitNew_expression(MxParser.New_expressionContext ctx) {
         if (ctx.new_array_type() != null) {
             //new_array_type : basic_type ('[' expression? ']')+
-
             ArrayList<ExpressionNode> expressions = new ArrayList<>();
             int sz = 0;
             boolean flag = true;
@@ -421,9 +425,14 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
             for (ExpressionNode expression : expressions) {
                 typeNode.addExpression(expression);
             }
-            return new NewExprNode((TypeNode) typeNode, null);
+
+            if (ctx.arrayConstant() != null) {
+                return new NewExprNode(typeNode, null, (ConstantNode) visit(ctx.arrayConstant()));
+            } else {
+                return new NewExprNode(typeNode, null, null);
+            }
         } else {
-            return new NewExprNode(new TypeNode(new Type(ctx.IDENTIFIER().toString())), ctx.IDENTIFIER().toString());
+            return new NewExprNode(new TypeNode(new Type(ctx.IDENTIFIER().toString())), ctx.IDENTIFIER().toString(), null);
         }
     }
 }

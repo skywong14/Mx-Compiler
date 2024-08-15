@@ -95,7 +95,7 @@ primary_expression
     | IDENTIFIER                    # primary_identifier
     ;
 new_expression
-    : 'new' new_array_type
+    : 'new' new_array_type arrayConstant?
     | 'new' IDENTIFIER ('(' ')')?
     ;
 

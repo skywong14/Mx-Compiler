@@ -285,7 +285,7 @@ public class SemanticChecker implements ASTVisitor {
         debug(it, "IfStatementNode");
         it.getCondition().accept(this);
         if (!it.getCondition().deduceType(scopeManager).equals("bool")) {
-            throw new RuntimeException("[Type Mismatch]: if condition should be bool");
+            throw new RuntimeException("[Invalid Type]: if condition should be bool");
         }
 
         scopeManager.enterScope("If", it);
@@ -320,9 +320,16 @@ public class SemanticChecker implements ASTVisitor {
         debug(it, "NewExprNode");
         TypeNode typeNode = it.getTypeNode();
         if (typeNode == null) {
-            throw new RuntimeException("Error: type node should not be null");
+            throw new RuntimeException("[Runtime Error]: type node should not be null");
         }
         typeNode.accept(this);
+
+        if (it.getArrayConstant() != null) {
+            it.getArrayConstant().accept(this);
+            if (!it.getArrayConstant().deduceType(scopeManager).equals(typeNode.getType())) {
+                throw new RuntimeException("[Type Mismatch]: array size should be int");
+            }
+        }
     }
 
     // 访问数组类型
@@ -353,7 +360,11 @@ public class SemanticChecker implements ASTVisitor {
     public void visit(FormattedStringNode it) {
         debug(it, "FormattedStringNode");
         for (ExpressionNode expression : it.getExpressions()) {
-            expression.accept(this);
+            Type deducedType = expression.deduceType(scopeManager);
+            if (deducedType.equals("int") || deducedType.equals("string") || deducedType.equals("bool")) {
+                expression.accept(this);
+            }
+            throw new RuntimeException("[Type Mismatch]: Invalid type in formatted string");
         }
     }
 
@@ -416,7 +427,7 @@ public class SemanticChecker implements ASTVisitor {
         if (condition != null) {
             condition.accept(this);
             if (!condition.deduceType(scopeManager).equals("bool")) {
-                throw new RuntimeException("[Type Mismatch]: for loop condition should be bool");
+                throw new RuntimeException("[Invalid Type]: for loop condition should be bool");
             }
         }
 
@@ -446,7 +457,7 @@ public class SemanticChecker implements ASTVisitor {
         // check condition
         it.getCondition().accept(this);
         if (!it.getCondition().deduceType(scopeManager).equals("bool")) {
-            throw new RuntimeException("[Type Mismatch]: while loop condition should be bool");
+            throw new RuntimeException("[Invalid Type]: while loop condition should be bool");
         }
 
         // check body
