@@ -351,7 +351,7 @@ public class SemanticChecker implements ASTVisitor {
         if (!primaryType.isArray())
             throw new RuntimeException("Error: not an array type");
         if (it.getExpressions().size() > primaryType.getDimension())
-            throw new RuntimeException("Error: array access dimension mismatch");
+            throw new RuntimeException("[Type Mismatch]: array access dimension mismatch");
     }
 
     // 访问格式化字符串
