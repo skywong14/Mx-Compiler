@@ -151,8 +151,7 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
         } else if (ctx.empty_stmt() != null) {
             return new EmptyStmtNode();
         }
-        throw new RuntimeException("Unknown statement type");
-//        return null; // should be unreachable
+        throw new RuntimeException("[Runtime Error]: Unknown statement type");
     }
 
     @Override
@@ -216,7 +215,7 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
                     first_expr,
                     second_expr, (StatementNode) visit(ctx.statement()));
         }
-        throw new RuntimeException("Unknown for_stmt type");
+        throw new RuntimeException("[Runtime Error]: Unknown for_stmt type");
     }
 
     @Override

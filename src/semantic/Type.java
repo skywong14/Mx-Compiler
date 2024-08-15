@@ -50,12 +50,12 @@ public class Type {
     public boolean equals(Type otherType) {
         if (this.equals("null")) {
             if (otherType.is_array) return true;
-            if (otherType.basicType.equals("int") || otherType.basicType.equals("boolean") || otherType.basicType.equals("void")) return false;
+            if (otherType.basicType.equals("int") || otherType.basicType.equals("bool") || otherType.basicType.equals("void")) return false;
             return true;
         }
         if (otherType.equals("null")) {
             if (this.is_array) return true;
-            if (this.basicType.equals("int") || this.basicType.equals("boolean") || this.basicType.equals("void")) return false;
+            if (this.basicType.equals("int") || this.basicType.equals("bool") || this.basicType.equals("void")) return false;
             return true;
         }
         // not null
