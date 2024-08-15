@@ -361,8 +361,9 @@ public class SemanticChecker implements ASTVisitor {
             Type deducedType = expression.deduceType(scopeManager);
             if (deducedType.equals("int") || deducedType.equals("string") || deducedType.equals("bool")) {
                 expression.accept(this);
+            } else {
+                throw new RuntimeException("[Type Mismatch]: Invalid type in formatted string");
             }
-            throw new RuntimeException("[Type Mismatch]: Invalid type in formatted string");
         }
     }
 
