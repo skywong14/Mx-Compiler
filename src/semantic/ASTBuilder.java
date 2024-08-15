@@ -368,7 +368,7 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
             }
             return constantNode;
         }
-        throw new RuntimeException("Unknown constant type:" + ctx.getText());
+        throw new RuntimeException("[Runtime Error] Unknown constant type:" + ctx.getText());
     }
 
     @Override
@@ -412,7 +412,7 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
                         flag = false;
                     }
                     if (children.get(i + 1) instanceof MxParser.ExpressionContext) {
-                        if (!flag) throw new RuntimeException("New array type error");
+                        if (!flag) throw new RuntimeException("[Invalid Identifier] New array type error");
                         expressions.add((ExpressionNode) visit(children.get(i + 1)));
                     }
                 }

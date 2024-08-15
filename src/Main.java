@@ -52,8 +52,10 @@ public class Main {
             debug("Success!");
         } catch (Exception e) {
             // error
-            System.out.println("Error: " + e.getMessage());
-             e.printStackTrace();
+            // 输出e.toString中被第一个中括号包含的内容
+//            System.out.println("Error: " + e.getMessage().split("\\[")[1].split("]")[0]);
+            System.out.println(e.getMessage().split("\\[")[1].split("]")[0]);
+//             e.printStackTrace();
             System.exit(2);
         }
     }
