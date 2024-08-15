@@ -28,7 +28,7 @@ public class Main {
 
             // 语法分析器，将词法分析器的输出转换为语法树
             MxParser parser = new MxParser(new CommonTokenStream(lexer));
-//            parser.removeErrorListeners();
+            // parser.removeErrorListeners();
             parser.addErrorListener(new MxErrorListener());
 
             // 解析程序，生成语法树的根节点
@@ -46,16 +46,15 @@ public class Main {
             ((ProgramNode)programNode).collectSymbol(globalScope);
 
             // 语义分析
-           new SemanticChecker(scopeManager).visit((ProgramNode) programNode);
+            new SemanticChecker(scopeManager).visit((ProgramNode) programNode);
 
             // success
             debug("Success!");
         } catch (Exception e) {
             // error
             // 输出e.toString中被第一个中括号包含的内容
-//            System.out.println("Error: " + e.getMessage().split("\\[")[1].split("]")[0]);
             System.out.println(e.getMessage().split("\\[")[1].split("]")[0]);
-//             e.printStackTrace();
+            // e.printStackTrace();
             System.exit(2);
         }
     }
