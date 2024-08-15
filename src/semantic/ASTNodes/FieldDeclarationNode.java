@@ -14,13 +14,8 @@ public class FieldDeclarationNode extends ASTNode{
     public void addName(String name) {
         names.add(name);
     }
-    public ArrayList<String> getNames() {
-        return names;
-    }
-
-    public TypeNode getType() {
-        return type;
-    }
+    public ArrayList<String> getNames() { return names;  }
+    public TypeNode getTypeNode() { return type; }
 
     @Override
     public void accept(ASTVisitor visitor) {

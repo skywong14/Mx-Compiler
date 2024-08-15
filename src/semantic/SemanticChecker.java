@@ -2,16 +2,28 @@ package semantic;
 
 import semantic.ASTNodes.*;
 
+import java.util.ArrayList;
+import java.util.Objects;
+
 public class SemanticChecker implements ASTVisitor {
     private ScopeManager scopeManager;
-    public SemanticChecker (ScopeManager scopeManager) {
+
+    private void debug(ASTNode node, String s) {
+//        int spaceNum = (scopeManager.getScopeSize() - 1) * 4;
+//        String space = new String(new char[spaceNum]).replace("\0", "  ");
+//        System.out.println(space + node.getClass().getSimpleName() + ": " + s);
+    }
+
+    public SemanticChecker(ScopeManager scopeManager) {
         this.scopeManager = scopeManager;
     }
 
     // 访问根节点
     @Override
-    public void visit(ProgramNode it){
+    public void visit(ProgramNode it) {
         // check if one main function exists
+        debug(it, "ProgramNode");
+
         FunctionNode mainFunction = null;
         if (scopeManager.isFunctionDeclaredInCurrentScope("main")) {
             mainFunction = scopeManager.resolveFunction("main");
@@ -45,38 +57,60 @@ public class SemanticChecker implements ASTVisitor {
     }
 
     // 访问类声明
-    public void visit(ClassNode it){
-        // enter scope
-        scopeManager.enterScope(it.getName());
+    public void visit(ClassNode it) {
+        debug(it, it.getName());
+
+        scopeManager.enterScope("Class_" + it.getName(), it);
+
+        // check fieldNodes
+        for (FieldDeclarationNode field : it.getFieldNodes()) {
+            field.accept(this);
+        }
+
+        // add methods to symbol table
+        for (FunctionNode method : it.getMethodNodes()) {
+            if (scopeManager.isFunctionDeclaredInCurrentScope(method.getName())) {
+                throw new RuntimeException("Error: method [" + method.getName() + "] already declared");
+            }
+            scopeManager.declareFunction(method.getName(), method);
+        }
 
         // check constructorNode
         if (it.getConstructorNode() != null) {
+            if (!it.getName().equals(it.getConstructorNode().getName())) {
+                throw new RuntimeException("Error: constructor name should be the same as class name");
+            }
             it.getConstructorNode().accept(this);
         } else {
             // default constructor
             // doing nothing in semantic check
         }
 
-        // check fieldNodes
-        for (FieldDeclarationNode field : it.getFieldNodes()) {
-            field.accept(this);
-        }
+
         // check methodNodes
         for (FunctionNode method : it.getMethodNodes()) {
             method.accept(this);
         }
+
+        scopeManager.exitScope();
     }
 
     // 访问构造函数
-    public void visit(ConstructorNode it){
+    public void visit(ConstructorNode it) {
+        debug(it, it.getName());
+        // enter scope
+        scopeManager.enterScope("Function_Constructor_" + it.getName(), it);
         // check body
         it.getBody().accept(this);
+
+        scopeManager.exitScope();
     }
 
     // 访问函数声明
     public void visit(FunctionNode it) {
+        debug(it, it.getName());
         // enter scope
-        scopeManager.enterScope(it.getName());
+        scopeManager.enterScope("Function_" + it.getName(), it);
 
         // check parameters
         for (ParameterNode parameter : it.getParameters()) {
@@ -90,12 +124,23 @@ public class SemanticChecker implements ASTVisitor {
             statement.accept(this);
         }
 
+        // check if have return statement
+        if (!it.getReturnType().equals("void")) {
+            if (!it.getBody().hasReturnStatement()) {
+                throw new RuntimeException("Error: function [" + it.getName() + "] should have return statement");
+            }
+        }
         // exit scope
         scopeManager.exitScope();
     }
 
+    public void visit(StatementNode it) {
+        throw new RuntimeException("Error: StatementNode should not be visited");
+    }
+
     // 访问函数调用
     public void visit(FunctionCallNode it) {
+        debug(it, it.getIdentifier());
         // check if function is declared
         if (scopeManager.resolveFunction(it.getIdentifier()) == null) {
             throw new RuntimeException("Error: function [" + it.getIdentifier() + "] not declared");
@@ -104,7 +149,7 @@ public class SemanticChecker implements ASTVisitor {
         // check arguments
         FunctionNode function = scopeManager.resolveFunction(it.getIdentifier());
         ArgListNode argListNode = it.getArgListNode();
-        assert(argListNode != null);
+        assert (argListNode != null);
         // check size
         if (argListNode.getArgList().size() != function.getParameterSize()) {
             throw new RuntimeException("Error: function [" + it.getIdentifier() + "] argument size mismatch");
@@ -122,16 +167,23 @@ public class SemanticChecker implements ASTVisitor {
     }
 
     // 访问变量
-    // public void visit(VariableNode it);
+     public void visit(VariableNode it) {
+        throw new RuntimeException("Error: VariableNode should not be visited");
+     }
 
     // 访问变量声明
     public void visit(VariableDeclarationNode it) {
+        debug(it, "VariableDeclarationNode");
         // check type
         it.getTypeNode().accept(this);
         Type type = it.getType();
+        if (type.basicType.equals("void"))
+            throw new RuntimeException("Error: variable type cannot be void");
+
         for (VariableNode variable : it.getVariableNodes()) {
             if (variable.getValue() != null) {
                 variable.getValue().accept(this);
+                debug(it, "Variable type: " + type.toString() + "; Value type: " + variable.getValue().deduceType(scopeManager).toString());
                 if (!type.equals(variable.getValue().deduceType(scopeManager))) {
                     throw new RuntimeException("Error: type mismatch in variable declaration");
                 }
@@ -141,8 +193,9 @@ public class SemanticChecker implements ASTVisitor {
     }
 
     // 访问复合语句
-    public void visit(CompoundStmtNode it){
-        scopeManager.enterScope();
+    public void visit(CompoundStmtNode it) {
+        debug(it, "CompoundStmtNode");
+        scopeManager.enterScope("{}", it);
         for (StatementNode statement : it.getStatement()) {
             statement.accept(this);
         }
@@ -150,66 +203,384 @@ public class SemanticChecker implements ASTVisitor {
     }
 
     // 访问跳转语句
-    public void visit(JumpStmtNode it);
+    public void visit(JumpStmtNode it) {
+        debug(it, "JumpStmtNode");
+        if (it.getJumpType().equals("return")) {
+            ExpressionNode expressionNode = it.getExpression();
+
+            Type expressionType = null;
+            if (expressionNode != null){
+                expressionNode.accept(this);
+                expressionType = expressionNode.deduceType(scopeManager);
+            } else {
+                expressionType = new Type("void");
+            }
+
+            // check if in function
+            if (!scopeManager.isInFunction()) {
+                throw new RuntimeException("Error: return statement not in function");
+            }
+            // check return type
+            // todo
+            FunctionNode function = scopeManager.getCurrentFunction();
+            if (!function.getReturnType().equals(expressionType)) {
+                debug(it, "Return type: " + expressionType + " Expected: " + function.getReturnType());
+                throw new RuntimeException("Error: return type mismatch");
+            }
+        } else if (it.getJumpType().equals("break") || it.getJumpType().equals("continue")) {
+            // check if in loop
+            if (!scopeManager.isInLoop()) {
+                throw new RuntimeException("Error: break/continue statement not in loop");
+            }
+        } else
+            throw new RuntimeException("Error: unknown jump statement");
+    }
+
+    // 访问成员访问
+    public void visit(MemberAccessNode it) {
+        debug(it, "MemberAccessNode");
+        // todo array and string
+        ExpressionNode expression = it.getPrimaryExpression();
+
+        expression.accept(this);
+
+        Type primaryType = expression.deduceType(scopeManager);
+
+        if (it.isMethod()) {
+            if (primaryType.isArray()) {
+                if (it.getIdentifier().equals("size")) {
+                    if (!it.getArgListNode().getArgList().isEmpty())
+                        throw new RuntimeException("Error: array size does not have arguments");
+                    return;
+                } else {
+                    throw new RuntimeException("Error: array type does not have member access except size");
+                }
+            }
+            ClassNode classNode = scopeManager.resolveClass(primaryType.getBasicType());
+            FunctionNode functionNode = classNode.getMethod(it.getIdentifier());
+            // check argList type
+            assert (it.getArgListNode() != null);
+            ArrayList<ExpressionNode> argList = it.getArgListNode().getArgList();
+            if (argList.size() != functionNode.getParameterSize())
+                throw new RuntimeException("Error: function [" + it.getIdentifier() + "] argument size mismatch");
+            for (int i = 0; i < argList.size(); i++) {
+                ExpressionNode arg = argList.get(i);
+
+                arg.accept(this);
+
+                if (!arg.deduceType(scopeManager).equals(functionNode.getParameters().get(i).getType())) {
+                    throw new RuntimeException("Error: function [" + it.getIdentifier() + "] argument type mismatch");
+                }
+            }
+        } else {
+            if (primaryType.isArray())
+                throw new RuntimeException("Array type does not have field access");
+            ClassNode classNode = scopeManager.resolveClass(expression.deduceType(scopeManager).getBasicType());
+            classNode.getField(it.getIdentifier());
+        }
+    }
 
     // 访问条件语句
-    public void visit(IfStatementNode it);
+    public void visit(IfStatementNode it) {
+        debug(it, "IfStatementNode");
+        it.getCondition().accept(this);
+        if (!it.getCondition().deduceType(scopeManager).equals("bool")) {
+            throw new RuntimeException("Error: if condition should be bool");
+        }
+
+        scopeManager.enterScope("If", it);
+        it.getIfStatement().accept(this);
+        scopeManager.exitScope();
+
+        if (it.getElseStatement() != null) {
+            scopeManager.enterScope("If_Else", it);
+            it.getElseStatement().accept(this);
+            scopeManager.exitScope();
+        }
+    }
 
     // 访问常量表达式
-    public void visit(ConstantNode it);
+    public void visit(ConstantNode it) {
+        // do nothing
+        debug(it, "ConstantNode");
+    }
 
     // 访问表达式
-    // public void visit(ExpressionNode it);
+    public void visit(ExpressionNode it){
+        throw new RuntimeException("Error: ExpressionNode should not be visited");
+    }
 
-    // 访问主表达式
-    // public void visit(PrimaryExpressionNode it);
+    // 访问Primary表达式
+    public void visit(PrimaryExpressionNode it) {
+        throw new RuntimeException("Error: PrimaryExpressionNode should not be visited");
+    }
 
     // 访问new表达式
-    public void visit(NewExprNode it);
+    public void visit(NewExprNode it) {
+        debug(it, "NewExprNode");
+        TypeNode typeNode = it.getTypeNode();
+        if (typeNode == null) {
+            throw new RuntimeException("Error: type node should not be null");
+        }
+        typeNode.accept(this);
+    }
 
     // 访问数组类型
-    public void visit(ArrayAccessNode it);
+    public void visit(ArrayAccessNode it) {
+        debug(it, "ArrayAccessNode");
+
+        for (ExpressionNode expression : it.getExpressions()) {
+
+            expression.accept(this);
+
+            if (!expression.deduceType(scopeManager).equals("int"))
+                throw new RuntimeException("Error: array index should be int");
+        }
+
+        ExpressionNode expression = it.getPrimaryExpression();
+
+        expression.accept(this);
+
+        Type primaryType = expression.deduceType(scopeManager);
+
+        if (!primaryType.isArray())
+            throw new RuntimeException("Error: not an array type");
+        if (it.getExpressions().size() > primaryType.getDimension())
+            throw new RuntimeException("Error: array access dimension mismatch");
+    }
 
     // 访问格式化字符串
     public void visit(FormattedStringNode it) {
+        debug(it, "FormattedStringNode");
         for (ExpressionNode expression : it.getExpressions()) {
             expression.accept(this);
         }
     }
 
     // 访问形参
-    public void visit(ParameterNode it);
+    public void visit(ParameterNode it) {
+        debug(it, "ParameterNode");
+        it.getTypeNode().accept(this);
+    }
     // 访问形参列表
-    public void visit(ParameterListNode it);
+     public void visit(ParameterListNode it) {
+        throw new RuntimeException("Error: ParameterListNode should not be visited");
+     }
 
-    // 访问实参
-    public void visit(ArgNode it);
     // 访问实参列表
-    public void visit(ArgListNode it);
+    public void visit(ArgListNode it){
+        // should not be visited, look at FunctionCall and MethodCall
+        throw new RuntimeException("Error: ArgListNode should not be visited");
+    }
 
     // 访问标识符
-    // public void visit(IdentifierNode it);
+    public void visit(IdentifierNode it) {
+        debug(it, it.getName());
+        // doing nothing
+    }
 
     // 访问类型
     public void visit(TypeNode it) {
+        debug(it, it.getType().toString());
         // check if type is declared
-        if (!scopeManager.isTypeDeclared(it.getType())) {
-            throw new RuntimeException("Error: type " + it.getType() + " not declared");
+        if (!scopeManager.isTypeDeclared(it.getType().getBasicType())) {
+            throw new RuntimeException("Error: type " + it.getType().getBasicType() + " not declared");
+        }
+        // check if array size is valid
+        for (ExpressionNode expression : it.getExpressions()) {
+            expression.accept(this);
+            if (!expression.deduceType(scopeManager).equals("int")) {
+                throw new RuntimeException("Error: array size should be int");
+            }
         }
     }
 
     // EmptyStmt
-    public void visit(EmptyStmtNode it);
+    public void visit(EmptyStmtNode it) {
+        // do nothing
+        debug(it, "EmptyStmtNode");
+    }
 
     // ForStmt
-    public void visit(ForStmtNode it);
+    public void visit(ForStmtNode it) {
+        debug(it, "ForStmtNode");
+        scopeManager.enterScope("Loop", it);
+
+        // check init
+        StatementNode init = it.getInit();
+        assert(init != null);
+        init.accept(this);
+
+        // check condition
+        ExpressionNode condition = it.getCondition();
+        if (condition != null) {
+            condition.accept(this);
+            if (!condition.deduceType(scopeManager).equals("bool")) {
+                throw new RuntimeException("Error: for loop condition should be bool");
+            }
+        }
+
+        // check update
+        if (it.getStep() != null) {
+            it.getStep().accept(this);
+        }
+
+        // check body
+        StatementNode body = it.getBody();
+        if (body instanceof CompoundStmtNode) {
+            for (StatementNode statement : ((CompoundStmtNode) body).getStatement()) {
+                statement.accept(this);
+            }
+        } else {
+            body.accept(this);
+        }
+
+        scopeManager.exitScope();
+    }
 
     // WhileStmt
-    public void visit(WhileStmtNode it);
+    public void visit(WhileStmtNode it) {
+        debug(it, "WhileStmtNode");
+        scopeManager.enterScope("Loop", it);
+
+        // check condition
+        it.getCondition().accept(this);
+        if (!it.getCondition().deduceType(scopeManager).equals("bool")) {
+            throw new RuntimeException("Error: while loop condition should be bool");
+        }
+
+        // check body
+        StatementNode body = it.getBody();
+        if (body instanceof CompoundStmtNode) {
+            for (StatementNode statement : ((CompoundStmtNode) body).getStatement()) {
+                statement.accept(this);
+            }
+        } else {
+            body.accept(this);
+        }
+
+        scopeManager.exitScope();
+    }
 
     // ExpressionStmt
-    public void visit(ExpressionStmtNode it);
+    public void visit(ExpressionStmtNode it) {
+        debug(it, "ExpressionStmtNode");
+        it.getExpression().accept(this);
+    }
 
     // FieldDeclaration
-    public void visit(FieldDeclarationNode it);
+    public void visit(FieldDeclarationNode it) {
+        debug(it, "FieldDeclarationNode");
+        TypeNode typeNode = it.getTypeNode();
+        if (typeNode.getType().basicType.equals("void"))
+            throw new RuntimeException("Error: variable type cannot be void");
+        typeNode.accept(this);
+        for (String name : it.getNames()) {
+            scopeManager.declareVariable(name, new VariableNode(typeNode, name));
+        }
+    }
+
+    // UnaryExpr
+    public void visit(UnaryExprNode it) {
+        debug(it, "UnaryExprNode");
+        String operator = it.getOperator();
+        boolean leftOp = it.isLeftOp();
+        ExpressionNode expressionNode = it.getExpression();
+
+        expressionNode.accept(this);
+
+        if (operator.equals("--") || operator.equals("++")) {
+            if (!expressionNode.isLeftValue())
+                throw new RuntimeException("Error: left operator should be left value");
+        }
+
+        if (operator.equals("--") || operator.equals("++") || operator.equals("-") || operator.equals("+") || operator.equals("~")) {
+            if (!expressionNode.deduceType(scopeManager).equals("int"))
+                throw new RuntimeException("Type error: " + operator + " cannot be applied to " + expressionNode.deduceType(scopeManager));
+        } else if (operator.equals("!")) {
+            if (!expressionNode.deduceType(scopeManager).equals("bool"))
+                throw new RuntimeException("Type error: " + operator + " cannot be applied to " + expressionNode.deduceType(scopeManager));
+        } else
+            throw new RuntimeException("Type error: unknown operator at Unary: " + operator);
+    }
+
+    // BinaryExpr
+    public void visit(BinaryExprNode it) {
+        debug(it, "BinaryExprNode");
+        String operator = it.getOperator();
+        ExpressionNode left = it.getLeft();
+        ExpressionNode right = it.getRight();
+
+        left.accept(this);
+        right.accept(this);
+
+        Type leftType = left.deduceType(scopeManager);
+        Type rightType = right.deduceType(scopeManager);
+
+        if (!leftType.equals(rightType))
+            throw new RuntimeException("Binary expression type mismatch, left: " + leftType.toString() + ", right: " + rightType.toString());
+
+        if (Objects.equals(operator, "+") || Objects.equals(operator, "<") || Objects.equals(operator, ">")
+                || Objects.equals(operator, "<=") || Objects.equals(operator, ">=")) {
+            if (!leftType.equals("int") && !leftType.equals("string"))
+                throw new RuntimeException("Binary expression(+ < > <= >=) type should be int or string, but received: " + leftType.toString());
+            return;
+        }
+
+        if (Objects.equals(operator, "-") ||
+                Objects.equals(operator, "*") || Objects.equals(operator, "/") || Objects.equals(operator, "%")) {
+            if (!leftType.equals("int"))
+                throw new RuntimeException("Binary expression(-*/%) type should be int, but received: " + leftType.toString());
+            return;
+        }
+        if (Objects.equals(operator, "&") || Objects.equals(operator, "^") || Objects.equals(operator, "|")) {
+            if (!leftType.equals("int"))
+                throw new RuntimeException("Binary expression(+-*/%) type should be int, but received: " + leftType.toString());
+            return;
+        }
+        if (Objects.equals(operator, "==") || Objects.equals(operator, "!=")){
+            return;
+        }
+        if (Objects.equals(operator, "&&") || Objects.equals(operator, "||")){
+            if (!leftType.equals("bool"))
+                throw new RuntimeException("Binary expression(&&,||) type should be bool, but received: " + leftType.toString());
+            return;
+        }
+        if (Objects.equals(operator, "<<") || Objects.equals(operator, ">>")) {
+            if (!leftType.equals("int"))
+                throw new RuntimeException("Binary expression(<<,>>) type should be int, but received: " + leftType.toString());
+            return;
+        }
+        if (Objects.equals(operator, "=")) {
+            // 函数的形参变量 / 全局变量和局部变量 / 类的一个成员 / 数组对象的一个元素
+            // this 指针作为左值视为语法错误 / 常量作为左值视为语法错误
+            if (rightType.equals("void"))
+                throw new RuntimeException("Error: right value should not be void");
+            if (!left.isLeftValue()) {
+                debug(it, "Left value: " + leftType.toString());
+                debug(it, "Right value: " + rightType.toString());
+                throw new RuntimeException("Error: left value should be assignable");
+            }
+            return;
+        }
+        throw new RuntimeException("Unknown operator at BinaryExpr: " + operator);
+    }
+
+    // TernaryExpr
+    public void visit(TernaryExprNode it) {
+        debug(it, "TernaryExprNode");
+        ExpressionNode condition = it.getCondition();
+        ExpressionNode trueExpr = it.getTrueExpr();
+        ExpressionNode falseExpr = it.getFalseExpr();
+
+        condition.accept(this);
+        trueExpr.accept(this);
+        falseExpr.accept(this);
+
+        if (!condition.deduceType(scopeManager).equals("bool"))
+            throw new RuntimeException("Error: condition in ternary expression should be bool");
+
+        if (!trueExpr.deduceType(scopeManager).equals(falseExpr.deduceType(scopeManager)))
+            throw new RuntimeException("Error: type mismatch in ternary expression");
+    }
 }

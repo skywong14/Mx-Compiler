@@ -34,7 +34,7 @@ statement
 empty_stmt: ';';
 
 while_stmt: 'while' '(' expression ')' statement;
-for_stmt: 'for' '(' (empty_stmt | expression_stmt | variable_declaration) expression ';' (expression)? ')' statement;
+for_stmt: 'for' '(' (empty_stmt | expression_stmt | variable_declaration) (contdition_expr = expression)? ';' (step_expr = expression)? ')' statement;
 
 
 jump_stmt: break_stmt | continue_stmt | return_stmt;
@@ -64,40 +64,45 @@ arglist : expression (',' expression)*;
 
 //--------------------expression--------------------
 expression
-    : primary_expression
-    | '(' expression ')'
-    | <assoc = right> opLeft = ('~' | '!') expression
-    | <assoc = right> opLeft = ('-' | '+') expression
-    | <assoc = right> opLeft = ('++' | '--') expression
-    | expression op = ('++' | '--')
-    | expression op = ('*' | '/' | '%') expression
-    | expression op = ('+' | '-') expression
-    | expression op = ('<<' | '>>') expression
-    | expression op = ('<' | '>' | '<=' | '>=') expression
-    | expression op = ('==' | '!=') expression
-    | expression op = '&' expression
-    | expression op = '^' expression
-    | expression op = '|' expression
-    | expression op = '&&' expression
-    | expression op = '||' expression
-    | <assoc = right> expression op = '?' expression ':' expression
-    | expression op = '=' expression
+    : primary_expression                                        # expression_primary
+    | IDENTIFIER '(' arglist? ')'                               # primary_function_call
+    | expression ('[' expression ']')+                          # array_access
+    | expression '.' IDENTIFIER                                 # member_access
+    | expression '.' IDENTIFIER '(' arglist? ')'                # member_function_call
+    | '(' expression ')'                                        # expression_parenthesis
+    | expression op = ('++' | '--')                             # unaryExpression
+    | <assoc = right> opLeft = ('++' | '--') expression         # unaryExpression
+    | <assoc = right> opLeft = ('~' | '!') expression           # unaryExpression
+    | <assoc = right> opLeft = ('-' | '+') expression           # unaryExpression
+    | expression op = ('*' | '/' | '%') expression              # binaryExpression
+    | expression op = ('+' | '-') expression                    # binaryExpression
+    | expression op = ('<<' | '>>') expression                  # binaryExpression
+    | expression op = ('<' | '>' | '<=' | '>=') expression      # binaryExpression
+    | expression op = ('==' | '!=') expression                  # binaryExpression
+    | expression op = '&' expression                            # binaryExpression
+    | expression op = '^' expression                            # binaryExpression
+    | expression op = '|' expression                            # binaryExpression
+    | expression op = '&&' expression                           # binaryExpression
+    | expression op = '||' expression                           # binaryExpression
+    | <assoc = right> expression op = '?' expression ':' expression # ternaryExpression
+    | <assoc = right> expression op = '=' expression                # assignExpression
     ;
 primary_expression
-    : formatted_string
-    | 'this'
-    | constant
-    | IDENTIFIER
-    | IDENTIFIER '(' arglist? ')'
-    | primary_expression ('[' expression ']')+ // array access
-    | primary_expression '.' IDENTIFIER
-    | primary_expression '.' IDENTIFIER '(' arglist? ')'
-    | new_expression
+    : formatted_string              # primary_formatted_string
+    | 'this'                        # primary_this
+    | new_expression                # primary_new
+    | constant                      # primary_constant
+    | IDENTIFIER                    # primary_identifier
     ;
 new_expression
-    : 'new' array_type
+    : 'new' new_array_type
     | 'new' IDENTIFIER ('(' ')')?
     ;
+
+new_array_type
+    : basic_type ('[' expression? ']')+
+    ;
+
 array_type
     : basic_type ('[' expression ']')+ ( '[' ']' )*
     | basic_type ('[' ']')+

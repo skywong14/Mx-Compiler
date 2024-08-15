@@ -18,22 +18,20 @@ public class UnaryExprNode extends ExpressionNode{
         return operator;
     }
 
+    public boolean isLeftOp() { return LeftOp; }
+
     public ExpressionNode getExpression() {
         return expression;
     }
 
     @Override
     public Type deduceType(ScopeManager scopeManager) {
-        // todo : if ! and ~ must be boolean
-        if (operator.equals("--") || operator.equals("++") || operator.equals("-") || operator.equals("+")) {
-            if (!expression.deduceType(scopeManager).equals("int"))
-                throw new RuntimeException("Type error: " + operator + " cannot be applied to " + expression.deduceType(scopeManager));
-        }
-        if (operator.equals("!")) {
-            if (!expression.deduceType(scopeManager).equals("boolean"))
-                throw new RuntimeException("Type error: " + operator + " cannot be applied to " + expression.deduceType(scopeManager));
-        }
         return expression.deduceType(scopeManager);
+    }
+
+    @Override
+    public boolean isLeftValue() {
+        return LeftOp && (operator.equals("++") || operator.equals("--")) && expression.isLeftValue();
     }
 
     @Override

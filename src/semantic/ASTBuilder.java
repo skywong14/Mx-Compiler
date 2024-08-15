@@ -54,6 +54,22 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
     }
 
     @Override
+    public ASTNode visitParameter_list(MxParser.Parameter_listContext ctx) {
+        ParameterListNode parameterListNode = new ParameterListNode();
+        for (ParseTree child : ctx.children) {
+            if (child instanceof MxParser.ParameterContext) {
+                parameterListNode.addParameter((ParameterNode) visit(child));
+            }
+        }
+        return parameterListNode;
+    }
+
+    @Override
+    public ASTNode visitParameter(MxParser.ParameterContext ctx) {
+        return new ParameterNode(ctx.IDENTIFIER().toString(), (TypeNode) visit(ctx.type()));
+    }
+
+    @Override
     public ASTNode visitClass_declaration(MxParser.Class_declarationContext ctx) {
         ClassNode classNode = new ClassNode(ctx.IDENTIFIER().toString());
 
@@ -61,9 +77,9 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
             if (child instanceof MxParser.Field_declrationContext) {
                 classNode.addField((FieldDeclarationNode) visit(child));
             } else if (child instanceof MxParser.Function_declarationContext) {
-                classNode.addConstructor((ConstructorNode) visit(child));
-            } else if (child instanceof MxParser.Constructor_declarationContext) {
                 classNode.addMethod((FunctionNode) visit(child));
+            } else if (child instanceof MxParser.Constructor_declarationContext) {
+                classNode.addConstructor((ConstructorNode) visit(child));
             }
         }
         return classNode;
@@ -182,20 +198,22 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
 
     @Override
     public ASTNode visitFor_stmt(MxParser.For_stmtContext ctx) {
-        // for_stmt: 'for' '(' (empty_stmt | expression_stmt | variable_declaration) expression ';' (expression)? ')' statement;
-        ExpressionNode second_expr = null;
-        if (ctx.expression().size() == 2)
-            second_expr = (ExpressionNode) visit(ctx.expression(1));
+        // for_stmt: 'for' '(' (empty_stmt | expression_stmt | variable_declaration) (expression)? ';' (expression)? ')' statement;
+        ExpressionNode first_expr = null, second_expr = null;
+        if (ctx.contdition_expr != null)
+            first_expr = (ExpressionNode) visit(ctx.contdition_expr);
+        if (ctx.step_expr != null)
+            second_expr = (ExpressionNode) visit(ctx.step_expr);
         if (ctx.empty_stmt() != null){
-            return new ForStmtNode(new EmptyStmtNode(), (ExpressionNode) visit(ctx.expression(0)),
+            return new ForStmtNode(new EmptyStmtNode(), first_expr,
                        second_expr, (StatementNode) visit(ctx.statement()));
         } else if (ctx.expression_stmt() != null) {
             return new ForStmtNode((ExpressionStmtNode) visit(ctx.expression_stmt()),
-                    (ExpressionNode) visit(ctx.expression(0)),
+                    first_expr,
                     second_expr, (StatementNode) visit(ctx.statement()));
         } else if (ctx.variable_declaration() != null) {
             return new ForStmtNode((VariableDeclarationNode) visit(ctx.variable_declaration()),
-                    (ExpressionNode) visit(ctx.expression(0)),
+                    first_expr,
                     second_expr, (StatementNode) visit(ctx.statement()));
         }
         throw new RuntimeException("Unknown for_stmt type");
@@ -212,7 +230,7 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
         VariableDeclarationNode variable = new VariableDeclarationNode(type);
         for (ParseTree child : ctx.variable_declaration_list().children) {
             if (child instanceof MxParser.Single_variable_declarationContext child_ctx) {
-                if (((MxParser.Single_variable_declarationContext) child).expression() != null) {
+                if (child_ctx.expression() != null) {
                     variable.addVariable(child_ctx.IDENTIFIER().toString(), (ExpressionNode) visit(child_ctx.expression()));
                 } else {
                     variable.addVariable(child_ctx.IDENTIFIER().toString(), null);
@@ -228,97 +246,119 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
     }
 
     @Override
-    public ASTNode visitExpression(MxParser.ExpressionContext ctx) {
-        if (ctx.primary_expression() != null) {
-            return visit(ctx.primary_expression());
-        }
-        if (ctx.LeftParen() != null && ctx.RightParen() != null) {
-            return visit(ctx.expression().getFirst());
-        }
-
-        if (ctx.opLeft != null) {
-            if (ctx.opLeft.getText().equals("~") || ctx.opLeft.getText().equals("!")) {
-                return new UnaryExprNode(ctx.opLeft.getText(), (ExpressionNode) visit(ctx.expression().getFirst()), true);
-            } else if (ctx.opLeft.getText().equals("-") || ctx.opLeft.getText().equals("+")) {
-                return new UnaryExprNode(ctx.opLeft.getText(), (ExpressionNode) visit(ctx.expression().getFirst()), true);
-            } else if (ctx.opLeft.getText().equals("++") || ctx.opLeft.getText().equals("--")) {
-                return new UnaryExprNode(ctx.opLeft.getText(), (ExpressionNode) visit(ctx.expression().getFirst()), true);
-            }
-        }
-        if (ctx.op != null) {
-            if (ctx.op.getText().equals("++") || ctx.op.getText().equals("--")) {
-                return new UnaryExprNode(ctx.op.getText(), (ExpressionNode) visit(ctx.expression().get(0)), false);
-            } else if (ctx.op.getText().equals("?")) {
-                // TernaryExprNode
-                return new TernaryExprNode((ExpressionNode) visit(ctx.expression().get(0)),
-                        (ExpressionNode) visit(ctx.expression().get(1)),
-                        (ExpressionNode) visit(ctx.expression().get(2)));
-            } else {
-                return new BinaryExprNode(ctx.op.getText(), (ExpressionNode) visit(ctx.expression().get(0)),
-                        (ExpressionNode) visit(ctx.expression().get(1)));
-            }
-        }
-        throw new RuntimeException("Unknown expression type");
+    public ASTNode visitUnaryExpression(MxParser.UnaryExpressionContext ctx) {
+        if (ctx.opLeft != null)
+            return new UnaryExprNode(ctx.opLeft.getText(), (ExpressionNode) visit(ctx.expression()), true);
+        return new UnaryExprNode(ctx.op.getText(), (ExpressionNode) visit(ctx.expression()), false);
     }
 
     @Override
-    public ASTNode visitPrimary_expression(MxParser.Primary_expressionContext ctx) {
+    public ASTNode visitExpression_primary(MxParser.Expression_primaryContext ctx) {
+        return visit(ctx.primary_expression());
+    }
 
-        if (ctx.formatted_string() != null) {
-            // formatted_string
-            return visit(ctx.formatted_string());
-        } else if (ctx.This() != null) {
-            // this
-            return new IdentifierNode(ctx.IDENTIFIER().toString());
-        } else if (ctx.constant() != null) {
-            // constant
-            return visit(ctx.constant());
-        } else if (ctx.IDENTIFIER() != null && ctx.LeftParen() == null && ctx.RightParen() == null) {
-            // IDENTIFIER (variable)
-            return new IdentifierNode(ctx.IDENTIFIER().toString());
-        } else if (ctx.IDENTIFIER() != null && ctx.LeftParen() != null && ctx.RightParen() != null) {
-            // function_call or method_call
-            if (ctx.arglist() != null)
-                return new FunctionCallNode(ctx.IDENTIFIER().toString(), (ArgListNode) visit(ctx.arglist()));
-            else
-                return new FunctionCallNode(ctx.IDENTIFIER().toString(), new ArgListNode());
-        } else if (ctx.LeftBracket() != null) {
-            // array_access
-            ArrayAccessNode arrayAccessNode = new ArrayAccessNode((PrimaryExpressionNode) visit(ctx.primary_expression()));
-            for (ParseTree child : ctx.children) {
-                if (child instanceof MxParser.ExpressionContext) {
-                    arrayAccessNode.addExpression((ExpressionNode) visit(child));
-                }
-            }
-        } else if (ctx.Dot() != null) {
-            // member_access
-            if (ctx.LeftParen() != null) {
-                // method_call
-                if (ctx.arglist() != null)
-                    return new MemberAccessNode((PrimaryExpressionNode) visit(ctx.primary_expression()), ctx.IDENTIFIER().toString(), true, (ArgListNode) visit(ctx.arglist()));
-                else
-                    return new MemberAccessNode((PrimaryExpressionNode) visit(ctx.primary_expression()), ctx.IDENTIFIER().toString(), true, null);
-            } else {
-                // member_access
-                return new MemberAccessNode((PrimaryExpressionNode) visit(ctx.primary_expression()), ctx.IDENTIFIER().toString(), false, null);
-            }
-        } else if (ctx.new_expression() != null) {
-            // new_expression
-            return visit(ctx.new_expression());
+    @Override
+    public ASTNode visitExpression_parenthesis(MxParser.Expression_parenthesisContext ctx) {
+        return visit(ctx.expression());
+    }
+
+    @Override
+    public ASTNode visitBinaryExpression(MxParser.BinaryExpressionContext ctx) {
+        return new BinaryExprNode(ctx.op.getText(), (ExpressionNode) visit(ctx.expression(0)), (ExpressionNode) visit(ctx.expression(1)));
+    }
+
+    @Override
+    public ASTNode visitTernaryExpression(MxParser.TernaryExpressionContext ctx) {
+        return new TernaryExprNode((ExpressionNode) visit(ctx.expression(0)),
+                (ExpressionNode) visit(ctx.expression(1)),
+                (ExpressionNode) visit(ctx.expression(2)));
+    }
+
+    @Override
+    public ASTNode visitAssignExpression(MxParser.AssignExpressionContext ctx) {
+        // todo modify
+        return new BinaryExprNode("=", (ExpressionNode) visit(ctx.expression(0)), (ExpressionNode) visit(ctx.expression(1)));
+    }
+
+    @Override
+    public ASTNode visitPrimary_formatted_string(MxParser.Primary_formatted_stringContext ctx) {
+        return visit(ctx.formatted_string());
+    }
+
+    @Override
+    public ASTNode visitPrimary_this(MxParser.Primary_thisContext ctx) {
+        return new IdentifierNode("this");
+    }
+
+    @Override
+    public ASTNode visitPrimary_new(MxParser.Primary_newContext ctx) {
+        return visit(ctx.new_expression());
+    }
+
+    @Override
+    // primary_constant
+    public ASTNode visitPrimary_constant(MxParser.Primary_constantContext ctx) {
+        return visit(ctx.constant());
+    }
+
+    @Override
+    public ASTNode visitPrimary_identifier(MxParser.Primary_identifierContext ctx) {
+        return new IdentifierNode(ctx.IDENTIFIER().toString());
+    }
+
+    @Override
+    public ASTNode visitPrimary_function_call(MxParser.Primary_function_callContext ctx) {
+        if (ctx.arglist() != null)
+            return new FunctionCallNode(ctx.IDENTIFIER().toString(), (ArgListNode) visit(ctx.arglist()));
+        else
+            return new FunctionCallNode(ctx.IDENTIFIER().toString(), new ArgListNode());
+    }
+
+    @Override
+    public ASTNode visitArray_access(MxParser.Array_accessContext ctx) {
+        ArrayAccessNode arrayAccessNode = new ArrayAccessNode((ExpressionNode) visit(ctx.expression(0)));
+        int sz = ctx.expression().size();
+        for (int i = 1; i < sz; i++) {
+            arrayAccessNode.addExpression((ExpressionNode) visit(ctx.expression(i)));
         }
-        throw new RuntimeException("Unknown primary_expression type");
+        return arrayAccessNode;
+    }
+
+    @Override
+    public ASTNode visitMember_access(MxParser.Member_accessContext ctx) {
+        return new MemberAccessNode((ExpressionNode) visit(ctx.expression()), ctx.IDENTIFIER().toString(), false, new ArgListNode());
+    }
+
+    @Override
+    // member_function_call
+    public ASTNode visitMember_function_call(MxParser.Member_function_callContext ctx) {
+        if (ctx.arglist() != null)
+            return new MemberAccessNode((ExpressionNode) visit(ctx.expression()), ctx.IDENTIFIER().toString(), true, (ArgListNode) visit(ctx.arglist()));
+        else
+            return new MemberAccessNode((ExpressionNode) visit(ctx.expression()), ctx.IDENTIFIER().toString(), true, new ArgListNode());
+    }
+
+    @Override
+    public ASTNode visitArglist(MxParser.ArglistContext ctx) {
+        ArgListNode argListNode = new ArgListNode();
+        for (ParseTree child : ctx.children) {
+            if (child instanceof MxParser.ExpressionContext) {
+                argListNode.addExpression((ExpressionNode) visit(child));
+            }
+        }
+        return argListNode;
     }
 
     @Override
     public ASTNode visitConstant(MxParser.ConstantContext ctx) {
         if (ctx.integerConstant() != null) {
-            return new ConstantNode(ctx.integerConstant().toString(), false);
+            return new ConstantNode(ctx.getText(), false);
         } else if (ctx.booleanConstant() != null) {
-            return new ConstantNode(ctx.booleanConstant().toString(), false);
+            return new ConstantNode(ctx.getText(), false);
         } else if (ctx.nullConstant() != null) {
-            return new ConstantNode(ctx.nullConstant().toString(), false);
+            return new ConstantNode(ctx.getText(), false);
         } else if (ctx.stringConstant() != null) {
-            return new ConstantNode(ctx.stringConstant().toString(), false);
+            return new ConstantNode(ctx.getText(), false);
         } else if (ctx.arrayConstant() != null) {
             ConstantNode constantNode = new ConstantNode("", true);
             for (ParseTree child : ctx.arrayConstant().children) {
@@ -326,8 +366,9 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
                     constantNode.addConstant((ConstantNode) visit(child));
                 }
             }
+            return constantNode;
         }
-        throw new RuntimeException("Unknown constant type");
+        throw new RuntimeException("Unknown constant type:" + ctx.getText());
     }
 
     @Override
@@ -356,10 +397,34 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
 
     @Override
     public ASTNode visitNew_expression(MxParser.New_expressionContext ctx) {
-        if (ctx.array_type() != null) {
-            return new NewExprNode((TypeNode) visit(ctx.array_type()), null);
+        if (ctx.new_array_type() != null) {
+            //new_array_type : basic_type ('[' expression? ']')+
+
+            ArrayList<ExpressionNode> expressions = new ArrayList<>();
+            int sz = 0;
+            boolean flag = true;
+            MxParser.New_array_typeContext new_array_type = ctx.new_array_type();
+            ArrayList<ParseTree> children = new ArrayList<>(new_array_type.children);
+            for (int i = 1; i < children.size(); i++) {
+                if (children.get(i).getText().equals("[")) {
+                    sz++;
+                    if (children.get(i + 1).getText().equals("]")) {
+                        flag = false;
+                    }
+                    if (children.get(i + 1) instanceof MxParser.ExpressionContext) {
+                        if (!flag) throw new RuntimeException("New array type error");
+                        expressions.add((ExpressionNode) visit(children.get(i + 1)));
+                    }
+                }
+            }
+            Type type = new Type(new_array_type.basic_type().getText(), true, sz);
+            TypeNode typeNode = new TypeNode(type);
+            for (ExpressionNode expression : expressions) {
+                typeNode.addExpression(expression);
+            }
+            return new NewExprNode((TypeNode) typeNode, null);
         } else {
-            return new NewExprNode(null, ctx.IDENTIFIER().toString());
+            return new NewExprNode(new TypeNode(new Type(ctx.IDENTIFIER().toString())), ctx.IDENTIFIER().toString());
         }
     }
 }

@@ -1,5 +1,7 @@
 package semantic.ASTNodes;
 
+import java.util.ArrayList;
+
 public class ForStmtNode extends StatementNode{
     private StatementNode init;
     private ExpressionNode condition;
@@ -11,6 +13,16 @@ public class ForStmtNode extends StatementNode{
         this.condition = condition_;
         this.step = step_;
         this.body = body_;
+    }
+
+    public StatementNode getInit() { return init; }
+    public ExpressionNode getCondition() { return condition; }
+    public ExpressionNode getStep() { return step; }
+    public StatementNode getBody() { return body; }
+
+    @Override
+    public boolean hasReturnStatement() {
+        return body.hasReturnStatement();
     }
 
     @Override

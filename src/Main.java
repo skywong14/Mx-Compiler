@@ -12,9 +12,14 @@ import java.io.FileInputStream;
 import java.io.InputStream;
 
 public class Main {
+    private static void debug(String msg) {
+//        System.out.println("Main: " + msg);
+    }
+
     public static void main(String[] args) throws Exception{
-        String name = "test.mx";
-        InputStream input = new FileInputStream(name);
+//        String name = "test.mx";
+//        InputStream input = new FileInputStream(name);
+        InputStream input = System.in;
         try {
             // 词法分析器，将输入流转换为字符流
             MxLexer lexer = new MxLexer(CharStreams.fromStream(input));
@@ -33,21 +38,23 @@ public class Main {
             ASTBuilder astBuilder = new ASTBuilder();
             ASTNode programNode = astBuilder.visit(parseTreeRoot);
 
+            debug("AST built successfully");
+
             // collect symbol
-            ScopeManager scopeManager = new ScopeManager();
+            ScopeManager scopeManager = new ScopeManager((ProgramNode) programNode);
             GlobalScope globalScope = (GlobalScope) scopeManager.getCurrentScope();
             ((ProgramNode)programNode).collectSymbol(globalScope);
 
             // 语义分析
            new SemanticChecker(scopeManager).visit((ProgramNode) programNode);
 
-
             // success
-            System.out.println("Success");
+            debug("Success!");
         } catch (Exception e) {
             // error
             System.out.println("Error: " + e.getMessage());
-            e.printStackTrace();
+             e.printStackTrace();
+            System.exit(2);
         }
     }
 }

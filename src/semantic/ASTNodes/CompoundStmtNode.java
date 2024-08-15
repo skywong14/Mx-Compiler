@@ -18,6 +18,15 @@ public class CompoundStmtNode extends StatementNode{
     }
 
     @Override
+    public boolean hasReturnStatement() {
+        for (StatementNode statement : statements) {
+            if (statement.hasReturnStatement())
+                return true;
+        }
+        return false;
+    }
+
+    @Override
     public void accept(ASTVisitor visitor) {
         visitor.visit(this);
     }

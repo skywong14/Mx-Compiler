@@ -1,0 +1,6 @@
+.idea
+output_file
+./src/text.mx
+# ignore all the *.class files in all subdirectories
+*.class
+Compiler-Design-Implementation

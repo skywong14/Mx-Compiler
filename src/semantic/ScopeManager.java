@@ -1,27 +1,21 @@
 package semantic;
 
-import semantic.ASTNodes.ClassNode;
-import semantic.ASTNodes.FunctionNode;
-import semantic.ASTNodes.VariableNode;
+import semantic.ASTNodes.*;
 
 import java.util.Stack;
 
 public class ScopeManager {
     private Stack<Scope> scopeStack;
 
-    public ScopeManager() {
+    public ScopeManager(ProgramNode programNode) {
         scopeStack = new Stack<>();
-        GlobalScope globalScope = new GlobalScope();
+        GlobalScope globalScope = new GlobalScope(programNode);
         scopeStack.push(globalScope);
     }
 
 
-    public void enterScope() {
-        enterScope("");
-    }
-
-    public void enterScope(String name) {
-        Scope newScope = new Scope(getCurrentScope(), name);
+    public void enterScope(String name, ASTNode node) {
+        Scope newScope = new Scope(getCurrentScope(), name, node);
         scopeStack.push(newScope);
     }
 
@@ -34,6 +28,8 @@ public class ScopeManager {
     public Scope getCurrentScope() {
         return scopeStack.peek();
     }
+
+    public int getScopeSize() { return scopeStack.size(); }
 
     public void declareVariable(String name, VariableNode node) {
         getCurrentScope().addVariable(name, node);
@@ -70,4 +66,21 @@ public class ScopeManager {
     public boolean isClassDeclaredInCurrentScope(String name) {
         return getCurrentScope().isClassDeclaredInCurrentScope(name);
     }
+
+    public boolean isTypeDeclared(String name) {
+        if (name.equals("int") || name.equals("void") || name.equals("bool") || name.equals("string")) {
+            return true;
+        }
+        return getCurrentScope().getGlobalScope().isClassDeclaredInCurrentScope(name);
+    }
+
+    public boolean isInLoop() { return getCurrentScope().isInLoop(); }
+
+    public boolean isInFunction() { return getCurrentScope().isInFunction(); }
+
+    public boolean isInClass() { return getCurrentScope().isInClass(); }
+
+    public FunctionNode getCurrentFunction() { return getCurrentScope().getCurrentFunction(); }
+
+    public ClassNode getCurrentClass() { return getCurrentScope().getCurrentClass(); }
 }

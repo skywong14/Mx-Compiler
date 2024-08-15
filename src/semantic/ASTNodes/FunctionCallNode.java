@@ -3,7 +3,7 @@ package semantic.ASTNodes;
 import semantic.ScopeManager;
 import semantic.Type;
 
-public class FunctionCallNode extends PrimaryExpressionNode{
+public class FunctionCallNode extends ExpressionNode{
     private String identifier;
     private ArgListNode argListNode;
 
@@ -19,6 +19,11 @@ public class FunctionCallNode extends PrimaryExpressionNode{
     public Type deduceType(ScopeManager scopeManager) {
         FunctionNode functionNode = scopeManager.resolveFunction(identifier);
         return functionNode.getReturnType();
+    }
+
+    @Override
+    public boolean isLeftValue() {
+        return false;
     }
 
     @Override

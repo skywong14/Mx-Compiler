@@ -4,7 +4,7 @@ import semantic.Type;
 
 import java.util.ArrayList;
 
-public class TypeNode extends StatementNode {
+public class TypeNode extends ASTNode {
     private Type type;
     private ArrayList<ExpressionNode> expressions; // size of array
 
@@ -17,9 +17,8 @@ public class TypeNode extends StatementNode {
         expressions.add(expression);
     }
 
-    public Type getType() {
-        return type;
-    }
+    public Type getType() { return type; }
+    public ArrayList<ExpressionNode> getExpressions() { return expressions; }
 
     @Override
     public void accept(ASTVisitor visitor) {

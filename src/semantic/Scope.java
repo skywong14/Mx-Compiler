@@ -2,6 +2,7 @@ package semantic;
 
 import java.util.HashMap;
 
+import semantic.ASTNodes.ASTNode;
 import semantic.ASTNodes.ClassNode;
 import semantic.ASTNodes.FunctionNode;
 import semantic.ASTNodes.VariableNode;
@@ -9,25 +10,21 @@ import semantic.ASTNodes.VariableNode;
 public class Scope {
     public Scope parent;
     public String name;
+    ASTNode node;
     private HashMap<String, VariableNode> variableSymbolTable; // 存储变量名及其类型
     private HashMap<String, FunctionNode> functionSymbolTable; // 存储函数名及其返回类型
     private HashMap<String, ClassNode> classSymbolTable;   // 存储类名及其定义
 
-
-    public Scope() {
-        this(null, "");
-    }
-    public Scope(Scope parent) {
-        this(parent, "");
-    }
-    public Scope(Scope parent, String name) {
+    public Scope(Scope parent, String name, ASTNode node) {
         this.parent = parent;
         this.name = name; // for debug
         this.variableSymbolTable = new HashMap<>();
         this.functionSymbolTable = new HashMap<>();
         this.classSymbolTable = new HashMap<>();
+        this.node = node;
     }
 
+    public Scope getParent() { return parent;  }
     public Scope getGlobalScope() {
         Scope current = this;
         while (current.parent != null) {
@@ -95,4 +92,34 @@ public class Scope {
         throw new RuntimeException("Class not found: " + name);
     }
 
+    public boolean isInLoop() {
+        if (parent == null) return false;
+        if (name.equals("Loop")) return true;
+        return parent.isInLoop();
+    }
+
+    public boolean isInFunction() {
+        if (parent == null) return false;
+        /// 如果name以“Function”开头，则说明当前作用域是函数作用域
+        if (name.startsWith("Function")) return true;
+        return parent.isInFunction();
+    }
+
+    public boolean isInClass() {
+        if (parent == null) return false;
+        if (name.startsWith("Class")) return true;
+        return parent.isInClass();
+    }
+
+    public FunctionNode getCurrentFunction() {
+        if (name.startsWith("Function")) return (FunctionNode) node;
+        if (parent == null) return null;
+        return parent.getCurrentFunction();
+    }
+
+    public ClassNode getCurrentClass() {
+        if (name.startsWith("Class")) return (ClassNode) node;
+        if (parent == null) return null;
+        return parent.getCurrentClass();
+    }
 }

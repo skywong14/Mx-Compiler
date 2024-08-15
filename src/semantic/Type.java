@@ -1,5 +1,7 @@
 package semantic;
 
+import java.util.Objects;
+
 public class Type {
     // int, boolean, string, void, class, array
     // string, class, array type are all reference type in fact
@@ -24,6 +26,7 @@ public class Type {
     }
     public boolean isArray() { return is_array; }
     public String getBasicType() { return basicType; }
+    public int getDimension() { return dimension; }
     public Type arrayReference() {
         return new Type(basicType, true, dimension + 1);
     }
@@ -45,6 +48,17 @@ public class Type {
         return res;
     }
     public boolean equals(Type otherType) {
+        if (this.equals("null")) {
+            if (otherType.is_array) return true;
+            if (otherType.basicType.equals("int") || otherType.basicType.equals("boolean") || otherType.basicType.equals("void")) return false;
+            return true;
+        }
+        if (otherType.equals("null")) {
+            if (this.is_array) return true;
+            if (this.basicType.equals("int") || this.basicType.equals("boolean") || this.basicType.equals("void")) return false;
+            return true;
+        }
+        // not null
         if (this.is_array != otherType.is_array) return false;
         if (!this.is_array) return this.basicType.equals(otherType.basicType);
         // is_array

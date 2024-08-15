@@ -18,6 +18,11 @@ public class WhileStmtNode extends StatementNode{
     }
 
     @Override
+    public boolean hasReturnStatement() {
+        return body.hasReturnStatement();
+    }
+
+    @Override
     public void accept(ASTVisitor visitor) {
         visitor.visit(this);
     }

@@ -34,10 +34,15 @@ public class TernaryExprNode extends ExpressionNode{
         if (conditionType.equals("boolean")) {
             throw new RuntimeException("Ternary condition must be of type boolean");
         }
-        if (trueType != falseType) {
-            throw new RuntimeException("Ternary true and false expressions must have the same type");
+        if (!trueType.equals(falseType)) {
+            throw new RuntimeException("Ternary true and false expressions must have the same type, got [" + trueType + "] and [" + falseType + "]");
         }
         return trueType;
+    }
+
+    @Override
+    public boolean isLeftValue() {
+        return false;
     }
 
     @Override

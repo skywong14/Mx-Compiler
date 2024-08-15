@@ -12,15 +12,24 @@ public class NewExprNode extends PrimaryExpressionNode{
         this.identifier = identifier_;
     }
 
+    public Type getType() { return type.getType(); }
+    public TypeNode getTypeNode() { return type; }
+    public String getIdentifier() { return identifier; }
+
     @Override
     public Type deduceType(ScopeManager scopeManager) {
-        if (type != null) {
+        if (identifier == null) {
             // new Array
             return type.getType();
         } else {
             // new Class
             return new Type(identifier);
         }
+    }
+
+    @Override
+    public boolean isLeftValue() {
+        return false;
     }
 
     @Override

@@ -9,7 +9,7 @@ public class ArgListNode extends ASTNode{
         values = new ArrayList<>();
     }
 
-    public void addValue(ExpressionNode value) {
+    public void addExpression(ExpressionNode value) {
         values.add(value);
     }
 

@@ -28,13 +28,12 @@ public class ConstantNode extends PrimaryExpressionNode {
         if (type != null) return type;
 
         if (isArray) {
-            // todo debug
             if (constants.isEmpty()) {
                 type = new Type("null").arrayReference();
                 return type;
             }
             // according to the first element
-            Type atom_type = constants.getFirst().deduceType(scopeManager);
+            Type atom_type = constants.get(0).deduceType(scopeManager);
             Type tmp_type;
             for (int i = 1; i < constants.size(); i++) {
                 tmp_type = constants.get(i).deduceType(scopeManager);
@@ -50,7 +49,7 @@ public class ConstantNode extends PrimaryExpressionNode {
         } else {
             // according to the literal value
             switch (literal_value) {
-                case "true", "false" -> type = new Type("boolean");
+                case "true", "false" -> type = new Type("bool");
                 case "null" -> type = new Type("null");
                 case "this" -> type = new Type("this");
                 case "void" -> type = new Type("void");
@@ -65,6 +64,11 @@ public class ConstantNode extends PrimaryExpressionNode {
             }
         }
         return type;
+    }
+
+    @Override
+    public boolean isLeftValue() {
+        return false;
     }
 
     @Override

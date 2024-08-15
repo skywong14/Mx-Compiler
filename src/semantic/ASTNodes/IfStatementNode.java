@@ -11,6 +11,18 @@ public class IfStatementNode extends StatementNode{
         this.elseStatement = elseStatement_;
     }
 
+    public ExpressionNode getCondition() { return condition; }
+    public StatementNode getIfStatement() { return ifStatement; }
+    public StatementNode getElseStatement() { return elseStatement; }
+
+    @Override
+    public boolean hasReturnStatement() {
+        if (elseStatement != null) {
+            return ifStatement.hasReturnStatement() && elseStatement.hasReturnStatement();
+        }
+        return ifStatement.hasReturnStatement();
+    }
+
     @Override
     public void accept(ASTVisitor visitor) {
         visitor.visit(this);

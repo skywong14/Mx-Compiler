@@ -191,23 +191,122 @@ public interface MxVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitArglist(MxParser.ArglistContext ctx);
 	/**
-	 * Visit a parse tree produced by {@link MxParser#expression}.
+	 * Visit a parse tree produced by the {@code binaryExpression}
+	 * labeled alternative in {@link MxParser#expression}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitExpression(MxParser.ExpressionContext ctx);
+	T visitBinaryExpression(MxParser.BinaryExpressionContext ctx);
 	/**
-	 * Visit a parse tree produced by {@link MxParser#primary_expression}.
+	 * Visit a parse tree produced by the {@code expression_primary}
+	 * labeled alternative in {@link MxParser#expression}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitPrimary_expression(MxParser.Primary_expressionContext ctx);
+	T visitExpression_primary(MxParser.Expression_primaryContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code member_access}
+	 * labeled alternative in {@link MxParser#expression}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitMember_access(MxParser.Member_accessContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code array_access}
+	 * labeled alternative in {@link MxParser#expression}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitArray_access(MxParser.Array_accessContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code member_function_call}
+	 * labeled alternative in {@link MxParser#expression}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitMember_function_call(MxParser.Member_function_callContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code assignExpression}
+	 * labeled alternative in {@link MxParser#expression}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitAssignExpression(MxParser.AssignExpressionContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code primary_function_call}
+	 * labeled alternative in {@link MxParser#expression}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitPrimary_function_call(MxParser.Primary_function_callContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code expression_parenthesis}
+	 * labeled alternative in {@link MxParser#expression}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitExpression_parenthesis(MxParser.Expression_parenthesisContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code unaryExpression}
+	 * labeled alternative in {@link MxParser#expression}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitUnaryExpression(MxParser.UnaryExpressionContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code ternaryExpression}
+	 * labeled alternative in {@link MxParser#expression}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitTernaryExpression(MxParser.TernaryExpressionContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code primary_formatted_string}
+	 * labeled alternative in {@link MxParser#primary_expression}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitPrimary_formatted_string(MxParser.Primary_formatted_stringContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code primary_this}
+	 * labeled alternative in {@link MxParser#primary_expression}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitPrimary_this(MxParser.Primary_thisContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code primary_new}
+	 * labeled alternative in {@link MxParser#primary_expression}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitPrimary_new(MxParser.Primary_newContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code primary_constant}
+	 * labeled alternative in {@link MxParser#primary_expression}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitPrimary_constant(MxParser.Primary_constantContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code primary_identifier}
+	 * labeled alternative in {@link MxParser#primary_expression}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitPrimary_identifier(MxParser.Primary_identifierContext ctx);
 	/**
 	 * Visit a parse tree produced by {@link MxParser#new_expression}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
 	T visitNew_expression(MxParser.New_expressionContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link MxParser#new_array_type}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitNew_array_type(MxParser.New_array_typeContext ctx);
 	/**
 	 * Visit a parse tree produced by {@link MxParser#array_type}.
 	 * @param ctx the parse tree

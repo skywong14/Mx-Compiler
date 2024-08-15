@@ -18,6 +18,11 @@ public class JumpStmtNode extends StatementNode{
     }
 
     @Override
+    public boolean hasReturnStatement() {
+        return jumpType.equals("return");
+    }
+
+    @Override
     public void accept(ASTVisitor visitor) {
         visitor.visit(this);
     }

@@ -41,7 +41,7 @@ public class ClassNode extends ASTNode {
         if (constructorNode.size() > 1) {
             throw new RuntimeException("Multiple constructors not supported!");
         }
-        return constructorNode.getFirst();
+        return constructorNode.get(0);
     }
     public ArrayList<FieldDeclarationNode> getFieldNodes() {
         return fieldNodes;
@@ -67,7 +67,7 @@ public class ClassNode extends ASTNode {
             for (String name : field.getNames()) {
                 if (symbolTable.containsKey(name))
                     throw new RuntimeException("Error: field [" + name + "] already declared");
-                symbolTable.put(name, new VariableNode(field.getType(), name));
+                symbolTable.put(name, new VariableNode(field.getTypeNode(), name));
             }
         for (FunctionNode method : methodNodes) {
             if (symbolTable.containsKey(method.getName()))

@@ -1,20 +1,24 @@
 package semantic.ASTNodes;
 
+import semantic.Type;
+
 import java.util.ArrayList;
 
-public class ConstructorNode extends ASTNode {
-    private String name;
-    private CompoundStmtNode body;
+public class ConstructorNode extends FunctionNode {
+    private String self_name;
+    private CompoundStmtNode self_body;
 
     public ConstructorNode(String name_, CompoundStmtNode body_) {
-        this.name = name_;
-        this.body = body_;
+        super(new TypeNode(new Type("void")), name_,
+                new ParameterListNode(), body_);
+        this.self_name = name_;
+        this.self_body = body_;
     }
 
     public String getName() {
-        return name;
+        return self_name;
     }
-    public CompoundStmtNode getBody() { return body; }
+    public CompoundStmtNode getBody() { return self_body; }
 
     @Override
     public void accept(ASTVisitor visitor) {
