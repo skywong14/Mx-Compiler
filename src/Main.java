@@ -53,6 +53,7 @@ public class Main {
         } catch (Exception e) {
             // error
             // 输出e.toString中被第一个中括号包含的内容
+//            System.out.println("Error: " + e.getMessage());
             System.out.println(e.getMessage().split("\\[")[1].split("]")[0]);
             // e.printStackTrace();
             System.exit(2);

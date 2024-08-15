@@ -32,7 +32,7 @@ public class Type {
     }
     public Type arrayDereference(int n) {
         if (n > dimension) {
-            throw new RuntimeException("Array dereference error");
+            throw new RuntimeException("[Dimension Out Of Bound] Array dereference error");
         }
         if (n == dimension) {
             return new Type(basicType, false, 0);
@@ -68,10 +68,7 @@ public class Type {
             if (!this.basicType.equals(otherType.basicType)) return false;
         }
         // dimension check
-        if (this.dimension != otherType.dimension) {
-            throw new RuntimeException("[Dimension Out Of Bound]: Dimension error");
-        }
-        return true;
+        return this.dimension == otherType.dimension;
     }
     public boolean equals(String basicType) {
         return this.basicType.equals(basicType) && !this.is_array;

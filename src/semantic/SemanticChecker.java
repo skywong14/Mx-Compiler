@@ -127,7 +127,7 @@ public class SemanticChecker implements ASTVisitor {
         // check if have return statement
         if (!it.getReturnType().equals("void")) {
             if (!it.getBody().hasReturnStatement()) {
-                throw new RuntimeException("[Type Mismatch]: function [" + it.getName() + "] should have return statement");
+                throw new RuntimeException("[Missing Return Statement]: function [" + it.getName() + "] should have return statement");
             }
         }
         // exit scope
@@ -339,7 +339,7 @@ public class SemanticChecker implements ASTVisitor {
             expression.accept(this);
 
             if (!expression.deduceType(scopeManager).equals("int"))
-                throw new RuntimeException("Error: array index should be int");
+                throw new RuntimeException("[Type Mismatch]: array index should be int");
         }
 
         ExpressionNode expression = it.getPrimaryExpression();
@@ -349,9 +349,9 @@ public class SemanticChecker implements ASTVisitor {
         Type primaryType = expression.deduceType(scopeManager);
 
         if (!primaryType.isArray())
-            throw new RuntimeException("Error: not an array type");
+            throw new RuntimeException("[Type Mismatch]: not an array type");
         if (it.getExpressions().size() > primaryType.getDimension())
-            throw new RuntimeException("[Type Mismatch]: array access dimension mismatch");
+            throw new RuntimeException("[Dimension Out Of Bound]: array access dimension mismatch");
     }
 
     // 访问格式化字符串
@@ -380,7 +380,7 @@ public class SemanticChecker implements ASTVisitor {
     // 访问实参列表
     public void visit(ArgListNode it){
         // should not be visited, look at FunctionCall and MethodCall
-        throw new RuntimeException("Error: ArgListNode should not be visited");
+        throw new RuntimeException("[Runtime Error]: ArgListNode should not be visited");
     }
 
     // 访问标识符

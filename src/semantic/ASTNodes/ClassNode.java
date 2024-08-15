@@ -39,7 +39,7 @@ public class ClassNode extends ASTNode {
             return null; // todo defalut constructor
         }
         if (constructorNode.size() > 1) {
-            throw new RuntimeException("Multiple constructors not supported!");
+            throw new RuntimeException("[Multiple Definitions]: Multiple constructors not supported!");
         }
         return constructorNode.get(0);
     }
@@ -51,12 +51,12 @@ public class ClassNode extends ASTNode {
     }
     public FunctionNode getMethod(String name) {
         if (!symbolTable.containsKey(name))
-            throw new RuntimeException("Error: Method member [" + name + "] not found");
+            throw new RuntimeException("[Multiple Definitions]: Method member [" + name + "] not found");
         return (FunctionNode) symbolTable.get(name);
     }
     public VariableNode getField(String name) {
         if (!symbolTable.containsKey(name))
-            throw new RuntimeException("Error: Field member [" + name + "] not found");
+            throw new RuntimeException("[Multiple Definitions]: Field member [" + name + "] not found");
         return (VariableNode) symbolTable.get(name);
     }
 
@@ -66,12 +66,12 @@ public class ClassNode extends ASTNode {
         for (FieldDeclarationNode field : fieldNodes)
             for (String name : field.getNames()) {
                 if (symbolTable.containsKey(name))
-                    throw new RuntimeException("Error: field [" + name + "] already declared");
+                    throw new RuntimeException("[Multiple Definitions]: field [" + name + "] already declared");
                 symbolTable.put(name, new VariableNode(field.getTypeNode(), name));
             }
         for (FunctionNode method : methodNodes) {
             if (symbolTable.containsKey(method.getName()))
-                throw new RuntimeException("Error: method [" + method.getName() + "] already declared");
+                throw new RuntimeException("[Multiple Definitions]: method [" + method.getName() + "] already declared");
             symbolTable.put(method.getName(), method);
         }
     }
