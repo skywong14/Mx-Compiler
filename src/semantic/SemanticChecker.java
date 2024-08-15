@@ -221,7 +221,6 @@ public class SemanticChecker implements ASTVisitor {
                 throw new RuntimeException("[Invalid Control Flow]: return statement not in function");
             }
             // check return type
-            // todo
             FunctionNode function = scopeManager.getCurrentFunction();
             if (!function.getReturnType().equals(expressionType)) {
                 debug(it, "Return type: " + expressionType + " Expected: " + function.getReturnType());
@@ -239,7 +238,6 @@ public class SemanticChecker implements ASTVisitor {
     // 访问成员访问
     public void visit(MemberAccessNode it) {
         debug(it, "MemberAccessNode");
-        // todo array and string
         ExpressionNode expression = it.getPrimaryExpression();
 
         expression.accept(this);
