@@ -181,7 +181,7 @@ NotEqual : '!=';
 
 INTEGER_CONSTANT : [1-9][0-9]* | '0' ;
 STRING_LITERAL : '"' (PRINTABLE_CHAR | ESC)* '"' ;
-IDENTIFIER: [a-zA-Z_][a-zA-Z0-9_]* ;
+IDENTIFIER: [a-zA-Z][a-zA-Z0-9_]* ;
 
 //排除了双引号 ("，\u0022)、反斜杠 (\，\u005C) 和美元符号 ($，\u0024)。
 fragment PRINTABLE_CHAR
