@@ -67,7 +67,11 @@ public class Type {
             // null : something like {{},{}}
             if (!this.basicType.equals(otherType.basicType)) return false;
         }
-        return this.dimension == otherType.dimension;
+        // dimension check
+        if (this.dimension != otherType.dimension) {
+            throw new RuntimeException("[Dimension Out Of Bound]: Dimension error");
+        }
+        return true;
     }
     public boolean equals(String basicType) {
         return this.basicType.equals(basicType) && !this.is_array;
