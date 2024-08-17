@@ -275,8 +275,8 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
 
     @Override
     public ASTNode visitAssignExpression(MxParser.AssignExpressionContext ctx) {
-        // todo update
-        return new BinaryExprNode("=", (ExpressionNode) visit(ctx.expression(0)), (ExpressionNode) visit(ctx.expression(1)));
+        return new AssignExprNode((ExpressionNode) visit(ctx.expression(0)), (ExpressionNode) visit(ctx.expression(1)));
+//        return new BinaryExprNode("=", (ExpressionNode) visit(ctx.expression(0)), (ExpressionNode) visit(ctx.expression(1)));
     }
 
     @Override

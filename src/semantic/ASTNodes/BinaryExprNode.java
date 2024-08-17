@@ -33,8 +33,7 @@ public class BinaryExprNode extends ExpressionNode{
         Type leftType = left.deduceType(scopeManager);
 
         if (Objects.equals(operator, "=")) {
-            // leftValue check is in SemanticChecker
-            return leftType;
+            throw new RuntimeException("[Runtime Error] Assignment operator should not be here");
         }
 
         if (Objects.equals(operator, "+")) {
@@ -60,7 +59,7 @@ public class BinaryExprNode extends ExpressionNode{
 
     @Override
     public boolean isLeftValue() {
-        return Objects.equals(operator, "=") && left.isLeftValue() && right.isLeftValue();
+        return false;
     }
 
     @Override

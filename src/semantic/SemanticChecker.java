@@ -562,16 +562,7 @@ public class SemanticChecker implements ASTVisitor {
             return;
         }
         if (Objects.equals(operator, "=")) {
-            // 函数的形参变量 / 全局变量和局部变量 / 类的一个成员 / 数组对象的一个元素
-            // this 指针作为左值视为语法错误 / 常量作为左值视为语法错误
-            if (rightType.equals("void"))
-                throw new RuntimeException("[Type Mismatch]: right value should not be void");
-            if (!left.isLeftValue()) {
-                debug(it, "Left value: " + leftType.toString());
-                debug(it, "Right value: " + rightType.toString());
-                throw new RuntimeException("[Type Mismatch]: left value should be assignable");
-            }
-            return;
+            throw new RuntimeException("[Runtime Error]: Assignment operator should not be here");
         }
         throw new RuntimeException("[Runtime Error]: Unknown operator at BinaryExpr: " + operator);
     }
@@ -592,5 +583,27 @@ public class SemanticChecker implements ASTVisitor {
 
         if (!trueExpr.deduceType(scopeManager).equals(falseExpr.deduceType(scopeManager)))
             throw new RuntimeException("[Type Mismatch]: type mismatch in ternary expression");
+    }
+
+    public void visit(AssignExprNode it) {
+        ExpressionNode left = it.getLeft();
+        ExpressionNode right = it.getRight();
+
+        left.accept(this);
+        right.accept(this);
+
+        Type leftType = left.deduceType(scopeManager);
+        Type rightType = right.deduceType(scopeManager);
+
+        if (!leftType.equals(rightType))
+            throw new RuntimeException("[Type Mismatch]: Binary expression type mismatch, left: " + leftType.toString() + ", right: " + rightType.toString());
+
+        // 函数的形参变量 / 全局变量和局部变量 / 类的一个成员 / 数组对象的一个元素
+        // this 指针作为左值视为语法错误 / 常量作为左值视为语法错误
+        if (rightType.equals("void"))
+            throw new RuntimeException("[Type Mismatch]: right value should not be void");
+        if (!left.isLeftValue()) {
+            throw new RuntimeException("[Type Mismatch]: left value should be assignable");
+        }
     }
 }

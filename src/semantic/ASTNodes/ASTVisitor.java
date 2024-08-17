@@ -7,6 +7,9 @@ public interface ASTVisitor {
     // 访问数组类型
     void visit(ArrayAccessNode it);
 
+    // 访问赋值
+    void visit(AssignExprNode it);
+
     // 访问二元表达式
     void visit(BinaryExprNode it);
 
