@@ -13,9 +13,12 @@ public class ArgListNode extends ASTNode{
         values.add(value);
     }
 
-    public ArrayList<ExpressionNode> getArgList() {
-        return values;
-    }
+    public int getSize() { return values.size(); }
+    public ArrayList<ExpressionNode> getArgList() { return values; }
+
+    public void notifyParent() { for (ExpressionNode e : values) e.setParent(this); }
+
+
 
     @Override
     public void accept(ASTVisitor visitor) {

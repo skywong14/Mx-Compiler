@@ -120,7 +120,7 @@ public class SemanticChecker implements ASTVisitor {
         }
 
         // check body
-        for (StatementNode statement : it.getBody().getStatement()) {
+        for (StatementNode statement : it.getBody().getStatements()) {
             statement.accept(this);
         }
 
@@ -167,9 +167,9 @@ public class SemanticChecker implements ASTVisitor {
     }
 
     // 访问变量
-     public void visit(VariableNode it) {
+    public void visit(VariableNode it) {
         throw new RuntimeException("[Runtime Error]: VariableNode should not be visited");
-     }
+    }
 
     // 访问变量声明
     public void visit(VariableDeclarationNode it) {
@@ -177,7 +177,7 @@ public class SemanticChecker implements ASTVisitor {
         // check type
         it.getTypeNode().accept(this);
         Type type = it.getType();
-        if (type.basicType.equals("void"))
+        if (type.baseType.equals("void"))
             throw new RuntimeException("[Invalid Type]: variable type cannot be void");
 
         for (VariableNode variable : it.getVariableNodes()) {
@@ -196,7 +196,7 @@ public class SemanticChecker implements ASTVisitor {
     public void visit(CompoundStmtNode it) {
         debug(it, "CompoundStmtNode");
         scopeManager.enterScope("{}", it);
-        for (StatementNode statement : it.getStatement()) {
+        for (StatementNode statement : it.getStatements()) {
             statement.accept(this);
         }
         scopeManager.exitScope();
@@ -232,13 +232,13 @@ public class SemanticChecker implements ASTVisitor {
                 throw new RuntimeException("[Invalid Control Flow]: break/continue statement not in loop");
             }
         } else
-        throw new RuntimeException("[Runtime Error]: unknown jump statement");
+            throw new RuntimeException("[Runtime Error]: unknown jump statement");
     }
 
     // 访问成员访问
     public void visit(MemberAccessNode it) {
         debug(it, "MemberAccessNode");
-        ExpressionNode expression = it.getPrimaryExpression();
+        ExpressionNode expression = it.getExpression();
 
         expression.accept(this);
 
@@ -254,7 +254,7 @@ public class SemanticChecker implements ASTVisitor {
                     throw new RuntimeException("[Undefined Identifier]: array type does not have member access except size");
                 }
             }
-            ClassNode classNode = scopeManager.resolveClass(primaryType.getBasicType());
+            ClassNode classNode = scopeManager.resolveClass(primaryType.getBaseType());
             FunctionNode functionNode = classNode.getMethod(it.getIdentifier());
             // check argList type
             assert (it.getArgListNode() != null);
@@ -273,7 +273,7 @@ public class SemanticChecker implements ASTVisitor {
         } else {
             if (primaryType.isArray())
                 throw new RuntimeException("[Undefined Identifier]: Array type does not have field access");
-            ClassNode classNode = scopeManager.resolveClass(expression.deduceType(scopeManager).getBasicType());
+            ClassNode classNode = scopeManager.resolveClass(expression.deduceType(scopeManager).getBaseType());
             classNode.getField(it.getIdentifier());
         }
     }
@@ -342,7 +342,7 @@ public class SemanticChecker implements ASTVisitor {
                 throw new RuntimeException("[Type Mismatch]: array index should be int");
         }
 
-        ExpressionNode expression = it.getPrimaryExpression();
+        ExpressionNode expression = it.getHeadExpression();
 
         expression.accept(this);
 
@@ -373,9 +373,9 @@ public class SemanticChecker implements ASTVisitor {
         it.getTypeNode().accept(this);
     }
     // 访问形参列表
-     public void visit(ParameterListNode it) {
+    public void visit(ParameterListNode it) {
         throw new RuntimeException("[Runtime Error]: ParameterListNode should not be visited");
-     }
+    }
 
     // 访问实参列表
     public void visit(ArgListNode it){
@@ -393,8 +393,8 @@ public class SemanticChecker implements ASTVisitor {
     public void visit(TypeNode it) {
         debug(it, it.getType().toString());
         // check if type is declared
-        if (!scopeManager.isTypeDeclared(it.getType().getBasicType())) {
-            throw new RuntimeException("[Undefined Identifier]: type " + it.getType().getBasicType() + " not declared");
+        if (!scopeManager.isTypeDeclared(it.getType().getBaseType())) {
+            throw new RuntimeException("[Undefined Identifier]: type " + it.getType().getBaseType() + " not declared");
         }
         // check if array size is valid
         for (ExpressionNode expression : it.getExpressions()) {
@@ -438,7 +438,7 @@ public class SemanticChecker implements ASTVisitor {
         // check body
         StatementNode body = it.getBody();
         if (body instanceof CompoundStmtNode) {
-            for (StatementNode statement : ((CompoundStmtNode) body).getStatement()) {
+            for (StatementNode statement : ((CompoundStmtNode) body).getStatements()) {
                 statement.accept(this);
             }
         } else {
@@ -462,7 +462,7 @@ public class SemanticChecker implements ASTVisitor {
         // check body
         StatementNode body = it.getBody();
         if (body instanceof CompoundStmtNode) {
-            for (StatementNode statement : ((CompoundStmtNode) body).getStatement()) {
+            for (StatementNode statement : ((CompoundStmtNode) body).getStatements()) {
                 statement.accept(this);
             }
         } else {
@@ -482,7 +482,7 @@ public class SemanticChecker implements ASTVisitor {
     public void visit(FieldDeclarationNode it) {
         debug(it, "FieldDeclarationNode");
         TypeNode typeNode = it.getTypeNode();
-        if (typeNode.getType().basicType.equals("void"))
+        if (typeNode.getType().baseType.equals("void"))
             throw new RuntimeException("[Invalid Type]: variable type cannot be void");
         typeNode.accept(this);
         for (String name : it.getNames()) {

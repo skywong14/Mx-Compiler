@@ -15,6 +15,8 @@ public class Scope {
     private HashMap<String, FunctionNode> functionSymbolTable; // 存储函数名及其返回类型
     private HashMap<String, ClassNode> classSymbolTable;   // 存储类名及其定义
 
+    public HashMap<String, Integer> localVariableCounter = new HashMap<>(); // 局部变量计数器，从<name>.1开始
+
     public Scope(Scope parent, String name, ASTNode node) {
         this.parent = parent;
         this.name = name; // for debug
@@ -41,12 +43,20 @@ public class Scope {
         return null;
     }
 
+    public int getLocalVariableCounter(String name) {
+        if (localVariableCounter.containsKey(name)) {
+            return localVariableCounter.get(name);
+        }
+        return 0;
+    }
+
     public void addVariable(String name, VariableNode variableNode) {
         // 变量名不能与函数名重复
         if (variableSymbolTable.containsKey(name) || functionSymbolTable.containsKey(name)) {
             throw new RuntimeException("[Multiple Definitions]: Variable name conflict: " + name);
         }
         variableSymbolTable.put(name, variableNode);
+        localVariableCounter.put(name, 0); // 初始化计数器
     }
     public void addFunction(String name, FunctionNode functionNode) {
         // 函数名不能与变量名或类名重复

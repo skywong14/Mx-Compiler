@@ -1,0 +1,35 @@
+define ptr @__allocateArray__(i32 %arraySize, i32 %elementSize) {
+entry:
+    ; 计算数据总大小
+    %dataSize = mul i32 %arraySize, %elementSize
+    %totalSize = add i32 %dataSize, 4  ; 4字节用于存储数组长度
+    %mallocPtr = call ptr @malloc(i32 %totalSize)
+
+    ; 存储数组长度
+    %arrayPtr = bitcast ptr %mallocPtr to ptr
+    store i32 %arraySize, ptr %arrayPtr
+
+    ; 计算数组数据的起始地址
+    %dataPtr = getelementptr i8, ptr %mallocPtr, i32 4
+
+    ; 初始化数组元素
+    %i = alloca i32
+    store i32 0, ptr %i
+    br label %loop
+
+loop:
+    %i_val = load i32, ptr %i
+    %cond = icmp slt i32 %i_val, %arraySize
+    br i1 %cond, label %body, label %endloop
+
+body:
+    %offset = mul i32 %i_val, %elementSize
+    %elemPtr = getelementptr i8, ptr %dataPtr, i32 %offset
+    call void @memset(ptr %elemPtr, i32 0, i32 %elementSize) ; 初始化为0
+    %next_i = add i32 %i_val, 1
+    store i32 %next_i, ptr %i
+    br label %loop
+
+endloop:
+    ret ptr %dataPtr
+}

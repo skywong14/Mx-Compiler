@@ -28,6 +28,11 @@ public class FormattedStringNode extends PrimaryExpressionNode{
         return expressions;
     }
 
+    public void notifyParent() {
+        for (ExpressionNode e : expressions)
+            e.setParent(this);
+    }
+
     @Override
     public Type deduceType(ScopeManager scopeManager) {
         return new Type("string");

@@ -17,6 +17,13 @@ public class WhileStmtNode extends StatementNode{
         return body;
     }
 
+    public void setCondition(ExpressionNode condition) { this.condition = condition; }
+
+    public void notifyParent() {
+        condition.setParent(this);
+        body.setParent(this);
+    }
+
     @Override
     public boolean hasReturnStatement() {
         return body.hasReturnStatement();

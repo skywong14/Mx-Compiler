@@ -14,6 +14,14 @@ public class IfStatementNode extends StatementNode{
     public ExpressionNode getCondition() { return condition; }
     public StatementNode getIfStatement() { return ifStatement; }
     public StatementNode getElseStatement() { return elseStatement; }
+    public void setCondition(ExpressionNode condition) { this.condition = condition; }
+
+    public void notifyParent() {
+        condition.setParent(this);
+        ifStatement.setParent(this);
+        if (elseStatement != null)
+            elseStatement.setParent(this);
+    }
 
     @Override
     public boolean hasReturnStatement() {

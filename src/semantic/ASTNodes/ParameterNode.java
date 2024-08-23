@@ -14,7 +14,7 @@ public class ParameterNode extends ASTNode{
     public String getName() { return name; }
     public Type getType() { return type.getType(); }
     public TypeNode getTypeNode() { return type; }
-
+    public void notifyParent() { type.setParent(this); }
 
     @Override
     public void accept(ASTVisitor visitor) {

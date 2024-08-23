@@ -13,8 +13,11 @@ public class JumpStmtNode extends StatementNode{
         return jumpType;
     }
 
-    public ExpressionNode getExpression() {
-        return expression;
+    public ExpressionNode getExpression() { return expression; }
+    public void setExpression(ExpressionNode expression) { this.expression = expression; }
+
+    public void notifyParent() {
+        if (expression != null) expression.setParent(this);
     }
 
     @Override

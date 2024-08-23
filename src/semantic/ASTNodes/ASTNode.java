@@ -1,22 +1,18 @@
 package semantic.ASTNodes;
 
 public abstract class ASTNode {
-    protected int line;
-    protected int column;
+    ASTNode parent;
 
-    public ASTNode() {}
-
-    public ASTNode(int line, int column) {
-        this.line = line;
-        this.column = column;
+    public ASTNode() {
+        this.parent = null;
     }
 
-    public int getLine() {
-        return line;
+    public void setParent(ASTNode parent) {
+        this.parent = parent;
     }
 
-    public int getColumn() {
-        return column;
+    public ASTNode getParent() {
+        return parent;
     }
 
     public abstract void accept(ASTVisitor visitor);

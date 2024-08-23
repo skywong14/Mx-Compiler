@@ -8,6 +8,8 @@ public class UnaryExprNode extends ExpressionNode{
     private ExpressionNode expression;
     private boolean LeftOp;
 
+    Type deduceType = null;
+
     public UnaryExprNode(String operator_, ExpressionNode expression_, boolean LeftOp_) {
         this.operator = operator_;
         this.expression = expression_;
@@ -24,9 +26,17 @@ public class UnaryExprNode extends ExpressionNode{
         return expression;
     }
 
+    public void setExpression(ExpressionNode expression) { this.expression = expression; }
+
+    public void notifyParent() { expression.setParent(this); }
+
     @Override
     public Type deduceType(ScopeManager scopeManager) {
-        return expression.deduceType(scopeManager);
+        if (deduceType != null) return deduceType;
+        if (scopeManager == null) throw new RuntimeException("ScopeManager is null");
+
+        deduceType = expression.deduceType(scopeManager);
+        return deduceType;
     }
 
     @Override

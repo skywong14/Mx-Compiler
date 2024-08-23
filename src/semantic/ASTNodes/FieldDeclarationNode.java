@@ -1,5 +1,7 @@
 package semantic.ASTNodes;
 
+import semantic.Type;
+
 import java.util.ArrayList;
 
 public class FieldDeclarationNode extends ASTNode{
@@ -14,8 +16,11 @@ public class FieldDeclarationNode extends ASTNode{
     public void addName(String name) {
         names.add(name);
     }
+    public int getSize() { return names.size(); }
     public ArrayList<String> getNames() { return names;  }
     public TypeNode getTypeNode() { return type; }
+    public Type getType() { return type.getType(); }
+    public void notifyParent() { type.setParent(this); }
 
     @Override
     public void accept(ASTVisitor visitor) {

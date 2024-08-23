@@ -20,6 +20,11 @@ public class ParameterListNode extends ASTNode{
         return parameters;
     }
 
+    public void notifyParent() {
+        for (ParameterNode node : parameters)
+            node.setParent(this);
+    }
+
     @Override
     public void accept(ASTVisitor visitor) {
         visitor.visit(this);

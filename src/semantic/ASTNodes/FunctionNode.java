@@ -18,6 +18,13 @@ public class FunctionNode extends ASTNode{
         this.body = body_;
     }
 
+    public void notifyParent() {
+        for (ParameterNode node : parameters)
+            node.setParent(this);
+        returnType.setParent(this);
+        body.setParent(this);
+    }
+
     public String getName() {
         return name;
     }

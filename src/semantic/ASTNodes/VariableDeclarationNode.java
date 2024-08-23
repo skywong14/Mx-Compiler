@@ -11,6 +11,8 @@ public class VariableDeclarationNode extends StatementNode{
 
     private ArrayList<VariableNode> variableNodes;
 
+    public boolean isGlobal = false;
+
     public VariableDeclarationNode(TypeNode type_) {
         this.variableNodes = new ArrayList<>();
         this.type = type_;
@@ -24,6 +26,13 @@ public class VariableDeclarationNode extends StatementNode{
 
     public ArrayList<VariableNode> getVariableNodes() {
         return variableNodes;
+    }
+    public ArrayList<String> getNames() { return names; }
+
+    public void notifyParent() {
+        type.setParent(this);
+        for (VariableNode variable : variableNodes)
+            variable.setParent(this);
     }
 
     @Override

@@ -4,14 +4,18 @@ import semantic.Scope;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Queue;
 
 public class ClassNode extends ASTNode {
-    private String name;
+    public String name;
     private ArrayList<ConstructorNode> constructorNode;
     private ArrayList<FieldDeclarationNode> fieldNodes;
     private ArrayList<FunctionNode> methodNodes;
 
     private HashMap<String, ASTNode> symbolTable;
+    public ArrayList<ASTNode> declarationQueue;
+
+    public boolean visited_in_declaration = false;
 
     public ClassNode(String name_) {
         this.name = name_;
@@ -19,6 +23,7 @@ public class ClassNode extends ASTNode {
         this.methodNodes = new ArrayList<>();
         this.constructorNode = new ArrayList<>();
         this.symbolTable = new HashMap<>();
+        this.declarationQueue = new ArrayList<>();
     }
 
     public void addField(FieldDeclarationNode fieldDeclarationNode) {
@@ -30,13 +35,18 @@ public class ClassNode extends ASTNode {
     public void addConstructor(ConstructorNode constructorNode) {
         this.constructorNode.add(constructorNode);
     }
+    public void notifyParent() {
+        for (FieldDeclarationNode node : fieldNodes) node.setParent(this);
+        for (FunctionNode node : methodNodes)        node.setParent(this);
+        for (ConstructorNode node : constructorNode) node.setParent(this);
+    }
 
     public String getName() {
         return name;
     }
     public ConstructorNode getConstructorNode() {
         if (constructorNode.isEmpty()) {
-            return null; // todo defalut constructor
+            return null; // todo defalut constructor if needed
         }
         if (constructorNode.size() > 1) {
             throw new RuntimeException("[Multiple Definitions]: Multiple constructors not supported!");
@@ -63,6 +73,7 @@ public class ClassNode extends ASTNode {
     public void collectSymbol() {
         // add fields and functions to symbol table
         // if multiplied, throw exception
+        symbolTable.clear();
         for (FieldDeclarationNode field : fieldNodes)
             for (String name : field.getNames()) {
                 if (symbolTable.containsKey(name))
@@ -79,5 +90,15 @@ public class ClassNode extends ASTNode {
     @Override
     public void accept(ASTVisitor visitor) {
         visitor.visit(this);
+    }
+
+    // for IR
+    public HashMap<String, Integer> fieldIndex = new HashMap<>();
+    public int fieldNum = 0;
+    public void initFieldIndex() {
+        for (FieldDeclarationNode field : fieldNodes)
+            for (String name : field.getNames()) {
+                fieldIndex.put(name, fieldNum++);
+            }
     }
 }

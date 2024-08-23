@@ -9,12 +9,13 @@ public class CompoundStmtNode extends StatementNode{
         this.statements = new ArrayList<>();
     }
 
-    public void addStatement(StatementNode statement) {
-        statements.add(statement);
-    }
+    public void addStatement(StatementNode statement) { statements.add(statement); }
 
-    public ArrayList<StatementNode> getStatement() {
-        return statements;
+    public ArrayList<StatementNode> getStatements() { return statements; }
+
+    public void notifyParent() {
+        for (StatementNode statement : statements)
+            statement.setParent(this);
     }
 
     @Override

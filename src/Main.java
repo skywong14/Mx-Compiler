@@ -1,3 +1,4 @@
+import IR.IRBuilder;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
@@ -6,7 +7,6 @@ import parser.MxParser;
 import semantic.*;
 import semantic.ASTNodes.ASTNode;
 import semantic.ASTNodes.ProgramNode;
-import semantic.error.Error;
 
 import java.io.FileInputStream;
 import java.io.InputStream;
@@ -17,9 +17,9 @@ public class Main {
     }
 
     public static void main(String[] args) throws Exception{
-//        String name = "test.mx";
-//        InputStream input = new FileInputStream(name);
-        InputStream input = System.in;
+        String name = "test.mx";
+        InputStream input = new FileInputStream(name);
+//        InputStream input = System.in;
         try {
             // 词法分析器，将输入流转换为字符流
             MxLexer lexer = new MxLexer(CharStreams.fromStream(input));
@@ -48,13 +48,18 @@ public class Main {
             // 语义分析
             new SemanticChecker(scopeManager).visit((ProgramNode) programNode);
 
+            // 常量折叠
+//            new ASTOptimizer().visit((ProgramNode) programNode);
+
+            // 生成IR
+            IRBuilder ir = new IRBuilder((ProgramNode) programNode);
+            ir.visitProgramNode((ProgramNode) programNode);
+
             // success
             debug("Success!");
         } catch (Exception e) {
-            // error
-            // 输出e.toString中被第一个中括号包含的内容
-//            System.out.println("Error: " + e.getMessage());
-            System.out.println(e.getMessage().split("\\[")[1].split("]")[0]);
+            System.out.println("Error: " + e.getMessage());
+//            System.out.println(e.getMessage().split("\\[")[1].split("]")[0]);
             // e.printStackTrace();
             System.exit(2);
         }

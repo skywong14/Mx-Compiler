@@ -31,15 +31,21 @@ public class ProgramNode extends ASTNode {
         allNodes.add(variable_);
     }
 
-    public ArrayList<ASTNode> getAllNodes() {
-        return allNodes;
+    public ArrayList<ASTNode> getAllNodes() { return allNodes; }
+    public ArrayList<ClassNode> getClasses() { return classes; }
+    public ArrayList<FunctionNode> getFunctions() { return functions; }
+    public ArrayList<VariableDeclarationNode> getVariables() { return variables; }
+
+    public void notifyParent() {
+        for (ASTNode node : getAllNodes())
+            node.setParent(this);
     }
 
     public void collectSymbol(Scope globalScope) {
         for (ASTNode node : allNodes) {
-            if (node instanceof FunctionNode)
+            if (node instanceof FunctionNode){
                 globalScope.addFunction(((FunctionNode) node).getName(), (FunctionNode) node);
-            else if (node instanceof ClassNode){
+            } else if (node instanceof ClassNode){
                 globalScope.addClass(((ClassNode) node).getName(), (ClassNode) node);
                 ((ClassNode) node).collectSymbol();
             }

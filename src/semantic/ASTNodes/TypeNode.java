@@ -1,5 +1,8 @@
 package semantic.ASTNodes;
 
+import IR.IRStmts.ArrayIRType;
+import IR.IRStmts.BasicIRType;
+import IR.IRStmts.IRType;
 import semantic.Type;
 
 import java.util.ArrayList;
@@ -24,4 +27,24 @@ public class TypeNode extends ASTNode {
     public void accept(ASTVisitor visitor) {
         visitor.visit(this);
     }
+
+    // IR
+    /*
+    public IRType toIRType() {
+        if (type.is_array) {
+            int dim = expressions.size();
+            IRType retType;
+            if (dim == type.dimension) {
+               retType = new BasicIRType(type.baseType);
+            } else {
+                retType = new BasicIRType("ptr");
+            }
+            for (int i = dim; i >= 0; i--) {
+                retType = new ArrayIRType(retType, expressions.get(i).toInt());
+            }
+        } else {
+            return new BasicIRType(type.baseType);
+        }
+    }
+    */
 }

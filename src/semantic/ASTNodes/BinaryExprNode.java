@@ -10,26 +10,35 @@ public class BinaryExprNode extends ExpressionNode{
     private ExpressionNode left;
     private ExpressionNode right;
 
+    Type deduceType;
+
     public BinaryExprNode(String operator_, ExpressionNode left_, ExpressionNode right_) {
         this.operator = operator_;
         this.left = left_;
         this.right = right_;
+        this.deduceType = null;
     }
 
     public String getOperator() {
         return operator;
     }
-
     public ExpressionNode getLeft() {
         return left;
     }
+    public ExpressionNode getRight() {  return right; }
+    public void setLeft(ExpressionNode left) { this.left = left; }
+    public void setRight(ExpressionNode right) { this.right = right; }
 
-    public ExpressionNode getRight() {
-        return right;
+    public void notifyParent() {
+        left.setParent(this);
+        right.setParent(this);
     }
 
     @Override
     public Type deduceType(ScopeManager scopeManager) {
+        if (deduceType != null) return deduceType;
+        if (scopeManager == null) throw new RuntimeException("ScopeManager is null");
+
         Type leftType = left.deduceType(scopeManager);
 
         if (Objects.equals(operator, "=")) {
@@ -37,21 +46,24 @@ public class BinaryExprNode extends ExpressionNode{
         }
 
         if (Objects.equals(operator, "+")) {
-            return leftType;
+            deduceType = leftType;
+            return deduceType;
         }
 
         if (Objects.equals(operator, "==") || Objects.equals(operator, "!=")
             || Objects.equals(operator, "&&") || Objects.equals(operator, "||")
             || Objects.equals(operator, "<") || Objects.equals(operator, ">")
                 || Objects.equals(operator, "<=") || Objects.equals(operator, ">=")) {
-            return new Type("bool");
+            deduceType = new Type("bool");
+            return deduceType;
         }
 
         if (Objects.equals(operator, "-") || Objects.equals(operator, "*")
                 || Objects.equals(operator, "/") || Objects.equals(operator, "%")
                 || Objects.equals(operator, "<<") || Objects.equals(operator, ">>")
                 || Objects.equals(operator, "&") || Objects.equals(operator, "^") || Objects.equals(operator, "|")) {
-              return new Type("int");
+            deduceType = new Type("int");
+            return deduceType;
         }
 
         throw new RuntimeException("Unknown operator at BinaryExpr: " + operator);

@@ -29,8 +29,6 @@ public class ScopeManager {
         return scopeStack.peek();
     }
 
-    public int getScopeSize() { return scopeStack.size(); }
-
     public void declareVariable(String name, VariableNode node) {
         getCurrentScope().addVariable(name, node);
     }

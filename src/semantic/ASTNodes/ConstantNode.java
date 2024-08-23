@@ -6,9 +6,9 @@ import semantic.Type;
 import java.util.ArrayList;
 
 public class ConstantNode extends PrimaryExpressionNode {
-    private String literal_value;
-    private boolean isArray;
-    private ArrayList<ConstantNode> constants;
+    public String literal_value;
+    public boolean isArray;
+    public ArrayList<ConstantNode> constants;
 
     Type type;
 
@@ -21,6 +21,12 @@ public class ConstantNode extends PrimaryExpressionNode {
 
     public void addConstant(ConstantNode constant) {
         constants.add(constant);
+    }
+
+    public void notifyParent() {
+        for (ConstantNode c : constants) {
+            c.setParent(this);
+        }
     }
 
     @Override
@@ -40,7 +46,7 @@ public class ConstantNode extends PrimaryExpressionNode {
                 if (!atom_type.equals(tmp_type)) {
                     throw new RuntimeException("Array elements must have the same type");
                 }
-                if (atom_type.getBasicType().equals("null")) {
+                if (atom_type.getBaseType().equals("null")) {
                     atom_type = tmp_type;
                     // to deal with something like {{},{1,2},{true}}
                 }

@@ -7,9 +7,12 @@ public class ExpressionStmtNode extends StatementNode{
         this.expression = expression_;
     }
 
+    public void setExpression(ExpressionNode expression) { this.expression = expression; }
     public ExpressionNode getExpression() {
         return expression;
     }
+
+    public void notifyParent() { expression.setParent(this); }
 
     @Override
     public boolean hasReturnStatement() {
