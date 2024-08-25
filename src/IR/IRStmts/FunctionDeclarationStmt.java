@@ -28,7 +28,7 @@ public class FunctionDeclarationStmt extends IRStmt {
         this.returnType = new BasicIRType(function.getReturnType());
         this.argTypes = new ArrayList<>();
         this.argNames = new ArrayList<>();
-        this.argTypes.add(new BasicIRType());
+        this.argTypes.add(new BasicIRType("ptr"));
         this.argNames.add("this");
         for (ParameterNode arg : function.getParameters()) {
             this.argTypes.add(new BasicIRType(arg.getType()));
@@ -40,7 +40,7 @@ public class FunctionDeclarationStmt extends IRStmt {
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        sb.append("define ").append(returnType.toString()).append(" @").append(name).append("(");
+        sb.append("declare ").append(returnType.toString()).append(" @").append(name).append("(");
         for (int i = 0; i < argTypes.size(); i++) {
             if (i > 0) sb.append(", ");
             sb.append(argTypes.get(i).toString()).append(" %").append(i);

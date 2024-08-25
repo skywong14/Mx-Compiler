@@ -15,8 +15,6 @@ public class ClassNode extends ASTNode {
     private HashMap<String, ASTNode> symbolTable;
     public ArrayList<ASTNode> declarationQueue;
 
-    public boolean visited_in_declaration = false;
-
     public ClassNode(String name_) {
         this.name = name_;
         this.fieldNodes = new ArrayList<>();
@@ -32,9 +30,7 @@ public class ClassNode extends ASTNode {
     public void addMethod(FunctionNode method) {
         methodNodes.add(method);
     }
-    public void addConstructor(ConstructorNode constructorNode) {
-        this.constructorNode.add(constructorNode);
-    }
+    public void addConstructor(ConstructorNode constructorNode) { this.constructorNode.add(constructorNode); }
     public void notifyParent() {
         for (FieldDeclarationNode node : fieldNodes) node.setParent(this);
         for (FunctionNode node : methodNodes)        node.setParent(this);
@@ -93,7 +89,7 @@ public class ClassNode extends ASTNode {
     }
 
     // for IR
-    public HashMap<String, Integer> fieldIndex = new HashMap<>();
+    private HashMap<String, Integer> fieldIndex = new HashMap<>();
     public int fieldNum = 0;
     public void initFieldIndex() {
         for (FieldDeclarationNode field : fieldNodes)
@@ -101,4 +97,5 @@ public class ClassNode extends ASTNode {
                 fieldIndex.put(name, fieldNum++);
             }
     }
+    public HashMap<String, Integer> getFieldIndex() { return fieldIndex; }
 }

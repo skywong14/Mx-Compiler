@@ -8,7 +8,7 @@ public class MyIRCode extends IRStmt {
     @Override
     public String toString() {
         //将同文件夹下的MyIRCode.ir文本文件转换为字符串返回，打开文件，读入和输出即可
-        String file = "MyIRCode.ir";
+        String file = "./src/IR/IRStmts/MyIRCode.txt";
         String content = "";
         try {
             BufferedReader reader = new BufferedReader(new FileReader(file));

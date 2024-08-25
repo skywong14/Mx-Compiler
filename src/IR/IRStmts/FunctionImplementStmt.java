@@ -24,11 +24,23 @@ public class FunctionImplementStmt extends IRStmt {
         curBlock.addStmt(stmt);
     }
 
+    public void newBlock(String label) {
+        curBlock = new Block(label);
+        blocks.add(curBlock);
+    }
+
     public int getCurBlockIndex() {
         for (int i = 0; i < blocks.size(); i++) {
             if (blocks.get(i) == curBlock) return i;
         }
         throw new RuntimeException("curBlock not found");
+    }
+
+    public String curBlockLabel() {
+        if (curBlock.label.equals("")) {
+            return "0";
+        }
+        return curBlock.label;
     }
 
 

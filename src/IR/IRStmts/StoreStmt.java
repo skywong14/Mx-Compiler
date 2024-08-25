@@ -14,6 +14,6 @@ public class StoreStmt extends IRStmt {
 
     @Override
     public String toString() {
-        return "store " + type.toString() + " " + src + ", " + dest;
+        return "store " + type.toString() + " " + src + ", ptr " + dest;
     }
 }

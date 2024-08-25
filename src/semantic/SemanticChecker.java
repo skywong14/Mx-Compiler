@@ -129,6 +129,10 @@ public class SemanticChecker implements ASTVisitor {
             if (!it.getBody().hasReturnStatement()) {
                 throw new RuntimeException("[Missing Return Statement]: function [" + it.getName() + "] should have return statement");
             }
+        } else {
+            if (!it.getBody().hasReturnStatement()) {
+                it.getBody().addStatement(new JumpStmtNode("return", null));
+            }
         }
         // exit scope
         scopeManager.exitScope();
@@ -276,6 +280,8 @@ public class SemanticChecker implements ASTVisitor {
             ClassNode classNode = scopeManager.resolveClass(expression.deduceType(scopeManager).getBaseType());
             classNode.getField(it.getIdentifier());
         }
+
+        it.deduceType(scopeManager);
     }
 
     // 访问条件语句

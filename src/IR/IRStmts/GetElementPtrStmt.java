@@ -28,6 +28,7 @@ public class GetElementPtrStmt extends IRStmt {
     public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append(dest).append(" = getelementptr ").append(type.toString()).append(", ptr ").append(pointer);
+        sb.append(", i32 0"); // 从第0个元素（基址）进行偏移
         for (String idx : index) {
             sb.append(", i32 ").append(idx);
         }

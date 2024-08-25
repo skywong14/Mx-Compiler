@@ -21,7 +21,7 @@ public class IdentifierNode extends PrimaryExpressionNode{
         if (deduceType != null) return deduceType;
         if (scopeManager == null) throw new RuntimeException("ScopeManager is null");
 
-        if (identifier.equals("this")) {
+        if (identifier.equals("%this")) {
             ClassNode currentClass = scopeManager.getCurrentClass();
             if (currentClass == null)
                 throw new RuntimeException("this should be used in class scope");

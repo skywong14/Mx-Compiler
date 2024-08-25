@@ -11,6 +11,7 @@ public class GlobalVariableDeclareStmt extends IRStmt{
 
     @Override
     public String toString() {
-        return "@" + name + " = global " + type.toString();
+        if (type.typeName.equals("ptr")) return "@" + name + " = global " + type.toString() + " null";
+        return "@" + name + " = global " + type.toString() + " 0";
     }
 }

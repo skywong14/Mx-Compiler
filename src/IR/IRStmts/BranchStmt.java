@@ -1,14 +1,30 @@
 package IR.IRStmts;
 
 public class BranchStmt extends IRStmt {
-    public String label;
+    public String condition;
+    public String trueLabel;
+    public String falseLabel;
 
-    public BranchStmt(String label) {
-        this.label = label;
+    // br i1 <cond>, label <iftrue>, label <iffalse> ; Conditional branch
+    public BranchStmt(String condition, String trueLabel, String falseLabel) {
+        this.condition = condition;
+        this.trueLabel = trueLabel;
+        this.falseLabel = falseLabel;
+    }
+
+    // br label <dest> ; Unconditional branch
+    public BranchStmt(String dest) {
+        this.condition = null;
+        this.trueLabel = dest;
+        this.falseLabel = null;
     }
 
     @Override
     public String toString() {
-        return "br label %" + label;
+        if (condition == null) {
+            return "br label %" + trueLabel + "\n";
+        } else {
+            return "br i1 " + condition + ", label %" + trueLabel + ", label %" + falseLabel + "\n";
+        }
     }
 }

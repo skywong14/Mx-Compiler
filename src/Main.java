@@ -13,7 +13,7 @@ import java.io.InputStream;
 
 public class Main {
     private static void debug(String msg) {
-//        System.out.println("Main: " + msg);
+        System.out.println("Main: " + msg);
     }
 
     public static void main(String[] args) throws Exception{
@@ -52,15 +52,19 @@ public class Main {
 //            new ASTOptimizer().visit((ProgramNode) programNode);
 
             // 生成IR
+            debug("begin to generate IR");
             IRBuilder ir = new IRBuilder((ProgramNode) programNode);
             ir.visitProgramNode((ProgramNode) programNode);
+
+            // print ir.toString()
+            System.out.println(ir.toString());
 
             // success
             debug("Success!");
         } catch (Exception e) {
             System.out.println("Error: " + e.getMessage());
 //            System.out.println(e.getMessage().split("\\[")[1].split("]")[0]);
-            // e.printStackTrace();
+             e.printStackTrace();
             System.exit(2);
         }
     }
