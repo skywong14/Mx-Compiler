@@ -1,3 +1,8 @@
+/*
+clang -S -emit-llvm --target=riscv32-unknown-elf -O2 -fno-builtin-printf -fno-builtin-memcpy builtin.c -o builtin_intermediate.ll
+sed 's/string_/string./g;s/array_/array./g' builtin_intermediate.ll > builtin.ll
+rm builtin_intermediate.ll
+*/
 #define bool _Bool
 typedef unsigned long size_t;
 
@@ -150,20 +155,3 @@ bool __ptrEqual__(void *ptr1, void *ptr2) {
 bool __ptrNotEqual__(void *ptr1, void *ptr2) {
     return ptr1 != ptr2;
 }
-
-// 修改后的memset函数，用于将内存块的所有字节设置为0
-//void *__myMemset__(void *s, size_t n) {
-//    return memset(s, 0, n);
-//}
-
-
-/*
-void *calloc(size_t num, size_t size);
-
-void *__calloc_class__(size_t class_size) {
-    // 使用 calloc 分配并初始化内存
-    void *obj = calloc(1, class_size);
-    // 返回指向分配内存的指针
-    return obj;
-}
-*/

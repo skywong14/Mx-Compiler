@@ -23,12 +23,10 @@ public class Main {
         try {
             // 词法分析器，将输入流转换为字符流
             MxLexer lexer = new MxLexer(CharStreams.fromStream(input));
-//            lexer.removeErrorListeners();
             lexer.addErrorListener(new MxErrorListener());
 
             // 语法分析器，将词法分析器的输出转换为语法树
             MxParser parser = new MxParser(new CommonTokenStream(lexer));
-            // parser.removeErrorListeners();
             parser.addErrorListener(new MxErrorListener());
 
             // 解析程序，生成语法树的根节点
