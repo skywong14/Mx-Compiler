@@ -28,27 +28,22 @@ declare i1 @__ptrNotEqual__(ptr, ptr)
 
 declare void @llvm.memset.p0.p0.i32(ptr, i8, i32, i1) ; 声明LLVM的内置memset函数，用于初始化内存为0
 
-
 define ptr @__allocateArray__(i32 %arraySize) {
 entry:
-    ; 计算需要分配的总字节数：4字节存储数组大小 + arraySize * 4字节
-    %totalSize = add i32 %arraySize, 1                ; 计算需要的总大小（包括size的4字节）
-    %totalBytes = mul i32 %totalSize, 4               ; 计算总的字节数，每个元素4字节
+    ; 4 Byte + arraySize * 4 Byte
+    %totalSize = add i32 %arraySize, 1
+    %totalBytes = mul i32 %totalSize, 4
 
-    ; 调用malloc分配内存
-    %ptr = call ptr @_malloc(i32 %totalBytes)
+    %ptr = call ptr @_malloc(i32 %totalBytes) ; 调用malloc分配内存
 
-    ; 初始化为0
-    call void @llvm.memset.p0.p0.i32(ptr %ptr, i8 0, i32 %totalBytes, i1 false)
+    call void @llvm.memset.p0.p0.i32(ptr %ptr, i8 0, i32 %totalBytes, i1 false) ; 初始化为0
 
     ; 将数组大小存储在前4个字节
-    %sizePtr = bitcast ptr %ptr to ptr                  ; 将指针转换为指向i32的指针类型以存储大小
-    store i32 %arraySize, ptr %sizePtr                 ; 将数组大小存储到数组头部
+    %sizePtr = bitcast ptr %ptr to ptr  ; 将指针转换为指向i32的指针类型以存储大小
+    store i32 %arraySize, ptr %sizePtr  ; 将数组大小存储到数组头部
 
-    ; 计算指向第一个元素的指针（跳过存储size的4个字节）
-    %elementPtr = getelementptr i32, ptr %sizePtr, i32 1
+    %elementPtr = getelementptr i32, ptr %sizePtr, i32 1 ; 跳过存储size的4个字节
 
-    ; 返回指向第一个元素的指针
-    ret ptr %elementPtr
+    ret ptr %elementPtr ; 返回指向第一个元素的指针
 }
 

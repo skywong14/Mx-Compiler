@@ -5,6 +5,9 @@ build:
 run:
 	java -cp ./src:/ulib/antlr-4.13.2-complete.jar Main
 
+.PHONY: outputFile
+outputFile:
+	java -cp /ulib/antlr-4.13.2-complete.jar:bin Main < test.mx > output.ll -emit-llvm
 
 .PHONY: testSingleIR
 testSingleIR:
