@@ -13,7 +13,7 @@ import java.io.InputStream;
 
 public class Main {
     private static void debug(String msg) {
-        System.out.println("Main: " + msg);
+//        System.out.println("Main: " + msg);
     }
 
     public static void main(String[] args) throws Exception{
@@ -69,3 +69,4 @@ public class Main {
         }
     }
 }
+// export PATH="/usr/local/opt/bin:$PATH"  # optional

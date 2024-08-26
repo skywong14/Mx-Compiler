@@ -53,6 +53,12 @@ public class IRScope {
             varTable.put(varName, varName);
             return varName;
         }
+        if (isClassScope()) {
+            // field
+            if (varTable.containsKey(varName)) throw new RuntimeException("Field redeclaration: " + varName);
+            varTable.put(varName, varName);
+            return varName;
+        }
         // not global
         IRScope funcScope = getFunctionScope();
         if (funcScope == null) throw new RuntimeException("No function scope found");
@@ -110,6 +116,6 @@ public class IRScope {
         IRScope funcScope = getFunctionScope();
         if (funcScope == null) throw new RuntimeException("No function scope found");
         funcScope.blockLabelCounter++;
-        return "Block_Label_" + funcScope.blockLabelCounter;
+        return "Block_Label." + funcScope.blockLabelCounter;
     }
 }

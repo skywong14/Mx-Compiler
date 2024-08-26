@@ -1,19 +1,19 @@
 package IR.IRStmts;
 
 public class StoreStmt extends IRStmt {
-    public String src;
+    public String val;
     public String dest;
     public BasicIRType type;
 
-    // store <type> src(val), ptr dest
-    public StoreStmt(BasicIRType type, String src, String dest) {
-        this.src = src;
+    // store <type> val, ptr dest
+    public StoreStmt(BasicIRType type, String val, String dest) {
+        this.val = val;
         this.dest = dest;
         this.type = type;
     }
 
     @Override
     public String toString() {
-        return "store " + type.toString() + " " + src + ", ptr " + dest;
+        return "store " + type.toString() + " " + val + ", ptr " + dest;
     }
 }

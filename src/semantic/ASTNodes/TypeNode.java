@@ -19,6 +19,8 @@ public class TypeNode extends ASTNode {
         expressions.add(expression);
     }
 
+    public int getDimension() { return expressions.size(); }
+
     public Type getType() { return type; }
     public ArrayList<ExpressionNode> getExpressions() { return expressions; }
 

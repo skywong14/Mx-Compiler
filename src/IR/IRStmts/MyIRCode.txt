@@ -1,22 +1,45 @@
-; 声明外部函数malloc
-declare ptr @malloc(i32)
+declare void @print(ptr)
+declare void @println(ptr)
+declare void @printInt(i32)
+declare void @printlnInt(i32)
 
-; 声明LLVM的内置memset函数，用于初始化内存为0
-declare void @llvm.memset.p0.p0.i32(ptr, i32, i32, i1)
+declare ptr @getString()
+declare i32 @getInt()
 
-; 定义输入参数
-define ptr @allocateArray(i32 %arraySize, i32 %elementSize) {
+declare ptr @toString(i32)
+declare i32 @string.length(ptr)
+declare ptr @string.substring(ptr, i32, i32)
+declare i32 @string.parseInt(ptr)
+declare i32 @string.ord(ptr, i32)
+declare ptr @string.add(ptr, ptr)
+declare i1 @string.equal(ptr, ptr)
+declare i1 @string.notEqual(ptr, ptr)
+declare i1 @string.less(ptr, ptr)
+declare i1 @string.lessOrEqual(ptr, ptr)
+declare i1 @string.greater(ptr, ptr)
+declare i1 @string.greaterOrEqual(ptr, ptr)
+
+declare i32 @array.size(ptr)
+declare ptr @_malloc(i32)
+declare ptr @__arrayDeepCopy__(ptr)
+
+declare i1 @__ptrEqual__(ptr, ptr)
+declare i1 @__ptrNotEqual__(ptr, ptr)
+
+declare void @llvm.memset.p0.p0.i32(ptr, i8, i32, i1) ; 声明LLVM的内置memset函数，用于初始化内存为0
+
+
+define ptr @__allocateArray__(i32 %arraySize) {
 entry:
-    ; 计算需要分配的总字节数：4字节存储数组大小 + arraySize * elementSize
-    ; 加上1是为了存储数组大小的位置
-    %totalSize = add i32 %arraySize, 1            ; 计算需要的总大小（包括size的4字节）
-    %totalBytes = mul i32 %totalSize, %elementSize ; 计算总的字节数
+    ; 计算需要分配的总字节数：4字节存储数组大小 + arraySize * 4字节
+    %totalSize = add i32 %arraySize, 1                ; 计算需要的总大小（包括size的4字节）
+    %totalBytes = mul i32 %totalSize, 4               ; 计算总的字节数，每个元素4字节
 
     ; 调用malloc分配内存
-    %ptr = call ptr @malloc(i32 %totalBytes)
+    %ptr = call ptr @_malloc(i32 %totalBytes)
 
     ; 初始化为0
-    call void @llvm.memset.p0.p0.i32(ptr %ptr, i32 0, i32 %totalBytes, i1 false)
+    call void @llvm.memset.p0.p0.i32(ptr %ptr, i8 0, i32 %totalBytes, i1 false)
 
     ; 将数组大小存储在前4个字节
     %sizePtr = bitcast ptr %ptr to ptr                  ; 将指针转换为指向i32的指针类型以存储大小
@@ -28,5 +51,4 @@ entry:
     ; 返回指向第一个元素的指针
     ret ptr %elementPtr
 }
-
 

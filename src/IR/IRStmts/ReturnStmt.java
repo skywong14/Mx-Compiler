@@ -11,6 +11,7 @@ public class ReturnStmt extends IRStmt {
 
     @Override
     public String toString() {
+        if (src == null) return "ret " + type.toString();
         return "ret " + type.toString() + " " + src;
     }
 }

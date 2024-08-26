@@ -42,7 +42,7 @@ public class CallStmt extends IRStmt {
                     sb.append(", ");
                 }
             }
-            sb.append(")\n");
+            sb.append(")");
             return sb.toString();
         }
     }

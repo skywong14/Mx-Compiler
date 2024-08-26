@@ -80,6 +80,7 @@ public class SemanticChecker implements ASTVisitor {
             if (!it.getName().equals(it.getConstructorNode().getName())) {
                 throw new RuntimeException("[Type Mismatch] : constructor name should be the same as class name");
             }
+            it.getConstructorNode().getBody().addStatement(new JumpStmtNode("return", null));
             it.getConstructorNode().accept(this);
         } else {
             // default constructor
@@ -130,9 +131,7 @@ public class SemanticChecker implements ASTVisitor {
                 throw new RuntimeException("[Missing Return Statement]: function [" + it.getName() + "] should have return statement");
             }
         } else {
-            if (!it.getBody().hasReturnStatement()) {
-                it.getBody().addStatement(new JumpStmtNode("return", null));
-            }
+            it.getBody().addStatement(new JumpStmtNode("return", null));
         }
         // exit scope
         scopeManager.exitScope();
@@ -168,6 +167,7 @@ public class SemanticChecker implements ASTVisitor {
                 throw new RuntimeException("[Type Mismatch]: function [" + it.getIdentifier() + "] argument type mismatch");
             }
         }
+        it.deduceType(scopeManager);
     }
 
     // 访问变量
@@ -334,6 +334,7 @@ public class SemanticChecker implements ASTVisitor {
                 throw new RuntimeException("[Type Mismatch]: array size should be int");
             }
         }
+        it.deduceType(scopeManager);
     }
 
     // 访问数组类型
@@ -358,6 +359,8 @@ public class SemanticChecker implements ASTVisitor {
             throw new RuntimeException("[Type Mismatch]: not an array type");
         if (it.getExpressions().size() > primaryType.getDimension())
             throw new RuntimeException("[Dimension Out Of Bound]: array access dimension mismatch");
+
+        it.deduceType(scopeManager);
     }
 
     // 访问格式化字符串
@@ -392,6 +395,7 @@ public class SemanticChecker implements ASTVisitor {
     // 访问标识符
     public void visit(IdentifierNode it) {
         debug(it, it.getName());
+        it.deduceType(scopeManager);
         // doing nothing
     }
 
@@ -518,6 +522,8 @@ public class SemanticChecker implements ASTVisitor {
                 throw new RuntimeException("[Type Mismatch]: " + operator + " cannot be applied to " + expressionNode.deduceType(scopeManager));
         } else
             throw new RuntimeException("Type error: unknown operator at Unary: " + operator);
+
+        it.deduceType(scopeManager);
     }
 
     // BinaryExpr
@@ -540,6 +546,7 @@ public class SemanticChecker implements ASTVisitor {
                 || Objects.equals(operator, "<=") || Objects.equals(operator, ">=")) {
             if (!leftType.equals("int") && !leftType.equals("string"))
                 throw new RuntimeException("[Invalid Type]: Binary expression(+ < > <= >=) type should be int or string, but received: " + leftType.toString());
+            it.deduceType(scopeManager);
             return;
         }
 
@@ -547,24 +554,29 @@ public class SemanticChecker implements ASTVisitor {
                 Objects.equals(operator, "*") || Objects.equals(operator, "/") || Objects.equals(operator, "%")) {
             if (!leftType.equals("int"))
                 throw new RuntimeException("[Invalid Type]: Binary expression(-*/%) type should be int, but received: " + leftType.toString());
+            it.deduceType(scopeManager);
             return;
         }
         if (Objects.equals(operator, "&") || Objects.equals(operator, "^") || Objects.equals(operator, "|")) {
             if (!leftType.equals("int"))
                 throw new RuntimeException("[Invalid Type]: Binary expression(+-*/%) type should be int, but received: " + leftType.toString());
+            it.deduceType(scopeManager);
             return;
         }
         if (Objects.equals(operator, "==") || Objects.equals(operator, "!=")){
+            it.deduceType(scopeManager);
             return;
         }
         if (Objects.equals(operator, "&&") || Objects.equals(operator, "||")){
             if (!leftType.equals("bool"))
                 throw new RuntimeException("[Invalid Type]: Binary expression(&&,||) type should be bool, but received: " + leftType.toString());
+            it.deduceType(scopeManager);
             return;
         }
         if (Objects.equals(operator, "<<") || Objects.equals(operator, ">>")) {
             if (!leftType.equals("int"))
                 throw new RuntimeException("[Invalid Type]: Binary expression(<<,>>) type should be int, but received: " + leftType.toString());
+            it.deduceType(scopeManager);
             return;
         }
         if (Objects.equals(operator, "=")) {
@@ -589,6 +601,8 @@ public class SemanticChecker implements ASTVisitor {
 
         if (!trueExpr.deduceType(scopeManager).equals(falseExpr.deduceType(scopeManager)))
             throw new RuntimeException("[Type Mismatch]: type mismatch in ternary expression");
+
+        it.deduceType(scopeManager);
     }
 
     public void visit(AssignExprNode it) {
@@ -611,5 +625,6 @@ public class SemanticChecker implements ASTVisitor {
         if (!left.isLeftValue()) {
             throw new RuntimeException("[Type Mismatch]: left value should be assignable");
         }
+        it.deduceType(scopeManager);
     }
 }

@@ -12,6 +12,6 @@ public class StringDeclareStmt extends IRStmt{
     // <dest> = private unnamed_addr constant [4 x i8] c"value\00"
     @Override
     public String toString() {
-        return dest + " = private unnamed_addr constant [" + value.length() + " x i8] c\"" + value + "\\00\"";
+        return dest + " = private unnamed_addr constant [" + (value.length() + 1) + " x i8] c\"" + value + "\\00\"";
     }
 }

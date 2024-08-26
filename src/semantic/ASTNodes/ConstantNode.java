@@ -23,6 +23,8 @@ public class ConstantNode extends PrimaryExpressionNode {
         constants.add(constant);
     }
 
+    public ArrayList<ConstantNode> getConstants() { return constants; }
+
     public void notifyParent() {
         for (ConstantNode c : constants) {
             c.setParent(this);

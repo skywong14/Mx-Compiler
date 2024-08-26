@@ -3,6 +3,7 @@ package IR;
 import parser.MxParser;
 import semantic.ASTNodes.*;
 
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -28,6 +29,9 @@ public class IRBuilder  {
 
     HashMap<String, String> stringLiteral = new HashMap<>();
     HashMap<String, Boolean> hasConstructor = new HashMap<>();
+
+    int constantArrayCnt = 0;
+    int newArrayCnt = 0;
 
     public IRBuilder(ProgramNode programNode) {
         globalScope = new IRScope( "Global", null);
@@ -129,7 +133,7 @@ public class IRBuilder  {
         }
 
         // add constantStmts to the head of irStmts
-        irStmts.addAll(0, constantStmts);
+        irStmts.addAll(1, constantStmts);
     }
 
     void enterScope(String name) {
@@ -143,11 +147,11 @@ public class IRBuilder  {
         enterScope("Class_" + it.getName());
         curClassNode = it;
 
-//        for (FieldDeclarationNode field : it.getFieldNodes()) {
-//            for (String name : field.getNames()) {
-//                curScope.declareVariable(name);
-//            }
-//        }
+        for (FieldDeclarationNode field : it.getFieldNodes()) {
+            for (String name : field.getNames()) {
+                curScope.declareVariable(name);
+            }
+        }
         // implement all the methods and constructors
 
         if (it.getConstructorNode() != null) {
@@ -197,15 +201,14 @@ public class IRBuilder  {
         curFunction = stmt;
 
         // declare parameters
-        int tmp_i = 0;
+
         for (ParameterNode parameter : it.getParameters()) {
             curScope.declareVariable(parameter.getName());
             String varPtr = curScope.getVariable(parameter.getName());
                     // varPtr = alloca <type>
             stmt.addStmt(new AllocaStmt(new BasicIRType(parameter.getType()), varPtr));
             // store <type> %<i> ptr <varPtr>
-            stmt.addStmt(new StoreStmt(new BasicIRType(parameter.getType()), "%" + tmp_i, varPtr));
-            tmp_i++;
+            stmt.addStmt(new StoreStmt(new BasicIRType(parameter.getType()), "%" + parameter.getName(), varPtr));
         }
 
         for (StatementNode node : it.getBody().getStatements()) {
@@ -343,8 +346,12 @@ public class IRBuilder  {
         } else if (it.getJumpType().equals("continue")) {
             curFunction.addStmt(new BranchStmt(curLoopContinue));
         } else if (it.getJumpType().equals("return")) {
-            String register = visitExpressionNode(it.getExpression());
-            curFunction.addStmt(new ReturnStmt(new BasicIRType(it.getExpression().deduceType(null)), register));
+            if (it.getExpression() != null) {
+                String register = visitExpressionNode(it.getExpression());
+                curFunction.addStmt(new ReturnStmt(new BasicIRType(it.getExpression().deduceType(null)), register));
+            } else {
+                curFunction.addStmt(new ReturnStmt(new BasicIRType("void"), null));
+            }
         }
     }
 
@@ -392,8 +399,10 @@ public class IRBuilder  {
             args.add(visitExpressionNode(arg));
             argTypes.add(new BasicIRType(arg.deduceType(null)));
         }
-        String retReg = curScope.getNewRegister();
+        String retReg = null;
 
+        if (!it.deduceType(null).equals("void"))
+            retReg = curScope.getNewRegister();
         if (curClassNode != null) {
             if (globalScope.functions.containsKey(curClassNode.getName() + "." + it.getIdentifier())) {
                 // if in a class method, add this as the first argument
@@ -427,7 +436,9 @@ public class IRBuilder  {
                 args.add(visitExpressionNode(arg));
                 argTypes.add(new BasicIRType(arg.deduceType(null)));
             }
-            String retReg = curScope.getNewRegister();
+            String retReg = null;
+            if (!it.deduceType(null).equals("void"))
+                retReg = curScope.getNewRegister();
             addStmt(new CallStmt(new BasicIRType(it.deduceType(null)),
                     it.getExpression().deduceType(null).baseType + "." +  it.getIdentifier(), argTypes, args, retReg));
             return retReg;
@@ -438,7 +449,8 @@ public class IRBuilder  {
             String fieldPtr = curScope.getNewRegister();
             String fieldName = it.getIdentifier();
             int index = getFieldIndex(it.getExpression().deduceType(null).baseType, fieldName);
-            addStmt(new GetElementPtrStmt(new BasicIRType(it.deduceType(null)), classInstance, Integer.toString(index), fieldPtr));
+            addStmt(new GetElementPtrStmt(new ClassTypeStmt(it.getExpression().deduceType(null).baseType, null) ,
+                    classInstance, Integer.toString(index), fieldPtr, true));
             // load the value of the field
             String register = curScope.getNewRegister();
             addStmt(new LoadStmt(new BasicIRType(it.deduceType(null)), fieldPtr, register));
@@ -449,14 +461,16 @@ public class IRBuilder  {
 
     String visitUnaryExprNode(UnaryExprNode it) {
         String register = visitExpressionNode(it.getExpression());
-        String destRegister = curScope.getNewRegister();
+        String destRegister = null;
         String operator = it.getOperator();
 
         if (operator.equals("~") || operator.equals("!")) {
+            destRegister = curScope.getNewRegister();
             addStmt(new UnaryExprStmt(operator, new BasicIRType("i1"), register, destRegister));
         } else if (operator.equals("++")) {
             String destRegister2 = curScope.getNewRegister();
             addStmt(new LoadStmt(new BasicIRType("i32"), leftValuePtr, destRegister2)); // load to destRegister2
+            destRegister = curScope.getNewRegister();
             addStmt(new UnaryExprStmt("++", new BasicIRType("i32"), destRegister2, destRegister));
             addStmt(new StoreStmt(new BasicIRType("i32"), destRegister, leftValuePtr)); // store
             if (it.isLeftOp()){
@@ -467,6 +481,7 @@ public class IRBuilder  {
         } else if (operator.equals("--")) {
             String destRegister2 = curScope.getNewRegister();
             addStmt(new LoadStmt(new BasicIRType("i32"), leftValuePtr, destRegister2)); // load to destRegister2
+            destRegister = curScope.getNewRegister();
             addStmt(new UnaryExprStmt("--", new BasicIRType("i32"), destRegister2, destRegister));
             addStmt(new StoreStmt(new BasicIRType("i32"), destRegister, leftValuePtr)); // store
             if (it.isLeftOp()){
@@ -475,22 +490,24 @@ public class IRBuilder  {
                 return destRegister2;
             }
         } else if (operator.equals("-")) {
+            destRegister = curScope.getNewRegister();
             addStmt(new UnaryExprStmt("-", new BasicIRType("i32"), register, destRegister));
-        } else if (!operator.equals("+")) {
+        } else if (operator.equals("+")) {
+            destRegister = register;
+        } else
             throw new RuntimeException("Unknown operator: " + operator);
-        }
         return destRegister;
     }
 
     String visitBinaryExprNode(BinaryExprNode it) {
         String Operator = it.getOperator();
-        String curBlockLabel = curFunction.curBlockLabel();
         if (Operator.equals("&&") || Operator.equals("||")) {
             // phi i1 [true, %curBlock], [false %endBlock]
             String leftRegister = visitExpressionNode(it.getLeft());
             String nextBlock = curScope.getNewBlock();
             String endBlock = curScope.getNewBlock();
 
+            String headBlockLabel = curFunction.curBlockLabel();
             if (Operator.equals("&&")) {
                 addStmt(new BranchStmt(leftRegister, nextBlock, endBlock));
             } else {
@@ -499,16 +516,16 @@ public class IRBuilder  {
 
             curFunction.newBlock(nextBlock);
             String rightRegister = visitExpressionNode(it.getRight());
-            addStmt(new BranchStmt(rightRegister, endBlock, endBlock));
+            addStmt(new BranchStmt(endBlock));
 
             curFunction.newBlock(endBlock);
             String destRegister = curScope.getNewRegister();
             if (Operator.equals("&&")) {
                 addStmt(new PhiStmt(new BasicIRType("i1"), new String[]{"false", "true"},
-                        new String[]{"%" + curBlockLabel, "%" + nextBlock}, destRegister));
+                        new String[]{"%" + headBlockLabel, "%" + nextBlock}, destRegister));
             } else {
                 addStmt(new PhiStmt(new BasicIRType("i1"), new String[]{"true", "false"},
-                        new String[]{"%" + curBlockLabel, "%" + nextBlock}, destRegister));
+                        new String[]{"%" + headBlockLabel, "%" + nextBlock}, destRegister));
             }
             return destRegister;
         }
@@ -614,19 +631,26 @@ public class IRBuilder  {
             // new Array
             TypeNode typeNode = it.getTypeNode();
 
+
+            int dimension = typeNode.getDimension(); // the dimension that need to alloc
+
+            ArrayList<String> indexReg = new ArrayList<>();
+            for (int i = 0; i < dimension; i++) {
+                String tmpReg = visitExpressionNode(typeNode.getExpressions().get(i));
+                indexReg.add(tmpReg);
+            }
+
+            newArrayCnt++;
+            String reg = curScope.getNewRegister();
+            addStmt(new NewArrayStmt(dimension, indexReg, Integer.toString(newArrayCnt), reg));
+            // debug(generateMultiDimensionalArrayIR(dimension, indexReg));
+
             ConstantNode arrayConstant = it.getArrayConstant();
-
-            String retReg = curScope.getNewRegister();
-
-            // retReg = generateMultiDimensionalArrayIR(typeNode, arrayConstant);
-
             if (arrayConstant != null) {
                 // set the array with value of arrayConstant
                 // ptr __arrayDeepCopy__(ptr arrPtr)
-
-
             }
-            return "todo";
+            return reg;
         } else {
             // new Class
             // alloc memory
@@ -649,13 +673,44 @@ public class IRBuilder  {
             stringLiteral.put(str, strPtr);
             constantStmts.add(new StringDeclareStmt(str, strPtr));
             return strPtr;
-            // @my_string = global i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0)
         }
         // @.str = private unnamed_addr constant [4 x i8] c"Mx*\00"
     }
 
     String arrayDeclareInGlobal(ConstantNode it) {
+        if (!it.isArray){
+            Type type = it.deduceType(null);
+            if (type.equals("String")) {
+                // string
+                return stringDeclareInGlobal(it.literal_value.substring(1, it.literal_value.length() - 1));
+            } else {
+                // i32 or i1
+                return it.literal_value;
+            }
+        }
 
+        ArrayList<String> elementIndex = new ArrayList<>();
+        for (ConstantNode constantNode : it.getConstants()) {
+            String tmpReg = curScope.getNewRegister();
+            elementIndex.add(tmpReg);
+        }
+        String arrayPtr = "@.array." + constantArrayCnt;
+        constantArrayCnt++;
+        // call __allocateArray__(i32 size) -> ptr
+        addStmt(new CallStmt(new BasicIRType("ptr"), "__allocateArray__",
+                new ArrayList<BasicIRType>(){{add(new BasicIRType("i32"));}},
+                new ArrayList<String>(){{add(Integer.toString(elementIndex.size()));}}, arrayPtr));
+        // store the value of the array
+        for (int i = 0; i < elementIndex.size(); i++) {
+            String elementPtr = curScope.getNewRegister();
+            String idx = Integer.toString(i);
+            addStmt(new GetElementPtrStmt(new BasicIRType(it.deduceType(null)), arrayPtr,
+                    new ArrayList<String>(){{add(idx);}}, elementPtr, true));
+            String register = arrayDeclareInGlobal(it.getConstants().get(i));
+            addStmt(new StoreStmt(new BasicIRType(it.deduceType(null)), register, elementPtr));
+        }
+
+        return arrayPtr;
     }
 
     String visitConstantNode(ConstantNode it) {
@@ -668,7 +723,7 @@ public class IRBuilder  {
             reg = it.literal_value;
             // addStmt(new ConstantStmt("i1", it.literal_value, reg));
         } else if (type.equals("string")) {
-            reg = stringDeclareInGlobal(it.literal_value); //todo
+            reg = stringDeclareInGlobal(it.literal_value.substring(1, it.literal_value.length() - 1));
         } else if (type.equals("null")) {
             reg = "null";
             // addStmt(new ConstantStmt("ptr", "null", reg));
@@ -684,14 +739,16 @@ public class IRBuilder  {
             return "%this";
         }
 
-        if (curScope.isField(it.getName())) {
+        // 检查&& curScope.getVariable(it.getName())的开头是否为“@”
+        boolean isGlobal = curScope.getVariable(it.getName()).startsWith("@"); //todo
+        if (curScope.isField(it.getName())  ) {
             // tmpReg = getelementptr <classType>, ptr %this, i32 0, i32 <fieldIndex>
             // retReg = load <fieldType> tmpReg
             String tmpReg = curScope.getNewRegister();
-            String retReg = curScope.getNewRegister();
+            addStmt(new GetElementPtrStmt(new ClassTypeStmt(curClassNode.name, null),
+                    "%this", Integer.toString(getFieldIndex(curClassNode.name, it.getName())), tmpReg, true));
 
-            addStmt(new GetElementPtrStmt(new BasicIRType(it.deduceType(null)),
-                    "%this", Integer.toString(getFieldIndex(curClassNode.name, it.getName())), tmpReg));
+            String retReg = curScope.getNewRegister();
             addStmt(new LoadStmt(new BasicIRType(it.deduceType(null)), tmpReg, retReg));
             leftValuePtr = tmpReg;
             return retReg;
@@ -710,7 +767,6 @@ public class IRBuilder  {
         String trueBlock = curScope.getNewBlock();
         String falseBlock = curScope.getNewBlock();
         String endBlock = curScope.getNewBlock();
-        String retReg = curScope.getNewRegister();
 
         String conditionRegister = visitExpressionNode(it.getCondition());
         curFunction.addStmt(new BranchStmt(conditionRegister, trueBlock, falseBlock));
@@ -724,6 +780,7 @@ public class IRBuilder  {
         curFunction.addStmt(new BranchStmt(endBlock));
 
         curFunction.newBlock(endBlock);
+        String retReg = curScope.getNewRegister();
         curFunction.addStmt(new SelectStmt(new BasicIRType(it.deduceType(null)), conditionRegister, trueReg, falseReg, retReg));
 
         return retReg;
@@ -742,7 +799,9 @@ public class IRBuilder  {
         // <result> = getelementptr <ty>, ptr <ptrval>{, <ty> <idx>}*
         // get the address of the element
         String elementPtr = curScope.getNewRegister();
-        addStmt(new GetElementPtrStmt(new BasicIRType(it.deduceType(null)), arrayHeadPtr, elementIndex, elementPtr));
+        //todo: type
+        addStmt(new GetElementPtrStmt(new BasicIRType(it.deduceType(null)),
+                arrayHeadPtr, elementIndex, elementPtr, true));
         // load the value of the element
         String register = curScope.getNewRegister();
         addStmt(new LoadStmt(new BasicIRType(it.deduceType(null)), elementPtr, register));
@@ -762,57 +821,81 @@ public class IRBuilder  {
     String visitFormattedStringNode(FormattedStringNode it) {
         int size = it.getExpressions().size();
         String reg0 = stringDeclareInGlobal(it.getPlainStrings().get(0));
+
+        ArrayList<BasicIRType> ptr2 = new ArrayList<>(); ptr2.add(new BasicIRType("ptr")); ptr2.add(new BasicIRType("ptr"));
+        ArrayList<BasicIRType> int1 = new ArrayList<>(); int1.add(new BasicIRType("i32"));
+
         for (int i = 0; i < size; i++) {
             String reg = visitExpressionNode(it.getExpressions().get(i));
-            // todo
-            String regStr = stringDeclareInGlobal(it.getPlainStrings().get(i + 1));
-            // todo
+            String regStr;
+            if (it.getExpressions().get(i).deduceType(null).equals("int")) {
+                // int
+                regStr = curScope.getNewRegister();
+                addStmt(new CallStmt(new BasicIRType("ptr"), "toString",
+                        int1, new ArrayList<String>(){{add(reg);}}, regStr));
+            } else if (it.getExpressions().get(i).deduceType(null).equals("string")) {
+                // string
+                regStr = reg;
+            } else {
+                // boolean
+                String trueStr = stringDeclareInGlobal("true"), falseStr = stringDeclareInGlobal("false");
+                regStr = curScope.getNewRegister();
+                addStmt(new SelectStmt(new BasicIRType("ptr"), reg, trueStr, falseStr, regStr));
+            }
+            // str.add
+            String newReg = curScope.getNewRegister();
+            ArrayList<String> args = new ArrayList<>(); args.add(reg0); args.add(regStr);
+            addStmt(new CallStmt(new BasicIRType("ptr"), "string.add",
+                    ptr2, args, newReg));
+            reg0 = newReg;
+
+            // str.add
+            String regi = stringDeclareInGlobal(it.getPlainStrings().get(i + 1));
+            newReg = curScope.getNewRegister();
+            args = new ArrayList<>(); args.add(reg0); args.add(regi);
+            addStmt(new CallStmt(new BasicIRType("ptr"), "string.add",
+                    ptr2, args, newReg));
+            reg0 = newReg;
         }
-        return ;
+        return reg0;
     }
 
-    public static String generateMultiDimensionalArrayIR(int n, ArrayList<String> sizeRegisters, int currentDimension) {
+    public static String generateMultiDimensionalArrayIR(int n, ArrayList<String> sizeRegisters) {
         StringBuilder ir = new StringBuilder();
+        String currentArrayPtr = "%arrayPtr";
 
-        // 获取当前维度的size寄存器
-        String currentSize = sizeRegisters.get(currentDimension);
+        for (int i = 0; i < n; i++) {
+            String currentSize = sizeRegisters.get(i);
+            String nextArrayPtr = "%arrayPtr" + i;
 
-        // 调用alloc_array函数分配当前维度的数组
-        String arrayPtr = "%arrayPtr" + currentDimension;
-        ir.append(arrayPtr).append(" = call ptr @alloc_array(i32 ").append(currentSize).append(", i32 4)\n");
+            ir.append(nextArrayPtr)
+                    .append(" = call ptr @allocateArray(i32 ")
+                    .append(currentSize)
+                    .append(")\n");
 
-        if (currentDimension < n - 1) {
-            // 如果还没有到达最后一个维度，递归生成内部数组
-            String loopIndex = "%i" + currentDimension;
-            String loopEnd = "%loopEnd" + currentDimension;
-            String loopStartLabel = "loop_start_" + currentDimension;
-            String loopEndLabel = "loop_end_" + currentDimension;
+            if (i > 0) {
+                String loopIndex = "%i" + (i - 1);
+                String loopStartLabel = "loop_start_" + (i - 1);
+                String loopEndLabel = "loop_end_" + (i - 1);
 
-            // 创建循环，递归为每个子数组分配内存
-            ir.append(loopIndex).append(" = alloca i32\n");
-            ir.append("store i32 0, ptr ").append(loopIndex).append("\n");
-            ir.append(loopEnd).append(" = load i32, ptr ").append(currentSize).append("\n");
+                ir.append(loopStartLabel).append(":\n")
+                        .append("  %idx").append(i - 1).append(" = load i32, i32* ").append(loopIndex).append("\n")
+                        .append("  %cond").append(i - 1).append(" = icmp slt i32 %idx").append(i - 1).append(", ").append(currentSize).append("\n")
+                        .append("  br i1 %cond").append(i - 1).append(", label %").append(loopStartLabel).append("_body, label %").append(loopEndLabel).append("\n")
+                        .append(loopStartLabel).append("_body:\n")
+                        .append("  %subArrayPtr").append(i - 1).append(" = getelementptr ptr, ptr ").append(currentArrayPtr).append(", i32 %idx").append(i - 1).append("\n")
+                        .append("  store ptr ").append(nextArrayPtr).append(", ptr %subArrayPtr").append(i - 1).append("\n")
+                        .append("  %newIdx").append(i - 1).append(" = add i32 %idx").append(i - 1).append(", 1\n")
+                        .append("  store i32 %newIdx").append(i - 1).append(", i32* ").append(loopIndex).append("\n")
+                        .append("  br label %").append(loopStartLabel).append("\n")
+                        .append(loopEndLabel).append(":\n");
+            }
 
-            ir.append(loopStartLabel).append(":\n");
-            ir.append("  %idx = load i32, ptr ").append(loopIndex).append("\n");
-            ir.append("  %cond = icmp slt i32 %idx, ").append(loopEnd).append("\n");
-            ir.append("  br i1 %cond, label %").append(loopStartLabel).append("_body, label %").append(loopEndLabel).append("\n");
-
-            ir.append(loopStartLabel).append("_body:\n");
-            ir.append("  %subArrayPtr = getelementptr ptr, ptr ").append(arrayPtr).append(", i32 %idx\n");
-            ir.append("  store ptr ").append(generateMultiDimensionalArrayIR(n, sizeRegisters, currentDimension + 1))
-                    .append(", ptr %subArrayPtr\n");
-            ir.append("  %newIdx = add i32 %idx, 1\n");
-            ir.append("  store i32 %newIdx, ptr ").append(loopIndex).append("\n");
-            ir.append("  br label %").append(loopStartLabel).append("\n");
-
-            ir.append(loopEndLabel).append(":\n");
+            currentArrayPtr = nextArrayPtr;
         }
 
-        if (currentDimension == 0) {
-            // 如果是最外层维度，返回最外层数组的指针
-            ir.append("ret ptr ").append(arrayPtr).append("\n");
-        }
+        // 返回最外层数组的指针
+        ir.append("ret ptr ").append(currentArrayPtr).append("\n");
 
         return ir.toString();
     }

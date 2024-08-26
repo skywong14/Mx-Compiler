@@ -16,6 +16,6 @@ public class MemsetStmt extends IRStmt {
 
     @Override
     public String toString() {
-        return "call void @llvm.memset.p0.p0.i32(ptr " + ptr + ", i8 " + value + ", i32 " + size + ", i1 " + isVolatile + ")";
+        return "call void @llvm.memset.p0.p0.i32(ptr " + ptr + ", i32 " + value + ", i32 " + size + ", i1 " + isVolatile + ")";
     }
 }

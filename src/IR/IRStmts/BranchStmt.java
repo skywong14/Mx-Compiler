@@ -22,9 +22,9 @@ public class BranchStmt extends IRStmt {
     @Override
     public String toString() {
         if (condition == null) {
-            return "br label %" + trueLabel + "\n";
+            return "br label %" + trueLabel;
         } else {
-            return "br i1 " + condition + ", label %" + trueLabel + ", label %" + falseLabel + "\n";
+            return "br i1 " + condition + ", label %" + trueLabel + ", label %" + falseLabel;
         }
     }
 }

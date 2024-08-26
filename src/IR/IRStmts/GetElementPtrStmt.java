@@ -6,29 +6,34 @@ import java.util.ArrayList;
 public class GetElementPtrStmt extends IRStmt {
     public String dest;
     public String pointer;
-    public BasicIRType type;
+    public IRType type;
     public ArrayList<String> index;
 
-    public GetElementPtrStmt(BasicIRType type, String pointer, ArrayList<String> index, String dest) {
+    boolean hasZero = false;
+
+    public GetElementPtrStmt(IRType type, String pointer, ArrayList<String> index, String dest, boolean hasZero) {
         this.pointer = pointer;
         this.dest = dest;
         this.type = type;
         this.index = index;
+        this.hasZero = hasZero;
     }
 
-    public GetElementPtrStmt(BasicIRType type, String pointer, String index, String dest) {
+    public GetElementPtrStmt(IRType type, String pointer, String index, String dest, boolean hasZero) {
         this.pointer = pointer;
         this.dest = dest;
         this.type = type;
         this.index = new ArrayList<>();
         this.index.add(index);
+        this.hasZero = hasZero;
     }
 
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append(dest).append(" = getelementptr ").append(type.toString()).append(", ptr ").append(pointer);
-        sb.append(", i32 0"); // 从第0个元素（基址）进行偏移
+        if (hasZero)
+            sb.append(", i32 0"); // 从第0个元素（基址）进行偏移
         for (String idx : index) {
             sb.append(", i32 ").append(idx);
         }

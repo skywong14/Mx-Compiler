@@ -151,6 +151,11 @@ bool __ptrNotEqual__(void *ptr1, void *ptr2) {
     return ptr1 != ptr2;
 }
 
+// 修改后的memset函数，用于将内存块的所有字节设置为0
+//void *__myMemset__(void *s, size_t n) {
+//    return memset(s, 0, n);
+//}
+
 
 /*
 void *calloc(size_t num, size_t size);
