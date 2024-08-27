@@ -12,6 +12,13 @@ public class FunctionDeclarationStmt extends IRStmt {
     public ArrayList<BasicIRType> argTypes;
     public ArrayList<String> argNames;
 
+    public FunctionDeclarationStmt(String name) {
+        this.name = name;
+        this.returnType = new BasicIRType("void");
+        this.argTypes = new ArrayList<>();
+        this.argNames = new ArrayList<>();
+    }
+
     public FunctionDeclarationStmt(FunctionNode function) {
         this.name = function.getName();
         this.returnType = new BasicIRType(function.getReturnType());

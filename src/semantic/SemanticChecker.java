@@ -253,6 +253,7 @@ public class SemanticChecker implements ASTVisitor {
                 if (it.getIdentifier().equals("size")) {
                     if (!it.getArgListNode().getArgList().isEmpty())
                         throw new RuntimeException("[Type Mismatch]: array size does not have arguments");
+                    it.deduceType(scopeManager);
                     return;
                 } else {
                     throw new RuntimeException("[Undefined Identifier]: array type does not have member access except size");

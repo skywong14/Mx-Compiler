@@ -1,7 +1,6 @@
 package IR.IRStmts;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Objects;
 
 public class Block extends IRStmt {
@@ -17,8 +16,25 @@ public class Block extends IRStmt {
         stmts.add(stmt);
     }
 
+    void updateBlock() {
+        if (stmts.isEmpty()) label = "";
+        else {
+            int sz = stmts.size();
+            for (IRStmt stmt : stmts) {
+                if (stmt instanceof BranchStmt || stmt instanceof ReturnStmt) {
+                    // remove all stmts after branch or return
+                    int idx = stmts.indexOf(stmt);
+                    if (idx == sz - 1) break;
+                    stmts = new ArrayList<>(stmts.subList(0, idx + 1));
+                    break;
+                }
+            }
+        }
+    }
+
     @Override
     public String toString() {
+        updateBlock();
         StringBuilder sb = new StringBuilder();
         if (!Objects.equals(label, "")) sb.append(label).append(":\n");
         for (IRStmt stmt : stmts) {

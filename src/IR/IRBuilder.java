@@ -87,13 +87,11 @@ public class IRBuilder  {
         for (FunctionNode function : it.getFunctions()) {
             FunctionDeclarationStmt stmt = new FunctionDeclarationStmt(function);
             curScope.addFunction(stmt.name, stmt);
-//            addStmt(stmt);
         }
         for (ClassNode classNode : it.getClasses()) {
             for (FunctionNode method : classNode.getMethodNodes()) {
                 FunctionDeclarationStmt stmt = new FunctionDeclarationStmt(classNode, method);
                 curScope.addFunction(stmt.name, stmt);
-//                addStmt(stmt);
             }
         }
         // declare class constructors
@@ -101,7 +99,6 @@ public class IRBuilder  {
             if (classNode.getConstructorNode() != null) {
                 FunctionDeclarationStmt stmt = new FunctionDeclarationStmt(classNode, classNode.getConstructorNode());
                 curScope.addFunction(stmt.name, stmt);
-//                addStmt(stmt);
             }
         }
 
@@ -115,7 +112,7 @@ public class IRBuilder  {
         // implement all functions and class methods
         for (FunctionNode function : it.getFunctions()) {
             if (!function.getName().equals("main")) {
-                visitFunctionNode(function);
+                visitFunctionNode(function, false);
             }
         }
         for (ClassNode classNode : it.getClasses()) {
@@ -123,12 +120,12 @@ public class IRBuilder  {
         }
 
         // __Mx_global_var_init (a function)
-
+        visitVariableInit(it);
 
         // __Mx_main
         for (FunctionNode function : it.getFunctions()) {
             if (function.getName().equals("main")) {
-                visitFunctionNode(function);
+                visitFunctionNode(function, true);
             }
         }
 
@@ -141,6 +138,27 @@ public class IRBuilder  {
     }
     void exitScope() {
         curScope = curScope.parent;
+    }
+
+    void visitVariableInit(ProgramNode it) {
+        FunctionDeclarationStmt emptyFunc = new FunctionDeclarationStmt("__Mx_global_var_init__");
+        FunctionImplementStmt varInit = new FunctionImplementStmt("__Mx_global_var_init__",
+                emptyFunc);
+        curFunction = varInit;
+
+        enterScope("Function_GlobalVarInit");
+        // get all the global variables with initial value
+        for (VariableDeclarationNode variable : it.getVariables())
+            for (VariableNode var : variable.getVariableNodes())
+                if (var.getValue() != null) {
+                    String varPtr = curScope.getVariable(var.getName());
+                    String register = visitExpressionNode(var.getValue());
+                    addStmt(new StoreStmt(new BasicIRType(var.getType()), register, varPtr));
+                }
+        varInit.addStmt(new ReturnStmt(new BasicIRType("void"), null));
+        curFunction = null;
+        exitScope();
+        irStmts.add(varInit);
     }
 
     void visitClassNode(ClassNode it) {
@@ -194,14 +212,20 @@ public class IRBuilder  {
         exitScope();
     }
 
-    void visitFunctionNode(FunctionNode it) {
+    void visitFunctionNode(FunctionNode it, boolean isMain) {
         enterScope("Function_" + it.getName());
 
         FunctionImplementStmt stmt = new FunctionImplementStmt(it.getName(), curScope.getFunctionDeclaration(it.getName()));
         curFunction = stmt;
 
-        // declare parameters
+        if (isMain) {
+            // add a call to __Mx_global_var_init__
+            ArrayList<String> args = new ArrayList<>();
+            ArrayList<BasicIRType> argTypes = new ArrayList<>();
+            addStmt(new CallStmt(new BasicIRType("void"), "__Mx_global_var_init__", argTypes, args, null));
+        }
 
+        // declare parameters
         for (ParameterNode parameter : it.getParameters()) {
             curScope.declareVariable(parameter.getName());
             String varPtr = curScope.getVariable(parameter.getName());
@@ -290,8 +314,12 @@ public class IRBuilder  {
 
         // condition
         curFunction.newBlock(conditionBlock);
-        String conditionRegister = visitExpressionNode(it.getCondition());
-        curFunction.addStmt(new BranchStmt(conditionRegister, bodyBlock, endBlock));
+        if (it.getCondition() != null) {
+            String conditionRegister = visitExpressionNode(it.getCondition());
+            curFunction.addStmt(new BranchStmt(conditionRegister, bodyBlock, endBlock));
+        } else {
+            curFunction.addStmt(new BranchStmt(bodyBlock));
+        }
 
         // body
         curFunction.newBlock(bodyBlock);
@@ -300,7 +328,8 @@ public class IRBuilder  {
 
         // step
         curFunction.newBlock(stepBlock);
-        visitExpressionNode(it.getStep());
+        if (it.getStep() != null)
+            visitExpressionNode(it.getStep());
         curFunction.addStmt(new BranchStmt(conditionBlock));
 
         // end
@@ -421,14 +450,15 @@ public class IRBuilder  {
 
     String visitMemberAccessNode(MemberAccessNode it) {
         if (it.isMethod()) {
-            // expression '.' IDENTIFIER '(' arglist? ')'
-            // call <classname.methodName>(<expression>, <arg1>, <arg2>, ...)
+            // expression '.' IDENTIFIER '(' argListNode ')'
             String classInstance = visitExpressionNode(it.getExpression());
+            String classInstanceLeftVal = leftValuePtr;
             ArrayList<String> args = new ArrayList<>();
             ArrayList<BasicIRType> argTypes = new ArrayList<>();
             argTypes.add(new BasicIRType("ptr"));
             if (curClassNode != null) {
-                args.add("%this");
+                // args.add("%this"); wrong
+                args.add(classInstance);
             } else {
                 args.add(classInstance);
             }
@@ -436,11 +466,13 @@ public class IRBuilder  {
                 args.add(visitExpressionNode(arg));
                 argTypes.add(new BasicIRType(arg.deduceType(null)));
             }
+
             String retReg = null;
-            if (!it.deduceType(null).equals("void"))
-                retReg = curScope.getNewRegister();
+            if (!it.deduceType(null).equals("void")) retReg = curScope.getNewRegister();
+            String className = it.getExpression().deduceType(null).baseType;
+            if (it.getExpression().deduceType(null).is_array) { className = "array"; }
             addStmt(new CallStmt(new BasicIRType(it.deduceType(null)),
-                    it.getExpression().deduceType(null).baseType + "." +  it.getIdentifier(), argTypes, args, retReg));
+                    className + "." +  it.getIdentifier(), argTypes, args, retReg));
             return retReg;
         } else {
             // expression '.' IDENTIFIER
@@ -464,9 +496,12 @@ public class IRBuilder  {
         String destRegister = null;
         String operator = it.getOperator();
 
-        if (operator.equals("~") || operator.equals("!")) {
+        if (operator.equals("!")) {
             destRegister = curScope.getNewRegister();
             addStmt(new UnaryExprStmt(operator, new BasicIRType("i1"), register, destRegister));
+        } else if (operator.equals("~")) {
+            destRegister = curScope.getNewRegister();
+            addStmt(new UnaryExprStmt(operator, new BasicIRType("i32"), register, destRegister));
         } else if (operator.equals("++")) {
             String destRegister2 = curScope.getNewRegister();
             addStmt(new LoadStmt(new BasicIRType("i32"), leftValuePtr, destRegister2)); // load to destRegister2
@@ -503,11 +538,14 @@ public class IRBuilder  {
         String Operator = it.getOperator();
         if (Operator.equals("&&") || Operator.equals("||")) {
             // phi i1 [true, %curBlock], [false %endBlock]
+            String answerPtr = curScope.getNewRegister();
             String leftRegister = visitExpressionNode(it.getLeft());
             String nextBlock = curScope.getNewBlock();
             String endBlock = curScope.getNewBlock();
 
             String headBlockLabel = curFunction.curBlockLabel();
+            addStmt(new AllocaStmt(new BasicIRType("i1"), answerPtr));
+            addStmt(new StoreStmt(new BasicIRType("i1"), leftRegister, answerPtr));
             if (Operator.equals("&&")) {
                 addStmt(new BranchStmt(leftRegister, nextBlock, endBlock));
             } else {
@@ -516,17 +554,12 @@ public class IRBuilder  {
 
             curFunction.newBlock(nextBlock);
             String rightRegister = visitExpressionNode(it.getRight());
+            addStmt(new StoreStmt(new BasicIRType("i1"), rightRegister, answerPtr));
             addStmt(new BranchStmt(endBlock));
 
             curFunction.newBlock(endBlock);
             String destRegister = curScope.getNewRegister();
-            if (Operator.equals("&&")) {
-                addStmt(new PhiStmt(new BasicIRType("i1"), new String[]{"false", "true"},
-                        new String[]{"%" + headBlockLabel, "%" + nextBlock}, destRegister));
-            } else {
-                addStmt(new PhiStmt(new BasicIRType("i1"), new String[]{"true", "false"},
-                        new String[]{"%" + headBlockLabel, "%" + nextBlock}, destRegister));
-            }
+            addStmt(new LoadStmt(new BasicIRType("i1"), answerPtr, destRegister));
             return destRegister;
         }
 
@@ -631,7 +664,6 @@ public class IRBuilder  {
             // new Array
             TypeNode typeNode = it.getTypeNode();
 
-
             int dimension = typeNode.getDimension(); // the dimension that need to alloc
 
             ArrayList<String> indexReg = new ArrayList<>();
@@ -674,7 +706,6 @@ public class IRBuilder  {
             constantStmts.add(new StringDeclareStmt(str, strPtr));
             return strPtr;
         }
-        // @.str = private unnamed_addr constant [4 x i8] c"Mx*\00"
     }
 
     String arrayDeclareInGlobal(ConstantNode it) {
@@ -739,9 +770,7 @@ public class IRBuilder  {
             return "%this";
         }
 
-        // 检查&& curScope.getVariable(it.getName())的开头是否为“@”
-        boolean isGlobal = curScope.getVariable(it.getName()).startsWith("@"); //todo
-        if (curScope.isField(it.getName())  ) {
+        if (curScope.isField(it.getName())) {
             // tmpReg = getelementptr <classType>, ptr %this, i32 0, i32 <fieldIndex>
             // retReg = load <fieldType> tmpReg
             String tmpReg = curScope.getNewRegister();
@@ -780,8 +809,11 @@ public class IRBuilder  {
         curFunction.addStmt(new BranchStmt(endBlock));
 
         curFunction.newBlock(endBlock);
-        String retReg = curScope.getNewRegister();
-        curFunction.addStmt(new SelectStmt(new BasicIRType(it.deduceType(null)), conditionRegister, trueReg, falseReg, retReg));
+        String retReg = null;
+        if (!it.deduceType(null).equals("void")) {
+            retReg = curScope.getNewRegister();
+            curFunction.addStmt(new SelectStmt(new BasicIRType(it.deduceType(null)), conditionRegister, trueReg, falseReg, retReg));
+        }
 
         return retReg;
     }
@@ -792,16 +824,29 @@ public class IRBuilder  {
 
         // get all the address of the index, all i32 type
         ArrayList <String> elementIndex = new ArrayList<>();
-        for (ExpressionNode expression : it.getExpressions()) {
-            String tmpReg = curScope.getNewRegister();
+        for (ExpressionNode indexExpr : it.getExpressions()) {
+            String tmpReg = visitExpressionNode(indexExpr);
             elementIndex.add(tmpReg);
         }
         // <result> = getelementptr <ty>, ptr <ptrval>{, <ty> <idx>}*
         // get the address of the element
-        String elementPtr = curScope.getNewRegister();
-        //todo: type
-        addStmt(new GetElementPtrStmt(new BasicIRType(it.deduceType(null)),
-                arrayHeadPtr, elementIndex, elementPtr, true));
+        int sz = it.getExpressions().size();
+        String elementPtr = null, tmpReg = null;
+
+        elementPtr = curScope.getNewRegister();
+        addStmt(new GetElementPtrStmt(new BasicIRType("ptr"), arrayHeadPtr,
+                elementIndex.get(0), elementPtr, false));
+        for (int i = 1; i < sz; i++) {
+            tmpReg = curScope.getNewRegister();
+            addStmt(new LoadStmt(new BasicIRType("ptr"), elementPtr, tmpReg));
+
+            elementPtr = curScope.getNewRegister();
+            addStmt(new GetElementPtrStmt(new BasicIRType("ptr"), tmpReg,
+                    elementIndex.get(i), elementPtr, false));
+        }
+//        elementPtr = curScope.getNewRegister();
+//        addStmt(new GetElementPtrStmt(new BasicIRType(it.deduceType(null)),
+//                lstPtr, elementIndex.get(sz - 1), elementPtr, false));
         // load the value of the element
         String register = curScope.getNewRegister();
         addStmt(new LoadStmt(new BasicIRType(it.deduceType(null)), elementPtr, register));

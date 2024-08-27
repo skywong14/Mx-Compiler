@@ -14,9 +14,13 @@ public class UnaryExprStmt extends IRStmt{
 
     @Override
     public String toString() {
-        if (operator.equals("~") || operator.equals("!")) {
+        if (operator.equals("~")) {
             return dest + " = not " + type.toString() + " " + register + "\n";
-            // %result = not i32/i1 %a
+            // %result = not i32 %a
+        }
+        if (operator.equals("!")) {
+            return dest + " = xor " + type.toString() + " " + register + ", true\n";
+            // %result = xor i1 %a, true
         }
         if (operator.equals("++")) {
             return dest + " = add " + type.toString() + " " + register + ", 1\n";

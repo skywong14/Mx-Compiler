@@ -109,7 +109,7 @@ public class IRScope {
         IRScope funcScope = getFunctionScope();
         if (funcScope == null) throw new RuntimeException("No function scope found");
         funcScope.tmpVarCounter++;
-        return "%" + funcScope.tmpVarCounter;
+        return "%." + funcScope.tmpVarCounter; // add "."
     }
 
     public String getNewBlock() {

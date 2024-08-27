@@ -57,7 +57,7 @@ public class NewArrayStmt extends IRStmt{
         addStmt(new LoadStmt(new BasicIRType("i32"), indexName, indexVal));
         String cond = "%" + headStr + "cond" + curDim;
         addStmt(new BinaryExprStmt("icmp slt", new BasicIRType("i32"), indexVal, sizes.get(curDim - 1), cond));
-        addStmt(new BranchStmt(cond, conditionLabel, endLabel));
+        addStmt(new BranchStmt(cond, bodyLabel, endLabel));
         // body block
         addStmt(new LabelStmt(bodyLabel));
 
