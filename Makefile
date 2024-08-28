@@ -11,7 +11,7 @@ outputFile:
 
 .PHONY: singleIR
 singleIR:
-	testcases/codegen/scripts/test_llvm_ir.bash 'java -cp /ulib/antlr-4.13.2-complete.jar:bin Main -emit-llvm' testcases/codegen/sorting/merge_sort.mx src/IR/builtin/builtin.ll
+	testcases/codegen/scripts/test_llvm_ir.bash 'java -cp /ulib/antlr-4.13.2-complete.jar:bin Main -emit-llvm' testcases/codegen/shortest_path/spfa.mx src/IR/builtin/builtin.ll
 
 .PHONY: allIR
 allIR:

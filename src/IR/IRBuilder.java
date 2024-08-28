@@ -204,7 +204,8 @@ public class IRBuilder  {
            curScope.declareVariable(parameter.getName());
             String varPtr = curScope.getVariable(parameter.getName());
             // varPtr = alloca <type>
-            stmt.addStmt(new AllocaStmt(new BasicIRType(parameter.getType()), varPtr));
+            // stmt.addStmt(new AllocaStmt(new BasicIRType(parameter.getType()), varPtr));
+            stmt.addAllocaStmt(new AllocaStmt(new BasicIRType(parameter.getType()), varPtr));
             // store <type> %<i> ptr <varPtr>
             stmt.addStmt(new StoreStmt(new BasicIRType(parameter.getType()), "%" + parameter.getName(), varPtr));
         }
@@ -237,7 +238,8 @@ public class IRBuilder  {
             curScope.declareVariable(parameter.getName());
             String varPtr = curScope.getVariable(parameter.getName());
                     // varPtr = alloca <type>
-            stmt.addStmt(new AllocaStmt(new BasicIRType(parameter.getType()), varPtr));
+            // stmt.addStmt(new AllocaStmt(new BasicIRType(parameter.getType()), varPtr));
+            stmt.addAllocaStmt(new AllocaStmt(new BasicIRType(parameter.getType()), varPtr));
             // store <type> %<i> ptr <varPtr>
             stmt.addStmt(new StoreStmt(new BasicIRType(parameter.getType()), "%" + parameter.getName(), varPtr));
         }
@@ -274,10 +276,11 @@ public class IRBuilder  {
         for (VariableNode var : it.getVariableNodes()) {
             curScope.declareVariable(var.getName());
             String varPtr = curScope.getVariable(var.getName());
-            addStmt(new AllocaStmt(new BasicIRType(var.getType()), varPtr));
+            curFunction.addAllocaStmt(new AllocaStmt(new BasicIRType(var.getType()), varPtr));
+            // addStmt(new AllocaStmt(new BasicIRType(var.getType()), varPtr));
             if (var.getValue() != null) {
                 String register = visitExpressionNode(var.getValue());
-                addStmt(new StoreStmt(new BasicIRType(var.getType()), register, varPtr));
+                curFunction.addStmt(new StoreStmt(new BasicIRType(var.getType()), register, varPtr));
             }
         }
     }
@@ -678,7 +681,7 @@ public class IRBuilder  {
                 }
                 newArrayCnt++;
                 String reg = curScope.getNewRegister();
-                addStmt(new NewArrayStmt(dimension, indexReg, Integer.toString(newArrayCnt), reg));
+                addStmt(new NewArrayStmt(dimension, indexReg, Integer.toString(newArrayCnt), reg, curFunction));
                 return reg;
             } else {
                 ConstantNode arrayConstant = it.getArrayConstant();

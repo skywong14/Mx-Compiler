@@ -13,10 +13,13 @@ public class NewArrayStmt extends IRStmt{
 
     String headStr;
 
-    public NewArrayStmt(int dim, ArrayList<String> sizes, String identifier, String dest) {
+    FunctionImplementStmt curFunction;
+
+    public NewArrayStmt(int dim, ArrayList<String> sizes, String identifier, String dest, FunctionImplementStmt curFunction) {
         this.dim = dim;
         this.sizes = sizes;
         this.dest = dest;
+        this.curFunction = curFunction;
         stmts = new ArrayList<>();
         headStr = ".newArray" + identifier + ".";
         generateStmt(1);
@@ -48,7 +51,7 @@ public class NewArrayStmt extends IRStmt{
         String bodyLabel = headStr + "loopBody" + curDim;
         String endLabel = headStr + "loopEnd" + curDim;
 
-        addStmt(new AllocaStmt(new BasicIRType("i32"), indexName));
+        curFunction.addAllocaStmt(new AllocaStmt(new BasicIRType("i32"), indexName));
         addStmt(new StoreStmt(new BasicIRType("i32"), "0", indexName));
         addStmt(new BranchStmt(conditionLabel));
         // condition block
