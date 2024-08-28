@@ -5,35 +5,27 @@ import semantic.ASTNodes.ArgListNode;
 import java.util.ArrayList;
 
 public class NewClassStmt extends IRStmt{
-    // alloc memory, then call constructor, return ptr to dest
+    // malloc memory, then call constructor, return ptr to dest
     public String dest;
     public String className;
 
-    public AllocaStmt allocStmt;
+    public CallStmt mallocStmt;
     public CallStmt callStmt;
 
-    public BitCastStmt bitCastStmt;
-    public PtrToIntStmt ptrToIntStmt;
-    public MemsetStmt memsetStmt;
-    public String tmp1, tmp2;
+    public int fieldSize;
 
-    public NewClassStmt(String className, String tmp1, String tmp2, String dest, Boolean hasConstructor) {
+    public NewClassStmt(String className, String dest, Boolean hasConstructor, int fieldSize) {
         this.dest = dest;
         this.className = className;
-        this.tmp1 = tmp1;
-        this.tmp2 = tmp2;
+        this.fieldSize = fieldSize;
         generateStmt(hasConstructor);
     }
 
     void generateStmt(boolean hasConstructor) {
-        // %ret = alloca %classType
-        // %ptr = bitcast ptr %ret to ptr
-        // %size = ptrtoint ptr getelementptr (%classType, ptr null, i32 1) to i32
-        // call void @llvm.memset.p0.p0.i32(ptr %ptr, i8 0, i32 %size, i1 false)
-        allocStmt = new AllocaStmt(new ClassTypeStmt(className, null), dest);
-        bitCastStmt = new BitCastStmt(dest, tmp1);
-        ptrToIntStmt = new PtrToIntStmt("%class." + className, "null", tmp2);
-        memsetStmt = new MemsetStmt(tmp1, "0", tmp2, "false");
+        // %ret = malloc %classType.size
+        ArrayList<BasicIRType> int1 = new ArrayList<>(); int1.add(new BasicIRType("i32"));
+        ArrayList<String> arg1 = new ArrayList<>(); arg1.add(Integer.toString(fieldSize));
+        mallocStmt = new CallStmt(new BasicIRType("ptr"), "_malloc", int1, arg1, dest);
 
         if (!hasConstructor) return;
         // Constructor call
@@ -48,9 +40,7 @@ public class NewClassStmt extends IRStmt{
 
     @Override
     public String toString() {
-        if (callStmt == null) return allocStmt.toString() + "\n\t" + bitCastStmt.toString()+ "\n\t" +
-                ptrToIntStmt.toString() + "\n\t" + memsetStmt.toString();
-        return allocStmt.toString() + "\n\t" + bitCastStmt.toString()+ "\n\t" +
-                ptrToIntStmt.toString() + "\n\t" + memsetStmt.toString() + "\n\t" + callStmt.toString();
+        if (callStmt == null) return mallocStmt.toString();
+        else return mallocStmt.toString() + "\n\t" + callStmt.toString();
     }
 }

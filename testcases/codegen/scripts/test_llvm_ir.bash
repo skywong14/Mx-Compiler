@@ -175,10 +175,10 @@ fi
 # 5. Execute the code
 echo "Executing the code..." >&2
 if [ $HAS_BUILTIN -eq 1 ]; then
-    timeout 60s reimu -i="$TEMPDIR/test.in" -o="$TEMPDIR/test.out" -f="$TEMPDIR/builtin.s","$TEMPDIR/output.s" --all > "$TEMPDIR/reimu_output.txt"
+    timeout 60s reimu -s=1M -i="$TEMPDIR/test.in" -o="$TEMPDIR/test.out" -f="$TEMPDIR/builtin.s","$TEMPDIR/output.s" --all -p="$TEMPDIR/reimu_output.txt"
     RAVEL_EXIT_CODE=$?
 else
-    timeout 60s reimu -i="$TEMPDIR/test.in" -o="$TEMPDIR/test.out" -f="$TEMPDIR/output.s" --all > "$TEMPDIR/reimu_output.txt"
+    timeout 60s reimu -s=1M -i="$TEMPDIR/test.in" -o="$TEMPDIR/test.out" -f="$TEMPDIR/output.s" --all > "$TEMPDIR/reimu_output.txt"
     RAVEL_EXIT_CODE=$?
 fi
 if [ $RAVEL_EXIT_CODE -ne 0 ]; then
