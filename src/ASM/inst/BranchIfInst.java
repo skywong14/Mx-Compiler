@@ -14,6 +14,7 @@ public class BranchIfInst extends ASMInst {
 
     @Override
     public String toString() {
+        if (rs2 == null) return op + " " + rs1 + ", " + label;
         return op + " " + rs1 + ", " + rs2 + ", " + label;
     }
 }

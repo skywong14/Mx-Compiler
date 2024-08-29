@@ -6,8 +6,7 @@ public class LwInst extends ASMInst {
     public String base;
     public int offset;
 
-    public LwInst(int size, String dest, String base, int offset) {
-        this.size = size;
+    public LwInst(String dest, int offset, String base) {
         this.dest = dest;
         this.base = base;
         this.offset = offset;

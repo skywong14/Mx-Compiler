@@ -12,7 +12,7 @@ public class RodataSection extends ASMSection {
     }
 
     public void addStringConst(String label, String literal) {
-        ASMBlock block = new ASMBlock(label, true, 1);
+        ASMBlock block = new ASMBlock(label, true, 1, null);
         strings.add(block);
         block.addInst(new Directive(".asciz", "\"" + literal + "\""));
     }

@@ -1,22 +1,8 @@
 package ASM.operand;
 
 public class PhysicalReg {
-    public class Register{
-        public String name;
-        public int value;
-        public int id;
-        public Register(String name, int id){
-            this.name = name;
-            this.id = id;
-            this.value = 0;
-        }
-        public void set(int value){ this.value = value; }
-        public int get(){ return this.value; }
-        public String toString(){ return this.name; }
-    }
     public Register zero, ra, sp, gp, tp;
-    public Register[] a, s, t;
-
+    public Register[] a, s, t; // a: 0~7  s: 0~11  t: 0~6
     public PhysicalReg(){
         zero = new Register("zero", 0);
         ra = new Register("ra", 1);
@@ -27,6 +13,8 @@ public class PhysicalReg {
         for (int i = 0; i < 8; i++)
             a[i] = new Register("a" + i, i + 10);
         s = new Register[12];
+        s[0] = new Register("s0", 8);
+        s[1] = new Register("s1", 9);
         for (int i = 2; i < 12; i++)
             s[i] = new Register("s" + i, i + 16); // s0, s1 are reserved
         t = new Register[7];

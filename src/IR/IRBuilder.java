@@ -741,9 +741,8 @@ public class IRBuilder  {
         // store the value of the array
         for (int i = 0; i < elementIndex.size(); i++) {
             String elementPtr = "%" + arrayPtr + "." + Integer.toString(i);
-            String idx = Integer.toString(i);
             varInit.addStmt(new GetElementPtrStmt(new BasicIRType(it.deduceType(null)), "@" + arrayPtr,
-                    new ArrayList<String>(){{add(idx);}}, elementPtr, false));
+                    Integer.toString(i), elementPtr, false));
             String register = arrayDeclareInGlobal(it.getConstants().get(i));
             varInit.addStmt(new StoreStmt(new BasicIRType(it.getConstants().get(i).deduceType(null)), register, elementPtr));
         }

@@ -9,15 +9,7 @@ public class GetElementPtrStmt extends IRStmt {
     public IRType type;
     public ArrayList<String> index;
 
-    boolean hasZero = false;
-
-    public GetElementPtrStmt(IRType type, String pointer, ArrayList<String> index, String dest, boolean hasZero) {
-        this.pointer = pointer;
-        this.dest = dest;
-        this.type = type;
-        this.index = index;
-        this.hasZero = hasZero;
-    }
+    public boolean hasZero = false;
 
     public GetElementPtrStmt(IRType type, String pointer, String index, String dest, boolean hasZero) {
         this.pointer = pointer;

@@ -75,7 +75,6 @@ public class NewArrayStmt extends IRStmt{
 
         addStmt(new BranchStmt(conditionLabel));
 
-
         addStmt(new LabelStmt(endLabel));
         return retRegName;
     }

@@ -56,11 +56,13 @@ public class Main {
             ir.visitProgramNode((ProgramNode) programNode);
 
             // print ir.toString()
-            System.out.println(ir.toString());
+//            System.out.println(ir.toString());
+            debug(ir.toString());
 
             // asm
-//            ASMBuilder asmBuilder = new ASMBuilder(ir);
-//            asmBuilder.visitProgram();
+            ASMBuilder asmBuilder = new ASMBuilder(ir);
+            asmBuilder.visitProgram();
+            System.out.println(asmBuilder.toString());
 
             // success
             debug("Success!");
