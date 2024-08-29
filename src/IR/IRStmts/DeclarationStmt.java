@@ -4,11 +4,11 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 
-public class MyIRCode extends IRStmt {
+public class DeclarationStmt extends IRStmt {
     @Override
     public String toString() {
         //将同文件夹下的MyIRCode.ir文本文件转换为字符串返回，打开文件，读入和输出即可
-        String file = "./src/IR/IRStmts/MyIRCode.txt";
+        String file = "./src/IR/IRStmts/irDeclaration.txt";
         String content = "";
         try {
             BufferedReader reader = new BufferedReader(new FileReader(file));
@@ -24,4 +24,7 @@ public class MyIRCode extends IRStmt {
         }
         return content;
     }
+
+    @Override
+    public int getSpSize() { return 0; }
 }

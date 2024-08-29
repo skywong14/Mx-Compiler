@@ -13,4 +13,7 @@ public class AllocaStmt extends IRStmt {
     public String toString() {
         return dest + " = alloca " + type.toString();
     }
+
+    @Override
+    public int getSpSize() { return 1; }
 }

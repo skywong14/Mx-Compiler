@@ -15,4 +15,7 @@ public class NewArray extends IRStmt{
     public String toString() {
         return dest + " = call ptr @__allocateArray__(i32 " + size + ", i32 "+ type.elementSize() +")\n";
     }
+
+    @Override
+    public int getSpSize() { return 1; }
 }

@@ -10,6 +10,7 @@ public class FunctionImplementStmt extends IRStmt {
     public Block curBlock;
     public ArrayList<Block> blocks;
     public ArrayList<AllocaStmt> allocaStmts;
+    private boolean allocaFlag = true;
 
     public FunctionImplementStmt(String name, FunctionDeclarationStmt declaration) {
         this.name = name;
@@ -60,13 +61,24 @@ public class FunctionImplementStmt extends IRStmt {
             sb.append(argTypes.get(i).toString()).append(" %").append(argNames.get(i));
         }
         sb.append(") {\n");
-        for (IRStmt stmt : allocaStmts) {
-            sb.append("\t").append(stmt.toString()).append("\n");
+        if (allocaFlag){
+            Block block0 = blocks.get(0);
+            block0.addAllocaStmts(allocaStmts);
+            allocaFlag = false;
         }
         for (Block block : blocks) {
             sb.append(block.toString());
         }
         sb.append("}\n");
         return sb.toString();
+    }
+
+    @Override
+    public int getSpSize() {
+        int spSize = 0;
+        for (Block block : blocks) {
+            spSize += block.getSpSize();
+        }
+        return spSize;
     }
 }

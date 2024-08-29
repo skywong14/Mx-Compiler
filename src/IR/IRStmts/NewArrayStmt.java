@@ -84,7 +84,7 @@ public class NewArrayStmt extends IRStmt{
     public String toString() {
         StringBuilder sb = new StringBuilder();
         boolean isFirst = true;
-        for (IRStmt stmt : stmts)
+        for (IRStmt stmt : stmts){
             if (stmt instanceof LabelStmt){
                 sb.append(stmt.toString()).append("\n");
             } else {
@@ -95,7 +95,16 @@ public class NewArrayStmt extends IRStmt{
                     sb.append("\t").append(stmt.toString()).append("\n");
                 }
             }
+        }
         return sb.toString();
     }
 
+    @Override
+    public int getSpSize() {
+        int spSize = 0;
+        for (IRStmt stmt : stmts) {
+            spSize += stmt.getSpSize();
+        }
+        return spSize;
+    }
 }

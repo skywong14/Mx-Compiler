@@ -16,6 +16,10 @@ public class Block extends IRStmt {
         stmts.add(stmt);
     }
 
+    public void addAllocaStmts(ArrayList<AllocaStmt> stmts_) {
+        stmts.addAll(0, stmts_);
+    }
+
     void updateBlock() {
         if (stmts.isEmpty()) label = "";
         else {
@@ -41,5 +45,14 @@ public class Block extends IRStmt {
             sb.append("\t").append(stmt.toString()).append("\n");
         }
         return sb.toString();
+    }
+
+    @Override
+    public int getSpSize() {
+        int spSize = 0;
+        for (IRStmt stmt : stmts) {
+            spSize += stmt.getSpSize();
+        }
+        return spSize;
     }
 }

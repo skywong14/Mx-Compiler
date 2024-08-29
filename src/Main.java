@@ -1,3 +1,4 @@
+import ASM.ASMBuilder;
 import IR.IRBuilder;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -56,6 +57,10 @@ public class Main {
 
             // print ir.toString()
             System.out.println(ir.toString());
+
+            // asm
+//            ASMBuilder asmBuilder = new ASMBuilder(ir);
+//            asmBuilder.visitProgram();
 
             // success
             debug("Success!");

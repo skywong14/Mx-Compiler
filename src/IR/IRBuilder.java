@@ -1,9 +1,7 @@
 package IR;
 
-import parser.MxParser;
 import semantic.ASTNodes.*;
 
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -17,8 +15,8 @@ public class IRBuilder  {
 
     String leftValuePtr = null;
 
-    ArrayList<IRStmt> irStmts = new ArrayList<>();
-    ArrayList<IRStmt> constantStmts = new ArrayList<>();
+    public ArrayList<IRStmt> irStmts = new ArrayList<>();
+    public ArrayList<IRStmt> constantStmts = new ArrayList<>();
 
     HashMap<String, HashMap<String, Integer> > classFieldIndex = new HashMap<>();
 
@@ -78,7 +76,7 @@ public class IRBuilder  {
     // 访问根节点
     public void visitProgramNode(ProgramNode it) {
         // arrayAllocator
-         addStmt(new MyIRCode());
+         addStmt(new DeclarationStmt());
 
         // declare all classes' fields
         for (ClassNode classNode : it.getClasses()) {

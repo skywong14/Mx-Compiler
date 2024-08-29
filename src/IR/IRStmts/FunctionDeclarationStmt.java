@@ -56,4 +56,7 @@ public class FunctionDeclarationStmt extends IRStmt {
         sb.append(")");
         return sb.toString();
     }
+
+    @Override
+    public int getSpSize() { return 0; }
 }

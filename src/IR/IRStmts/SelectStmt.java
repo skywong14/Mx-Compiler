@@ -19,4 +19,7 @@ public class SelectStmt extends IRStmt {
     public String toString() {
         return dest + " = select i1 " + cond + ", " + type.toString() + " " + trueBranch + ", " + type.toString() + " " + falseBranch;
     }
+
+    @Override
+    public int getSpSize() { return 1; }
 }

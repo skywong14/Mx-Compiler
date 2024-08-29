@@ -14,4 +14,7 @@ public class GlobalVariableDeclareStmt extends IRStmt{
         if (type.typeName.equals("ptr")) return "@" + name + " = global " + type.toString() + " null";
         return "@" + name + " = global " + type.toString() + " 0";
     }
+
+    @Override
+    public int getSpSize() { return 0; }
 }

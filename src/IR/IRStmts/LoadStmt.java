@@ -16,4 +16,7 @@ public class LoadStmt extends IRStmt{
     public String toString() {
         return dest + " = load " + type.toString() + ", ptr " + pointer;
     }
+
+    @Override
+    public int getSpSize() { return 1; }
 }

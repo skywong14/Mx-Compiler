@@ -62,6 +62,19 @@ public class StringDeclareStmt extends IRStmt{
         return llvmStr.toString();
     }
 
+    public static String convert2riscv(String str){
+        // 替换 \\\\ 为 \
+        // String riscvString = str.replace("\\\\", "\\");
+
+        // 替换 \\22 为 "
+        String riscvString = str.replace("\\22", "\\\"");
+
+        // 替换 \\0A 为换行符 \n
+        riscvString = riscvString.replace("\\0A", "\\\n");
+
+        return riscvString;
+    }
+
     public StringDeclareStmt(String value, String dest) {
         this.dest = dest;
         this.value = convertEscapedString(value);
@@ -73,5 +86,10 @@ public class StringDeclareStmt extends IRStmt{
     @Override
     public String toString() {
         return dest + " = private unnamed_addr constant [" + length + " x i8] c\"" + printValue + "\\00\"";
+    }
+
+    @Override
+    public int getSpSize() {
+        return 0;
     }
 }

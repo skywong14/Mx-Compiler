@@ -33,4 +33,7 @@ public class UnaryExprStmt extends IRStmt{
         }
         return "";
     }
+
+    @Override
+    public int getSpSize() { return 1; }
 }

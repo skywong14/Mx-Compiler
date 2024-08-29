@@ -46,4 +46,10 @@ public class CallStmt extends IRStmt {
             return sb.toString();
         }
     }
+
+    @Override
+    public int getSpSize() {
+        if (retType.typeName.equals("void")) return 0;
+        return 1;
+    }
 }

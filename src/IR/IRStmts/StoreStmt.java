@@ -16,4 +16,7 @@ public class StoreStmt extends IRStmt {
     public String toString() {
         return "store " + type.toString() + " " + val + ", ptr " + dest;
     }
+
+    @Override
+    public int getSpSize() { return 0; }
 }

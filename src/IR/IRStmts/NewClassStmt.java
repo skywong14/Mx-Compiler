@@ -43,4 +43,9 @@ public class NewClassStmt extends IRStmt{
         if (callStmt == null) return mallocStmt.toString();
         else return mallocStmt.toString() + "\n\t" + callStmt.toString();
     }
+
+    @Override
+    public int getSpSize() {
+        return 1;
+    }
 }
