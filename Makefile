@@ -23,7 +23,7 @@ ir_all:
 
 .PHONY: single
 single:
-	testcases/codegen/scripts/test_asm.bash 'java -cp /ulib/antlr-4.13.2-complete.jar:bin Main -S' testcases/codegen/t13.mx src/IR/builtin/builtin.s
+	testcases/codegen/scripts/test_asm.bash 'java -cp /ulib/antlr-4.13.2-complete.jar:bin Main -S' testcases/codegen/t67.mx src/IR/builtin/builtin.s
 
 .PHONY: all
 all:

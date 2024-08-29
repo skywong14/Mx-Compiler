@@ -26,6 +26,9 @@ public class ASMFunction {
 
     public PhysicalReg physicalReg;
 
+    public int indexInProgram = 0;
+    public String blockHead = null;
+
     //public VirtualReg virtualReg;
     public HashMap<String, Integer> virtualRegMap;
 

@@ -20,12 +20,14 @@ public class ASMBuilder {
     public DataSection dataSection = new DataSection();
     public RodataSection rodataSection = new RodataSection();
 
+    public int functionCnt = 0;
+
     static boolean outOfBound(int imm) {
         return imm < -2048 || imm > 2047;
     }
 
     void debug(String msg) {
-//        System.out.println("ASM: " + msg);
+        System.out.println("ASM: " + msg);
     }
 
     public ArrayList<ASMInst> Lw(String rd, int offset, String rs) {
@@ -106,6 +108,8 @@ public class ASMBuilder {
     void buildFunctions(FunctionImplementStmt irFunction) {
         ASMFunction func = new ASMFunction(irFunction.name, getSpSize(irFunction) + regSize);
         //init: move sp, store the arguments
+        func.indexInProgram = functionCnt;
+        func.blockHead = "B" + functionCnt + ".";
         func.addInst(ArithImm("+", "sp", "sp", -func.spOffset));
         // store ra
         func.addInst(Sw("ra", func.allocMemory(4), "sp"));
@@ -124,16 +128,16 @@ public class ASMBuilder {
             if (i < 8) {
                 int offset = func.allocMemory(4);
                 func.addInst(Sw("a" + i, offset, "sp")); // use sp + sSize ~ sp + sSize min(8, args.size()) * 4
-                func.putVirtualReg(irFunction.argNames.get(i), offset);
+                func.putVirtualReg("%" + irFunction.argNames.get(i), offset);
             } else {
-                func.putVirtualReg(irFunction.argNames.get(i), func.spOffset + (i - 8) * 4);
+                func.putVirtualReg("%" + irFunction.argNames.get(i), func.spOffset + (i - 8) * 4);
             }
         }
 
         boolean firstBlock = true;
         for (Block block : irFunction.blocks) {
             if (firstBlock) firstBlock = false;
-            else func.newBlock(block.label);
+            else func.newBlock(func.blockHead + block.label);
             for (IRStmt irStmt : block.stmts) {
                 visitIRStmt(irStmt, func);
             }
@@ -172,8 +176,17 @@ public class ASMBuilder {
             visitNewArrayStmt((NewArrayStmt) irStmt, func);
         } else if (irStmt instanceof GetElementPtrStmt) {
             visitGetElementPtrStmt((GetElementPtrStmt) irStmt, func);
+        } else if (irStmt instanceof NewClassStmt) {
+            visitClassStmt((NewClassStmt) irStmt, func);
         } else {
             throw new RuntimeException("unknown IRStmt: " + irStmt);
+        }
+    }
+
+    void visitClassStmt(NewClassStmt irStmt, ASMFunction func) {
+        visitCallStmt(irStmt.mallocStmt, func);
+        if (irStmt.callStmt != null) {
+            visitCallStmt(irStmt.callStmt, func);
         }
     }
 
@@ -204,7 +217,7 @@ public class ASMBuilder {
     void visitNewArrayStmt(NewArrayStmt irStmt, ASMFunction func) {
         for (IRStmt stmt: irStmt.stmts)
             if (stmt instanceof LabelStmt) {
-                func.newBlock(((LabelStmt) stmt).label);
+                func.newBlock(func.blockHead + ((LabelStmt) stmt).label);
             } else {
                 visitIRStmt(stmt, func);
             }
@@ -212,13 +225,13 @@ public class ASMBuilder {
 
     void visitBranchStmt(BranchStmt irStmt, ASMFunction func) {
         if (irStmt.condition == null) {
-            func.addInst(new JInst(irStmt.trueLabel));
+            func.addInst(new JInst(func.blockHead + irStmt.trueLabel));
         } else {
             resolveRegister(irStmt.condition, "t0", func);
             // bnez t0, if_true  # 如果 t0 不为 0，跳转到 if_true
             // j if_false        # 否则，跳转到 if_false
-            func.addInst(new BranchIfInst("bnez", "t0", null, irStmt.trueLabel));
-            func.addInst(new JInst(irStmt.falseLabel));
+            func.addInst(new BranchIfInst("bnez", "t0", null, func.blockHead + irStmt.trueLabel));
+            func.addInst(new JInst(func.blockHead + irStmt.falseLabel));
         }
     }
 
@@ -334,10 +347,10 @@ public class ASMBuilder {
         resolveRegister(irStmt.register, "t1", func);
         switch (irStmt.operator) {
             case "!":
-                func.addInst(new ArithImmInst("xor", "t0", "t1", 1));
+                func.addInst(new ArithImmInst("^", "t0", "t1", 1));
                 break;
             case "~":
-                func.addInst(new ArithImmInst("xor", "t0", "t1", -1));
+                func.addInst(new ArithImmInst("^", "t0", "t1", -1));
                 break;
             case "-":
                 func.addInst(new UnaryRegInst("neg", "t0", "t1"));
@@ -416,7 +429,7 @@ public class ASMBuilder {
 
         for (IRStmt irStmt: irBuilder.irStmts)
             if (irStmt instanceof FunctionImplementStmt irFunction) {
-                debug("build function: " + irFunction.name);
+                functionCnt++;
                 buildFunctions(irFunction);
             }
     }

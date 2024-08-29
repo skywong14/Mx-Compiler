@@ -69,8 +69,8 @@ public class StringDeclareStmt extends IRStmt{
         // 替换 \\22 为 "
         String riscvString = str.replace("\\22", "\\\"");
 
-        // 替换 \\0A 为换行符 \n
-        riscvString = riscvString.replace("\\0A", "\\\n");
+        // 替换 \\0A 为换行符 \\n
+        riscvString = riscvString.replace("\\0A", "\\n");
 
         return riscvString;
     }
