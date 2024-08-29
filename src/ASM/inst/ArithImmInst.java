@@ -13,16 +13,13 @@ public class ArithImmInst extends ASMInst {
         this.imm = imm;
         switch (this.op) {
             case "+": this.opType = "addi"; break;
-            case "*": this.opType = "mul"; break;
-            case "/": this.opType = "div"; break;
-            case "%": this.opType = "rem"; break;
-            case "&": this.opType = "and"; break;
-            case "|": this.opType = "or"; break;
-            case "^": this.opType = "xor"; break;
-            case "<<": this.opType = "sll"; break;
-            case ">>": this.opType = "sra"; break;
-            case "<": this.opType = "slt"; break;
-            case "<u": this.opType = "sltu"; break;
+            case "&": this.opType = "andi"; break;
+            case "|": this.opType = "ori"; break;
+            case "^": this.opType = "xori"; break;
+            case "<<": this.opType = "slli"; break;
+            case ">>": this.opType = "srai"; break;
+            case "<": this.opType = "slti"; break;
+            case "<u": this.opType = "sltiu"; break;
             default: throw new RuntimeException("ArithImmInst: unknown op " + op);
         }
     }

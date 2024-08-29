@@ -15,5 +15,5 @@ public class AllocaStmt extends IRStmt {
     }
 
     @Override
-    public int getSpSize() { return 1; }
+    public int getSpSize() { return 2; }
 }

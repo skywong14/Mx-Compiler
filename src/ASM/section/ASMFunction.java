@@ -37,7 +37,7 @@ public class ASMFunction {
         this.physicalReg = new PhysicalReg();
         this.curSpOffset = 0; // 从底开始分配
         this.virtualRegMap = new HashMap<>();
-        curBlock = new ASMBlock(name, this);
+        curBlock = new ASMBlock(name, true, 2, this);
         this.blocks.add(curBlock);
     }
 
@@ -84,7 +84,12 @@ public class ASMFunction {
 
     public String toString() {
         StringBuilder sb = new StringBuilder();
-
+//        sb.append(".globl ").append(name).append("\n");
+        sb.append(".type ").append(name).append(", @function\n");
+//        sb.append(name).append(":\n");
+        for (ASMBlock block : blocks) {
+            sb.append(block.toString()).append("\n");
+        }
         return sb.toString();
     }
 }

@@ -17,7 +17,7 @@ public class ASMBlock{
         this.label = label;
         this.insts = new ArrayList<>();
         this.isGlobal = false;
-        this.alignSize = 1;
+        this.alignSize = 0;
         this.parentFunc = function;
     }
 

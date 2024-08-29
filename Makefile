@@ -7,7 +7,7 @@ run:
 
 .PhONY: output
 output:
-	java -cp /ulib/antlr-4.13.2-complete.jar:bin Main < test.mx > output.s -emit-llvm
+	java -cp /ulib/antlr-4.13.2-complete.jar:bin Main < test.mx > test.s -emit-llvm
 
 .PHONY: ir_output
 ir_output:
@@ -23,11 +23,11 @@ ir_all:
 
 .PHONY: single
 single:
-	testcases/codegen/scripts/test_asm.bash 'java -cp /ulib/antlr-4.13.2-complete.jar:bin Main -S' testcases/codegen/e1.mx src/IR/builtin/builtin.s
+	testcases/codegen/scripts/test_asm.bash 'java -cp /ulib/antlr-4.13.2-complete.jar:bin Main -S' testcases/codegen/t13.mx src/IR/builtin/builtin.s
 
 .PHONY: all
 all:
-	testcases/codegen/scripts/test_asm_all.bash 'java -cp /ulib/antlr-4.13.2-complete.jar:bin Main -S' src/IR/builtin/builtin.s
+	testcases/codegen/scripts/test_asm_all.bash 'java -cp /ulib/antlr-4.13.2-complete.jar:bin Main -S' testcases/codegen  src/IR/builtin/builtin.s
 
 .PHONY: init
 init:
@@ -36,3 +36,7 @@ init:
 .PHONY: clang
 clang:
 	clang-18 -m32 output.ll src/IR/builtin/builtin.ll -o test
+
+.PHONY: debug
+debug:
+	reimu --debug -i=test.in -o=output.s

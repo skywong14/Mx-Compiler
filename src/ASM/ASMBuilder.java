@@ -12,7 +12,7 @@ import IR.IRStmts.*;
 import java.util.ArrayList;
 
 public class ASMBuilder {
-    public static final int regSize = 32;
+    public static final int regSize = 36; // ra & a0~a7
     public IRBuilder irBuilder;
     public PhysicalReg physicalReg = new PhysicalReg();
 
@@ -24,12 +24,16 @@ public class ASMBuilder {
         return imm < -2048 || imm > 2047;
     }
 
+    void debug(String msg) {
+//        System.out.println("ASM: " + msg);
+    }
+
     public ArrayList<ASMInst> Lw(String rd, int offset, String rs) {
         ArrayList<ASMInst> insts = new ArrayList<>();
         if (outOfBound(offset)) {
-            insts.add(new LiInst("t0", offset));
-            insts.add(new ArithInst("+", "t0", rs, "t0"));
-            insts.add(new LwInst(rd, 0, "t0"));
+            insts.add(new LiInst("t6", offset));
+            insts.add(new ArithInst("+", "t6", rs, "t6"));
+            insts.add(new LwInst(rd, 0, "t6"));
         } else {
             insts.add(new LwInst(rd, offset, rs));
         }
@@ -39,9 +43,9 @@ public class ASMBuilder {
     public ArrayList<ASMInst> Sw(String src, int offset, String rd) {
         ArrayList<ASMInst> insts = new ArrayList<>();
         if (outOfBound(offset)) {
-            insts.add(new LiInst("t0", offset));
-            insts.add(new ArithInst("+", "t0", rd, "t0"));
-            insts.add(new SwInst(src, 0, "t0"));
+            insts.add(new LiInst("t6", offset));
+            insts.add(new ArithInst("+", "t6", rd, "t6"));
+            insts.add(new SwInst(src, 0, "t6"));
         } else {
             insts.add(new SwInst(src, offset, rd));
         }
@@ -51,8 +55,8 @@ public class ASMBuilder {
     public ArrayList<ASMInst> ArithImm(String op, String rd, String rs, int imm) {
         ArrayList<ASMInst> insts = new ArrayList<>();
 
-        insts.add(new LiInst("t0", imm));
-        insts.add(new ArithInst(op, rd, rs, "t0"));
+        insts.add(new LiInst("t6", imm));
+        insts.add(new ArithInst(op, rd, rs, "t6"));
         return insts;
         /*if (outOfBound(imm)) {
             insts.add(new LiInst("t0", imm));
@@ -84,8 +88,7 @@ public class ASMBuilder {
     void buildGlobalVariables() {
         for (IRStmt irStmt: irBuilder.irStmts) {
             if (irStmt instanceof GlobalVariableDeclareStmt stmt) {
-                String label = stmt.name.substring(1); // remove @
-                dataSection.addGlobalVariable(label, "0");
+                dataSection.addGlobalVariable(stmt.name, "0");
             }
         }
     }
@@ -104,8 +107,9 @@ public class ASMBuilder {
         ASMFunction func = new ASMFunction(irFunction.name, getSpSize(irFunction) + regSize);
         //init: move sp, store the arguments
         func.addInst(ArithImm("+", "sp", "sp", -func.spOffset));
+        // store ra
+        func.addInst(Sw("ra", func.allocMemory(4), "sp"));
 
-        int sSize = 0;
         // store s0~s11
         /*
         sSize = 48;
@@ -118,8 +122,9 @@ public class ASMBuilder {
         // store args
         for (int i = 0; i < irFunction.argNames.size(); i++) {
             if (i < 8) {
-                func.addInst(Sw("a" + i, i * 4 + sSize, "sp")); // use sp + sSize ~ sp + sSize min(8, args.size()) * 4
-                func.putVirtualReg(irFunction.argNames.get(i), func.allocMemory(4));
+                int offset = func.allocMemory(4);
+                func.addInst(Sw("a" + i, offset, "sp")); // use sp + sSize ~ sp + sSize min(8, args.size()) * 4
+                func.putVirtualReg(irFunction.argNames.get(i), offset);
             } else {
                 func.putVirtualReg(irFunction.argNames.get(i), func.spOffset + (i - 8) * 4);
             }
@@ -133,18 +138,20 @@ public class ASMBuilder {
                 visitIRStmt(irStmt, func);
             }
         }
-
-        // restore s0~s11
-        // todo
-        // end: restore sp
-        func.addInst(ArithImm("+", "sp", "sp", func.spOffset));
-
         textSection.addFunction(func);
+    }
+
+    void visitAlloc(AllocaStmt irStmt, ASMFunction func) {
+        int regPosOffset = func.allocMemory(4);
+        func.putVirtualReg(irStmt.dest, regPosOffset);
+        int offset = func.allocMemory(4);
+        func.addInst(ArithImm("+", "t5", "sp", offset));
+        func.addInst(Sw("t5", regPosOffset, "sp"));
     }
 
     void visitIRStmt(IRStmt irStmt, ASMFunction func) {
         if (irStmt instanceof AllocaStmt) {
-            func.putVirtualReg(((AllocaStmt) irStmt).dest, func.allocMemory(4));
+            visitAlloc((AllocaStmt) irStmt, func);
         } else if (irStmt instanceof BinaryExprStmt) {
             visitBinaryExprStmt((BinaryExprStmt) irStmt, func);
         } else if (irStmt instanceof UnaryExprStmt) {
@@ -176,7 +183,7 @@ public class ASMBuilder {
             resolveRegister(irStmt.index.get(0), "t1", func);
             // slli t2, t1, 2      # 计算偏移量：t1 << 2，相当于乘以4（因为i32是4字节）
             // add t2, t0, t2      # 计算结果地址：t0 + 偏移量
-            func.addInst(new ArithImmInst("slli", "t1", "t1", 2));
+            func.addInst(new ArithImmInst("<<", "t1", "t1", 2));
             func.addInst(new ArithInst("+", "t2", "t0", "t1"));
 
             int offset = func.getVirtualReg(irStmt.dest);
@@ -186,7 +193,7 @@ public class ASMBuilder {
             resolveRegister(irStmt.index.get(0), "t1", func);
             //slli t1, t1, 2      # 计算偏移量：t1 << 2
             // add t2, t0, t1      # 计算结果地址：t0 + 偏移量
-            func.addInst(new ArithImmInst("slli", "t1", "t1", 2));
+            func.addInst(new ArithImmInst("<<", "t1", "t1", 2));
             func.addInst(new ArithInst("+", "t2", "t0", "t1"));
 
             int offset = func.getVirtualReg(irStmt.dest);
@@ -247,7 +254,6 @@ public class ASMBuilder {
             func.addInst(Lw(destReg, offset1, "sp"));
         } else if (regName.startsWith("@")) {
             func.addInst(new LaInst(destReg, regName.substring(1)));
-            func.addInst(Lw(destReg, 0, destReg));
         } else {
             int val;
             if (regName.equals("true")) val = 1;
@@ -366,6 +372,10 @@ public class ASMBuilder {
         if (irStmt.src != null) {
             resolveRegister(irStmt.src, "a0", func);
         }
+        // restore ra
+        func.addInst(Lw("ra", 0, "sp"));
+        // restore sp
+        func.addInst(ArithImm("+", "sp", "sp", func.spOffset));
         func.addInst(new RetInst());
     }
 
@@ -406,15 +416,16 @@ public class ASMBuilder {
 
         for (IRStmt irStmt: irBuilder.irStmts)
             if (irStmt instanceof FunctionImplementStmt irFunction) {
+                debug("build function: " + irFunction.name);
                 buildFunctions(irFunction);
             }
     }
 
     public String toString() {
         StringBuilder sb = new StringBuilder();
+        sb.append(textSection.toString());
         sb.append(dataSection.toString());
         sb.append(rodataSection.toString());
-        sb.append(textSection.toString());
         return sb.toString();
     }
 }
