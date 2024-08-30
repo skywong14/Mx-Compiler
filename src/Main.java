@@ -31,6 +31,7 @@ public class Main {
             e.printStackTrace();
             throw new RuntimeException("builtin file not found");
         }
+        System.out.println(content);
     }
 
     public static void main(String[] args) throws Exception{
