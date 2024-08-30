@@ -96,7 +96,7 @@ public class ASMBuilder {
     }
 
     int getSpSize(FunctionImplementStmt irFunction) {
-        int spSize = 0;
+        int spSize = irFunction.argNames.size();
         for (Block block : irFunction.blocks) {
             for (IRStmt irStmt : block.stmts) {
                 spSize += irStmt.getSpSize();
@@ -402,18 +402,24 @@ public class ASMBuilder {
             // store to stack
         }
         // sp -= extraSpOffset
+        int curOffset = 0;
+        if (extraSpOffset > 0)
+            func.addInst(ArithImm("+", "sp", "sp", -extraSpOffset));
         for (int i = 0; i < irStmt.args.size(); i++) {
             if (i < 8) {
                 resolveRegister(irStmt.args.get(i), "a" + i, func);
             } else {
-                int offset = func.getVirtualReg(irStmt.args.get(i));
-                func.addInst(Sw("a" + i, offset, "sp"));
+                resolveRegister(irStmt.args.get(i), "t0", func);
+                func.addInst(Sw("t0", curOffset, "sp"));
+                curOffset += 4;
             }
         }
 
         func.addInst(new CallInst(irStmt.funcName));
 
         // sp += extraSpOffset
+        if (extraSpOffset > 0)
+            func.addInst(ArithImm("+", "sp", "sp", extraSpOffset));
         // restore a0~a7
         // get a0
         if (!irStmt.retType.typeName.equals("void")) {

@@ -79,6 +79,6 @@ public class FunctionImplementStmt extends IRStmt {
         for (Block block : blocks) {
             spSize += block.getSpSize();
         }
-        return spSize;
+        return spSize + argNames.size();
     }
 }

@@ -59,7 +59,6 @@ public class ASMFunction {
         if (!virtualRegMap.containsKey(regName)) {
             int offset = allocMemory(4);
             virtualRegMap.put(regName, offset);
-//            throw new RuntimeException("virtual register not found");
         }
         return virtualRegMap.get(regName);
     }
