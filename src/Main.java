@@ -76,13 +76,14 @@ public class Main {
 //            System.out.println(ir.toString());
             debug(ir.toString());
 
+            printBuiltin();
+
             // asm
             ASMBuilder asmBuilder = new ASMBuilder(ir);
             asmBuilder.visitProgram();
             System.out.println(asmBuilder.toString());
 
             // print file "builtin.s"
-            printBuiltin();
 
             // success
             debug("Success!");
