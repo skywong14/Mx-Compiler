@@ -202,7 +202,6 @@ public class IRBuilder  {
            curScope.declareVariable(parameter.getName());
             String varPtr = curScope.getVariable(parameter.getName());
             // varPtr = alloca <type>
-            // stmt.addStmt(new AllocaStmt(new BasicIRType(parameter.getType()), varPtr));
             stmt.addAllocaStmt(new AllocaStmt(new BasicIRType(parameter.getType()), varPtr));
             // store <type> %<i> ptr <varPtr>
             stmt.addStmt(new StoreStmt(new BasicIRType(parameter.getType()), "%" + parameter.getName(), varPtr));
@@ -236,7 +235,6 @@ public class IRBuilder  {
             curScope.declareVariable(parameter.getName());
             String varPtr = curScope.getVariable(parameter.getName());
                     // varPtr = alloca <type>
-            // stmt.addStmt(new AllocaStmt(new BasicIRType(parameter.getType()), varPtr));
             stmt.addAllocaStmt(new AllocaStmt(new BasicIRType(parameter.getType()), varPtr));
             // store <type> %<i> ptr <varPtr>
             stmt.addStmt(new StoreStmt(new BasicIRType(parameter.getType()), "%" + parameter.getName(), varPtr));

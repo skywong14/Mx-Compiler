@@ -56,18 +56,17 @@ public class ASMBuilder {
 
     public ArrayList<ASMInst> ArithImm(String op, String rd, String rs, int imm) {
         ArrayList<ASMInst> insts = new ArrayList<>();
-
-        insts.add(new LiInst("t6", imm));
-        insts.add(new ArithInst(op, rd, rs, "t6"));
-        return insts;
-        /*if (outOfBound(imm)) {
-            insts.add(new LiInst("t0", imm));
-            insts.add(new ArithInst(op, rd, rs, "t0"));
+//        insts.add(new LiInst("t6", imm));
+//        insts.add(new ArithInst(op, rd, rs, "t6"));
+//        return insts;
+        if (outOfBound(imm)) {
+            insts.add(new LiInst("t6", imm));
+            insts.add(new ArithInst(op, rd, rs, "t6"));
             return insts;
         } else {
             insts.add(new ArithImmInst(op, rd, rs, imm));
             return insts;
-        }*/
+        }
     }
 
     void init(IRBuilder irBuilder_) {

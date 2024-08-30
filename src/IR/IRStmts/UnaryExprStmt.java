@@ -31,7 +31,7 @@ public class UnaryExprStmt extends IRStmt{
         if (operator.equals("-")) {
             return dest + " = sub " + type.toString() + " 0, " + register + "\n";
         }
-        return "";
+        throw new RuntimeException("UnaryExprStmt: operator not found: " + operator);
     }
 
     @Override

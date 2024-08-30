@@ -31,7 +31,6 @@ public class ClassTypeDefineStmt extends IRStmt{
 
     @Override
     public String toString() {
-//        return "%class." + typeName + " = type {" + fields.stream().map(IRType::toString).reduce((a, b) -> a + ", " + b).orElse("") + "}";
         StringBuilder ret = new StringBuilder("%class." + typeName + " = type {");
         for (int i = 0; i < fields.size(); i++) {
             ret.append(fields.get(i).toString());

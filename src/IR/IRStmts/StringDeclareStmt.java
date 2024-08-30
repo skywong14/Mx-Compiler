@@ -63,15 +63,10 @@ public class StringDeclareStmt extends IRStmt{
     }
 
     public static String convert2riscv(String str){
-        // 替换 \\\\ 为 \
-        // String riscvString = str.replace("\\\\", "\\");
-
-        // 替换 \\22 为 "
+        // 替换 \\22 为 \\\"
         String riscvString = str.replace("\\22", "\\\"");
-
         // 替换 \\0A 为换行符 \\n
         riscvString = riscvString.replace("\\0A", "\\n");
-
         return riscvString;
     }
 

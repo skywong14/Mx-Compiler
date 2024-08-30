@@ -35,8 +35,6 @@ public class Main {
     }
 
     public static void main(String[] args) throws Exception{
-//        String name = "test.mx";
-//        InputStream input = new FileInputStream(name);
         InputStream input = System.in;
         try {
             // 词法分析器，将输入流转换为字符流
@@ -73,8 +71,7 @@ public class Main {
             ir.visitProgramNode((ProgramNode) programNode);
 
             // print ir.toString()
-//            System.out.println(ir.toString());
-            debug(ir.toString());
+            ir.toString();
 
             printBuiltin();
 

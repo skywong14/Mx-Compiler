@@ -1,7 +1,5 @@
 package IR.IRStmts;
 
-import semantic.ASTNodes.ArgListNode;
-
 import java.util.ArrayList;
 
 public class NewClassStmt extends IRStmt{

@@ -1,21 +1,11 @@
 package ASM.section;
 
 import ASM.inst.ASMInst;
-import ASM.inst.CallInst;
 import ASM.operand.PhysicalReg;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 
-/*
-| ...               | <- 栈顶 (较高地址)
-| 临时数据            | <- 临时使用的栈空间 (例如用于计算)
-| 空闲空间            | <- 可用的额外栈空间
-| ...               |
-| 局部变量            | <- 函数的局部变量
-| 保存的寄存器值       | <- 保存的寄存器值: a0~a8, s0~s12
-| (sp) 栈指针        | <- 栈底 (较低地址)
-*/
 public class ASMFunction {
     public String name;
     public ArrayList<ASMBlock> blocks;
@@ -29,10 +19,9 @@ public class ASMFunction {
     public int indexInProgram = 0;
     public String blockHead = null;
 
-    //public VirtualReg virtualReg;
     public HashMap<String, Integer> virtualRegMap;
 
-    // can use: sp(0) ~ sp(spOffsetMax - 4)
+    // can use memory: [ 0(sp) , spOffsetMax(sp) )
     public ASMFunction(String name, int spOffset) {
         this.name = name;
         this.blocks = new ArrayList<>();
@@ -68,11 +57,6 @@ public class ASMFunction {
         blocks.add(curBlock);
     }
 
-    public void addBlock(ASMBlock block) {
-        blocks.add(block);
-        curBlock = block;
-    }
-
     public void addInst(ASMInst inst) {
         curBlock.addInst(inst);
     }
@@ -81,14 +65,9 @@ public class ASMFunction {
         curBlock.addInst(inst);
     }
 
-
-
-
     public String toString() {
         StringBuilder sb = new StringBuilder();
-//        sb.append(".globl ").append(name).append("\n");
         sb.append(".type ").append(name).append(", @function\n");
-//        sb.append(name).append(":\n");
         for (ASMBlock block : blocks) {
             sb.append(block.toString()).append("\n");
         }

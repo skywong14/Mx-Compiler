@@ -9,7 +9,7 @@ public class ASMBlock{
     public boolean isGlobal;
     public int alignSize;
     public String label;
-    public ASMFunction parentFunc = null;
+    public ASMFunction parentFunc;
     // instructions
     public ArrayList<ASMInst> insts;
 

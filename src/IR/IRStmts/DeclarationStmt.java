@@ -7,7 +7,6 @@ import java.io.IOException;
 public class DeclarationStmt extends IRStmt {
     @Override
     public String toString() {
-        //将同文件夹下的MyIRCode.ir文本文件转换为字符串返回，打开文件，读入和输出即可
         String file = "./src/IR/IRStmts/irDeclaration.txt";
         String content = "";
         try {
