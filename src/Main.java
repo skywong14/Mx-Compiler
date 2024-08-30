@@ -9,12 +9,28 @@ import semantic.*;
 import semantic.ASTNodes.ASTNode;
 import semantic.ASTNodes.ProgramNode;
 
-import java.io.FileInputStream;
-import java.io.InputStream;
+import java.io.*;
 
 public class Main {
     private static void debug(String msg) {
 //        System.out.println("Main: " + msg);
+    }
+
+    public static void printBuiltin() {
+        String file = "./src/IR/builtin/builtin.s";
+        String content = "";
+        try {
+            BufferedReader reader = new BufferedReader(new FileReader(file));
+            String line = reader.readLine();
+            while (line != null) {
+                content += line + "\n";
+                line = reader.readLine();
+            }
+            reader.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw new RuntimeException("builtin file not found");
+        }
     }
 
     public static void main(String[] args) throws Exception{
@@ -64,8 +80,11 @@ public class Main {
             asmBuilder.visitProgram();
             System.out.println(asmBuilder.toString());
 
+            // print file "builtin.s"
+            printBuiltin();
+
             // success
-//            debug("Success!");
+            debug("Success!");
         } catch (Exception e) {
 //            System.out.println("Error: " + e.getMessage());
             System.out.println(e.getMessage().split("\\[")[1].split("]")[0]);
