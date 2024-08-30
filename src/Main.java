@@ -83,8 +83,6 @@ public class Main {
             asmBuilder.visitProgram();
             System.out.println(asmBuilder.toString());
 
-            // print file "builtin.s"
-
             // success
             debug("Success!");
         } catch (Exception e) {

@@ -121,6 +121,57 @@ void *_malloc(int n){ //分配4n个字节
 
 #define NULL (void*)0
 
+void *__arrayMalloc__(int length) {
+    int *tmp = (int *) _malloc(length + 1);
+    tmp[0] = length;
+    return tmp + 1;
+}
+
+void *__arrayDeepCopy__(void *constArr, int dim) {
+    if (constArr == 0) return 0;
+    int length = array_size(constArr);
+    if (dim == 1) {
+        void *arr = __arrayMalloc__(length);
+        memcpy(arr, constArr, length * 4);
+        return arr;
+    } else {
+        int *arr = (int *) __arrayMalloc__(length);
+        for (int i = 0; i < length; ++i)
+            arr[i] = (int) __arrayDeepCopy__((void *) ((int*)constArr)[i], dim - 1);
+    }
+}
+
+bool __ptrEqual__(void *ptr1, void *ptr2) {
+    return ptr1 == ptr2;
+}
+
+bool __ptrNotEqual__(void *ptr1, void *ptr2) {
+    return ptr1 != ptr2;
+}
+
+/*
+define ptr @__allocateArray__(i32 %arraySize) {
+    ; 4 Byte + arraySize * 4 Byte
+    %totalSize = add i32 %arraySize, 1
+    %totalBytes = mul i32 %totalSize, 4
+
+    %ptr = call ptr @_malloc(i32 %totalBytes) ; 调用malloc分配内存
+
+    call void @llvm.memset.p0.p0.i32(ptr %ptr, i32 0, i32 %totalBytes, i1 false) ; 初始化为0 why wrong?(link error)
+
+    ; 将数组大小存储在前4个字节
+    %sizePtr = bitcast ptr %ptr to ptr  ; 将指针转换为指向i32的指针类型以存储大小
+    store i32 %arraySize, ptr %sizePtr  ; 将数组大小存储到数组头部
+
+    %elementPtr = getelementptr i32, ptr %sizePtr, i32 1 ; 跳过存储size的4个字节
+
+    ret ptr %elementPtr ; 返回指向第一个元素的指针
+}
+*/
+
+/*
+
+
 void *__arrayDeepCopy__(void *arr) {
     // 获取数组大小
     int size = array_size(arr);
@@ -146,34 +197,5 @@ void *__arrayDeepCopy__(void *arr) {
     }
 
     return array_ptr;
-}
-
-bool __ptrEqual__(void *ptr1, void *ptr2) {
-    return ptr1 == ptr2;
-}
-
-bool __ptrNotEqual__(void *ptr1, void *ptr2) {
-    return ptr1 != ptr2;
-}
-
-/*
-declare void @llvm.memset.p0.p0.i32(ptr, i32, i32, i1) ; 声明LLVM的内置memset函数，用于初始化内存为0
-
-define ptr @__allocateArray__(i32 %arraySize) {
-    ; 4 Byte + arraySize * 4 Byte
-    %totalSize = add i32 %arraySize, 1
-    %totalBytes = mul i32 %totalSize, 4
-
-    %ptr = call ptr @_malloc(i32 %totalBytes) ; 调用malloc分配内存
-
-    call void @llvm.memset.p0.p0.i32(ptr %ptr, i32 0, i32 %totalBytes, i1 false) ; 初始化为0 why wrong?(link error)
-
-    ; 将数组大小存储在前4个字节
-    %sizePtr = bitcast ptr %ptr to ptr  ; 将指针转换为指向i32的指针类型以存储大小
-    store i32 %arraySize, ptr %sizePtr  ; 将数组大小存储到数组头部
-
-    %elementPtr = getelementptr i32, ptr %sizePtr, i32 1 ; 跳过存储size的4个字节
-
-    ret ptr %elementPtr ; 返回指向第一个元素的指针
 }
 */

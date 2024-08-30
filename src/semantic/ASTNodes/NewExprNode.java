@@ -30,6 +30,10 @@ public class NewExprNode extends PrimaryExpressionNode{
         if (arrayConstant != null) arrayConstant.setParent(this);
     }
 
+    public int getDimension() {
+        return arrayConstant == null ? 0 : arrayConstant.getDimension();
+    }
+
     @Override
     public Type deduceType(ScopeManager scopeManager) {
         if (deduceType != null) return deduceType;

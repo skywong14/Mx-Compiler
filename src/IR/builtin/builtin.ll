@@ -191,40 +191,57 @@ define dso_local noalias ptr @_malloc(i32 noundef %0) local_unnamed_addr #9 {
   ret ptr %3
 }
 
-; Function Attrs: nofree nounwind
-define dso_local noalias nonnull ptr @__arrayDeepCopy__(ptr nocapture noundef readonly %0) local_unnamed_addr #2 {
-  %2 = getelementptr inbounds i8, ptr %0, i32 -4
-  %3 = load i32, ptr %2, align 4, !tbaa !4
-  %4 = shl i32 %3, 2
-  %5 = add i32 %4, 4
-  %6 = tail call ptr @malloc(i32 noundef %5) #12
-  %7 = inttoptr i32 %3 to ptr
-  store ptr %7, ptr %6, align 4, !tbaa !9
-  %8 = getelementptr inbounds ptr, ptr %6, i32 1
-  %9 = icmp sgt i32 %3, 0
-  br i1 %9, label %11, label %10
+; Function Attrs: mustprogress nofree nounwind willreturn
+define dso_local noalias nonnull ptr @__arrayMalloc__(i32 noundef %0) local_unnamed_addr #9 {
+  %2 = shl i32 %0, 2
+  %3 = add i32 %2, 4
+  %4 = tail call ptr @malloc(i32 noundef %3) #12
+  store i32 %0, ptr %4, align 4, !tbaa !4
+  %5 = getelementptr inbounds i32, ptr %4, i32 1
+  ret ptr %5
+}
 
-10:                                               ; preds = %18, %1
-  ret ptr %8
+; Function Attrs: nounwind
+define dso_local ptr @__arrayDeepCopy__(ptr noundef %0, i32 noundef %1) local_unnamed_addr #0 {
+  %3 = icmp eq ptr %0, null
+  br i1 %3, label %26, label %4
 
-11:                                               ; preds = %1, %18
-  %12 = phi i32 [ %21, %18 ], [ 0, %1 ]
-  %13 = getelementptr inbounds ptr, ptr %0, i32 %12
-  %14 = load ptr, ptr %13, align 4, !tbaa !9
-  %15 = icmp ult ptr %14, inttoptr (i32 4096 to ptr)
-  br i1 %15, label %18, label %16
+4:                                                ; preds = %2
+  %5 = getelementptr inbounds i8, ptr %0, i32 -4
+  %6 = load i32, ptr %5, align 4, !tbaa !4
+  %7 = icmp eq i32 %1, 1
+  br i1 %7, label %12, label %8
 
-16:                                               ; preds = %11
-  %17 = tail call ptr @__arrayDeepCopy__(ptr noundef nonnull %14) #12
+8:                                                ; preds = %4
+  %9 = icmp sgt i32 %6, 0
+  br i1 %9, label %10, label %26
+
+10:                                               ; preds = %8
+  %11 = add nsw i32 %1, -1
   br label %18
 
-18:                                               ; preds = %11, %16
-  %19 = phi ptr [ %17, %16 ], [ %14, %11 ]
-  %20 = getelementptr inbounds ptr, ptr %8, i32 %12
-  store ptr %19, ptr %20, align 4
-  %21 = add nuw nsw i32 %12, 1
-  %22 = icmp eq i32 %21, %3
-  br i1 %22, label %10, label %11, !llvm.loop !11
+12:                                               ; preds = %4
+  %13 = shl i32 %6, 2
+  %14 = add i32 %13, 4
+  %15 = tail call ptr @malloc(i32 noundef %14) #12
+  store i32 %6, ptr %15, align 4, !tbaa !4
+  %16 = getelementptr inbounds i32, ptr %15, i32 1
+  %17 = tail call ptr @memcpy(ptr noundef nonnull %16, ptr noundef nonnull %0, i32 noundef %13) #11
+  br label %26
+
+18:                                               ; preds = %10, %18
+  %19 = phi i32 [ 0, %10 ], [ %24, %18 ]
+  %20 = getelementptr inbounds i32, ptr %0, i32 %19
+  %21 = load i32, ptr %20, align 4, !tbaa !4
+  %22 = inttoptr i32 %21 to ptr
+  %23 = tail call ptr @__arrayDeepCopy__(ptr noundef %22, i32 noundef %11) #12
+  %24 = add nuw nsw i32 %19, 1
+  %25 = icmp eq i32 %24, %6
+  br i1 %25, label %26, label %18, !llvm.loop !9
+
+26:                                               ; preds = %18, %8, %12, %2
+  %27 = phi ptr [ null, %2 ], [ %16, %12 ], [ undef, %8 ], [ undef, %18 ]
+  ret ptr %27
 }
 
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind readnone willreturn
@@ -266,13 +283,10 @@ attributes #13 = { nounwind }
 !6 = !{!"omnipotent char", !7, i64 0}
 !7 = !{!"Simple C/C++ TBAA"}
 !8 = !{!6, !6, i64 0}
-!9 = !{!10, !10, i64 0}
-!10 = !{!"any pointer", !6, i64 0}
-!11 = distinct !{!11, !12}
-!12 = !{!"llvm.loop.mustprogress"}
+!9 = distinct !{!9, !10}
+!10 = !{!"llvm.loop.mustprogress"}
 
-
-;-------------------------
+; -------------------------
 
 define ptr @__allocateArray__(i32 %arraySize) {
     ; 4 Byte + arraySize * 4 Byte
@@ -291,4 +305,3 @@ define ptr @__allocateArray__(i32 %arraySize) {
 
     ret ptr %elementPtr ; 返回指向第一个元素的指针
 }
-

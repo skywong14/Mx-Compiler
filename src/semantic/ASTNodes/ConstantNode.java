@@ -31,6 +31,15 @@ public class ConstantNode extends PrimaryExpressionNode {
         }
     }
 
+    public int getDimension() {
+        if (!isArray) return 0;
+        int maxDim = 0;
+        for (ConstantNode c : constants) {
+            maxDim = Math.max(maxDim, c.getDimension());
+        }
+        return maxDim + 1;
+    }
+
     @Override
     public Type deduceType(ScopeManager scopeManager) {
         if (type != null) return type;

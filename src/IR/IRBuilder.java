@@ -687,9 +687,10 @@ public class IRBuilder  {
                 String regLoad = curScope.getNewRegister();
                 addStmt(new LoadStmt(new BasicIRType("ptr"), arrayPtr, regLoad));
                 String reg = curScope.getNewRegister();
+                ArrayList<BasicIRType> types = new ArrayList<>(); types.add(new BasicIRType("ptr")); types.add(new BasicIRType("i32"));
+                ArrayList<String> args = new ArrayList<>(); args.add(regLoad); args.add(Integer.toString(it.getDimension()));
                 addStmt(new CallStmt(new BasicIRType("ptr"), "__arrayDeepCopy__",
-                        new ArrayList<BasicIRType>(){{add(new BasicIRType("ptr"));}},
-                        new ArrayList<String>(){{add(regLoad);}}, reg));
+                        types, args, reg));
                 return reg;
             }
         } else {
@@ -741,7 +742,7 @@ public class IRBuilder  {
         // store the value of the array
         for (int i = 0; i < elementIndex.size(); i++) {
             String elementPtr = "%" + arrayPtr + "." + Integer.toString(i);
-            varInit.addStmt(new GetElementPtrStmt(new BasicIRType(it.deduceType(null)), "@" + arrayPtr,
+            varInit.addStmt(new GetElementPtrStmt(new BasicIRType(it.deduceType(null)), "%" + arrayPtr,
                     Integer.toString(i), elementPtr, false));
             String register = arrayDeclareInGlobal(it.getConstants().get(i));
             varInit.addStmt(new StoreStmt(new BasicIRType(it.getConstants().get(i).deduceType(null)), register, elementPtr));
