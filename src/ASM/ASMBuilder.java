@@ -236,8 +236,8 @@ public class ASMBuilder {
 
     void visitSelectStmt(SelectStmt irStmt, ASMFunction func) {
         resolveRegister(irStmt.cond, "t0", func);
-        resolveRegister(irStmt.trueBranch, "t1", func);
-        resolveRegister(irStmt.falseBranch, "t2", func);
+        resolveRegister(irStmt.trueVal, "t1", func);
+        resolveRegister(irStmt.falseVal, "t2", func);
         // # 首先，根据条件构造一个全为0或全为1的掩码
         //sltu t3, x0, t0    # t3 = (t0 != 0) ? 1 : 0，t3现在是1或0
         //neg t3, t3         # t3 = -t3，如果t3是1，则t3=-1（即全1的掩码）；否则是0

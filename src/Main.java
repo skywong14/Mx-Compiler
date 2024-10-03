@@ -1,5 +1,6 @@
 import ASM.ASMBuilder;
 import IR.IRBuilder;
+import IR.IRCode;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
@@ -70,22 +71,28 @@ public class Main {
             IRBuilder ir = new IRBuilder((ProgramNode) programNode);
             ir.visitProgramNode((ProgramNode) programNode);
 
-            // print ir.toString()
-            ir.toString();
+            // transfer IR form, for the upcoming optimization
+            IRCode irCode = new IRCode();
+            ir.toString(irCode);
 
-            printBuiltin();
+            // optimization
+            irCode.optimize();
+
+            // print IR
+            System.out.println(irCode.toString()); // for debug
 
             // asm
-            ASMBuilder asmBuilder = new ASMBuilder(ir);
-            asmBuilder.visitProgram();
-            System.out.println(asmBuilder.toString());
+//            printBuiltin();
+//            ASMBuilder asmBuilder = new ASMBuilder(ir);
+//            asmBuilder.visitProgram();
+//            System.out.println(asmBuilder.toString());
 
             // success
             debug("Success!");
         } catch (Exception e) {
-//            System.out.println("Error: " + e.getMessage());
-            System.out.println(e.getMessage().split("\\[")[1].split("]")[0]);
-//             e.printStackTrace();
+            System.out.println("Error: " + e.getMessage());
+//            System.out.println(e.getMessage().split("\\[")[1].split("]")[0]);
+             e.printStackTrace();
             System.exit(2);
         }
     }

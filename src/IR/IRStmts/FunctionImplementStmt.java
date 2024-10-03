@@ -10,7 +10,7 @@ public class FunctionImplementStmt extends IRStmt {
     public Block curBlock;
     public ArrayList<Block> blocks;
     public ArrayList<AllocaStmt> allocaStmts;
-    private boolean allocaFlag = true;
+    public boolean allocaFlag = true;
 
     public FunctionImplementStmt(String name, FunctionDeclarationStmt declaration) {
         this.name = name;
@@ -35,22 +35,6 @@ public class FunctionImplementStmt extends IRStmt {
         curBlock = new Block(label);
         blocks.add(curBlock);
     }
-
-    public int getCurBlockIndex() {
-        for (int i = 0; i < blocks.size(); i++) {
-            if (blocks.get(i) == curBlock) return i;
-        }
-        throw new RuntimeException("curBlock not found");
-    }
-
-    public String curBlockLabel() {
-        if (curBlock.label.equals("")) {
-            return "0";
-        }
-        return curBlock.label;
-    }
-
-
 
     @Override
     public String toString() {

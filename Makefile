@@ -5,13 +5,13 @@ build:
 run:
 	java -cp /ulib/antlr-4.13.2-complete.jar:bin Main -emit-llvm
 
-.PhONY: output
-output:
+.PhONY: asm_output
+asm_output:
 	java -cp /ulib/antlr-4.13.2-complete.jar:bin Main < test.mx > test.s -emit-llvm
 
 .PHONY: ir_output
 ir_output:
-	java -cp /ulib/antlr-4.13.2-complete.jar:bin Main < test.mx > output.ll -emit-llvm
+	java -cp /ulib/antlr-4.13.2-complete.jar:bin Main < test.mx > teset.ll -emit-llvm
 
 .PHONY: ir_single
 ir_single:
@@ -21,12 +21,12 @@ ir_single:
 ir_all:
 	testcases/codegen/scripts/test_llvm_ir_all.bash 'java -cp /ulib/antlr-4.13.2-complete.jar:bin Main -emit-llvm' testcases/codegen src/IR/builtin/builtin.ll
 
-.PHONY: single
-single:
+.PHONY: asm_single
+asm_single:
 	testcases/codegen/scripts/test_asm.bash 'java -cp /ulib/antlr-4.13.2-complete.jar:bin Main -S' testcases/codegen/t75.mx src/IR/builtin/builtin.s
 
-.PHONY: all
-all:
+.PHONY: asm_all
+asm_all:
 	testcases/codegen/scripts/test_asm_all.bash 'java -cp /ulib/antlr-4.13.2-complete.jar:bin Main -S' testcases/codegen  src/IR/builtin/builtin.s
 
 .PHONY: init
@@ -40,3 +40,7 @@ clang:
 .PHONY: debug
 debug:
 	reimu --debug -i=test.in -o=output.s
+
+.PHONY: asm_oj # same condition as Online Judge
+asm_oj:
+	testcases/codegen/scripts/test_asm_all.bash 'java -cp /ulib/antlr-4.13.2-complete.jar:bin Main -S' testcases/codegen  src/IR/builtin/empty.s

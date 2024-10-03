@@ -2,9 +2,9 @@ package IR.IRStmts;
 
 public class AllocaStmt extends IRStmt {
     public String dest;
-    public IRType type;
+    public BasicIRType type;
 
-    public AllocaStmt(IRType type, String dest) {
+    public AllocaStmt(BasicIRType type, String dest) {
         this.type = type;
         this.dest = dest;
     }

@@ -64,7 +64,7 @@ public class ASTOptimizer implements ASTVisitor {
     }
 
     @Override
-    public void visit(ProgramNode it) {
+    public void visit(ProgramNode it) { 
         for (ASTNode node : it.getAllNodes()) {
             node.accept(this);
         }

@@ -48,11 +48,39 @@ public class IRBuilder  {
 
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        // debug(String.valueOf(irStmts.size()));
+
+        for (IRStmt stmt : constantStmts) {
+            sb.append(stmt.toString()).append("\n");
+        }
+
         for (IRStmt stmt : irStmts) {
             sb.append(stmt.toString()).append("\n");
         }
         return sb.toString();
+    }
+
+    public void toString(IRCode irCode) {
+        // declaration?
+        for (IRStmt stmt : constantStmts) {
+            if (stmt instanceof StringDeclareStmt)
+                irCode.stringDeclarations.add((StringDeclareStmt) stmt);
+            else
+                irCode.globalVariables.add((GlobalVariableDeclareStmt) stmt);
+        }
+
+        for (IRStmt stmt : irStmts) {
+            if (stmt instanceof DeclarationStmt) {
+                irCode.initDeclaration((DeclarationStmt) stmt);
+            } else if (stmt instanceof FunctionImplementStmt) {
+                irCode.addFunction((FunctionImplementStmt) stmt);
+            } else if (stmt instanceof GlobalVariableDeclareStmt) {
+                irCode.globalVariables.add((GlobalVariableDeclareStmt) stmt); //todo
+            } else if (stmt instanceof ClassTypeDefineStmt) {
+                irCode.classTypeDefineStmts.add((ClassTypeDefineStmt) stmt); // todo
+            } else {
+                throw new RuntimeException("Unknown IRStmt: " + stmt.toString());
+            }
+        }
     }
 
     void addStmt(IRStmt stmt) {
@@ -75,7 +103,7 @@ public class IRBuilder  {
 
     // 访问根节点
     public void visitProgramNode(ProgramNode it) {
-        // arrayAllocator
+        // builtin function declarations
          addStmt(new DeclarationStmt());
 
         // declare all classes' fields
@@ -104,7 +132,6 @@ public class IRBuilder  {
                 curScope.addFunction(stmt.name, stmt);
             }
         }
-
         // declare all global variables
         for (VariableDeclarationNode variable : it.getVariables()) {
             for (VariableNode var : variable.getVariableNodes()) {
@@ -133,7 +160,7 @@ public class IRBuilder  {
         }
 
         // add constantStmts to the head of irStmts
-        irStmts.addAll(1, constantStmts);
+        // irStmts.addAll(1, constantStmts);
 
         // add return stmt to __Mx_global_var_init__
         varInit.addStmt(new ReturnStmt(new BasicIRType("void"), null));

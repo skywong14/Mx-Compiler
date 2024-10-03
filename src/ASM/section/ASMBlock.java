@@ -29,7 +29,6 @@ public class ASMBlock{
         this.parentFunc = function;
     }
 
-
     public void addInst(ASMInst inst) {
         insts.add(inst);
     }

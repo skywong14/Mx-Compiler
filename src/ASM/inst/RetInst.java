@@ -1,6 +1,4 @@
-package IR.IRStmts;
-
-import ASM.inst.ASMInst;
+package ASM.inst;
 
 public class RetInst extends ASMInst {
     @Override

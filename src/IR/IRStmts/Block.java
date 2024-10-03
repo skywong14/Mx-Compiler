@@ -20,7 +20,7 @@ public class Block extends IRStmt {
         stmts.addAll(0, stmts_);
     }
 
-    void updateBlock() {
+    public void updateBlock() {
         if (stmts.isEmpty()) label = "";
         else {
             int sz = stmts.size();
