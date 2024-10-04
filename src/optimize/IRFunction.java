@@ -4,6 +4,7 @@ import IR.IRStmts.*;
 
 import javax.print.attribute.HashPrintJobAttributeSet;
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.HashMap;
 
 public class IRFunction extends IRStmt {
@@ -67,11 +68,78 @@ public class IRFunction extends IRStmt {
         }
     }
 
-    private void activityAnalysis() {
-        // 构建CFG(Control Flow Graph)和支配树
+    void clearDeadBlock() {
+        // 消除不可达的block
+        for (IRBlock block : blocks) {
+            if (!block.isHead && block.pred.isEmpty()) {
+                throw new RuntimeException("IRFunction: clearDeadBlock: unreachable block");
+                // todo
+            }
+        }
+    }
+
+    boolean[] boolArray;
+    void dfs(IRBlock curBlock) {
+        boolArray[curBlock.indexInFunc] = false;
+        for (IRBlock succBlock : curBlock.succ) {
+            if (boolArray[succBlock.indexInFunc]) {
+                dfs(succBlock);
+            }
+        }
+    }
+    void buildDomTree() {
+        // 目前使用朴素算法
+        // todo: 数据流迭代
+        int sz = blocks.size();
+        for (int i = 0; i < sz; i++)
+            blocks.get(i).dom = new BitSet(sz); // init: false
+        IRBlock headBlock = blocks.get(0);
+        boolArray = new boolean[sz];
+        for (int i = 0; i < sz; i++)
+            blocks.get(i).dom.set(0); // every block is dominated by the head block
+        // 得到dom节点
+        for (int i = 1; i < sz; i++) {
+            for (int j = 0; j < sz; j++) boolArray[j] = true;
+            boolArray[i] = false;
+            dfs(headBlock);
+            for (int j = 0; j < sz; j++)
+                if (boolArray[j]) blocks.get(j).dom.set(i);
+            blocks.get(i).dom.set(i);
+        }
+        // immediate dominator
+        for (int i = 1; i < sz; i++) {
+            int[] idom = new int[sz]; // for debug only
+            IRBlock curBlock = blocks.get(i);
+            for (int j = 0; j < sz; j++)
+                if (curBlock.dom.get(j)) {
+                    // tmp = (dom[v] & dom[u]) ^ dom[u];
+                    BitSet tmp = (BitSet) curBlock.dom.clone();
+                    tmp.and(blocks.get(j).dom);
+                    tmp.xor(blocks.get(j).dom);
+
+                    if (tmp.cardinality() == 1 && tmp.get(i)) {
+                        idom[i] = j;
+                        curBlock.idom = j;
+                        curBlock.idomBlock = blocks.get(j);
+                        break;
+                    }
+                }
+        }
+
+    }
+
+    void activityAnalysis() {
+        clearDeadBlock(); // 消去不可达的block
+
+        // set index
+        for (int i = 0; i < blocks.size(); i++)
+            blocks.get(i).indexInFunc = i;
+
+        buildDomTree(); // 构建支配树
 
         // 活跃分析
-        // liveIn and liveOut in each block
+
+        // use and def in each block
         for (IRBlock block : blocks)
             block.activityAnalysis();
         // liveIn and liveOut among blocks

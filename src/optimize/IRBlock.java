@@ -3,6 +3,7 @@ package optimize;
 import IR.IRStmts.*;
 
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.HashSet;
 
 // block for optimization
@@ -19,6 +20,12 @@ public class IRBlock extends IRStmt {
     // activity analysis
     public HashSet<String> liveIn = new HashSet<>();
     public HashSet<String> liveOut = new HashSet<>();
+    // dominant nodes
+    public int idom = -1;
+    public IRBlock idomBlock = null;
+    public BitSet dom = null;
+    // block id
+    public int indexInFunc = -1;
 
     public IRBlock(Block block) {
         block.updateBlock(); // remove all stmts after branch or return
