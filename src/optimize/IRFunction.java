@@ -6,9 +6,10 @@ import javax.print.attribute.HashPrintJobAttributeSet;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.HashMap;
+import java.util.HashSet;
 
 public class IRFunction extends IRStmt {
-    public String typeName, funcName;
+    public String typeName;
     public String name;
     public BasicIRType returnType;
     public ArrayList<BasicIRType> argTypes;
@@ -27,6 +28,25 @@ public class IRFunction extends IRStmt {
     }
     private HashMap<String, ArrayList<StringPair>> phiMap = new HashMap<>(); // phi函数的名字和对应的块和值
 
+    private static void debug(String msg) {
+        System.out.println("IRFunc: " + msg);
+    }
+    private void debug(int status) {
+        // 0: print idom
+        if (status == 0) {
+            System.out.println("---idom---");
+            if (status == 0) {
+                for (IRBlock block : blocks) {
+                    if (block.idomBlock == null)
+                        System.out.println("   " + block.label + " -> null");
+                    else
+                        System.out.println("   " + block.label + " -> " + block.idomBlock.label);
+                }
+            }
+            System.out.println("-------");
+        }
+    }
+
     public IRFunction(FunctionImplementStmt func) {
         this.name = func.name;
         this.returnType = func.returnType;
@@ -34,6 +54,40 @@ public class IRFunction extends IRStmt {
         this.argNames = func.argNames;
         this.blocks = new ArrayList<>();
 
+        // 展开NewArrayStmt
+        for (int i = 0; i < func.blocks.size(); i++) {
+            Block block = func.blocks.get(i);
+            int sz = block.stmts.size();
+            for (int j = 0; j < sz; j++) {
+                IRStmt stmt = block.stmts.get(j);
+                if (stmt instanceof NewArrayStmt newArray) {
+                    for (IRStmt newStmt : newArray.stmts) {
+                        block.stmts.add(j, newStmt);
+                        j++;
+                    }
+                    block.stmts.remove(j);
+                    j--;
+                    sz = block.stmts.size();
+                }
+            }
+        }
+        // split the block by LabelStmt
+        ArrayList<Block> tmpBlocks = new ArrayList<>();
+        Block curBlock;
+        for (Block block : func.blocks) {
+            curBlock = new Block(block.label);
+            for (IRStmt stmt : block.stmts)
+                if (stmt instanceof LabelStmt) {
+                    tmpBlocks.add(curBlock);
+                    curBlock = new Block(((LabelStmt) stmt).label);
+                } else {
+                    curBlock.stmts.add(stmt);
+                }
+            tmpBlocks.add(curBlock);
+        }
+        func.blocks = tmpBlocks;
+
+        // -----------------------
         // 收集函数内的alloca
         if (func.allocaFlag) {
             for (int i = 0; i < func.allocaStmts.size(); i++) {
@@ -42,7 +96,7 @@ public class IRFunction extends IRStmt {
                 phiMap.put(allocaStmt.dest, new ArrayList<>());
             }
         }
-        // 拷贝每个Block
+        // 复制每个Block
         for (int i = 0; i < func.blocks.size(); i++) {
             IRBlock newBlock = new IRBlock(func.blocks.get(i));
             if (i == 0) newBlock.label = this.name; // the entry of the function
@@ -75,6 +129,59 @@ public class IRFunction extends IRStmt {
                 throw new RuntimeException("IRFunction: clearDeadBlock: unreachable block");
                 // todo
             }
+        }
+    }
+    void clearDeadStmt() {
+        // 消除没有use的stmt
+        HashSet<String> isUsed = new HashSet<>();
+        for (IRBlock block : blocks) {
+            for (IRStmt stmt : block.stmts) {
+                if (stmt instanceof StoreStmt store) {
+                    isUsed.add(store.dest);
+                    isUsed.add(store.val);
+                } else if (stmt instanceof LoadStmt load) {
+                    isUsed.add(load.pointer);
+                } else if (stmt instanceof CallStmt call) {
+                    isUsed.addAll(call.args);
+                } else if (stmt instanceof BinaryExprStmt binaryExpr) {
+                    isUsed.add(binaryExpr.register1);
+                    isUsed.add(binaryExpr.register2);
+                } else if (stmt instanceof GetElementPtrStmt getElementPtr) {
+                    isUsed.add(getElementPtr.pointer);
+                    isUsed.add(getElementPtr.index);
+                } else if (stmt instanceof SelectStmt select) {
+                    isUsed.add(select.cond);
+                    isUsed.add(select.trueVal);
+                    isUsed.add(select.falseVal);
+                } else if (stmt instanceof BranchStmt branch) {
+                    isUsed.add(branch.condition);
+                } else if (stmt instanceof ReturnStmt ret) {
+                    if (ret.src != null) isUsed.add(ret.src);
+                } else if (stmt instanceof UnaryExprStmt unaryExpr) {
+                    isUsed.add(unaryExpr.register);
+                } else
+                    throw new RuntimeException("IRFunction: clearDeadStmt: unknown stmt");
+            }
+        }
+        for (IRBlock block : blocks) {
+            ArrayList<IRStmt> newStmts = new ArrayList<>();
+            for (IRStmt stmt : block.stmts) {
+                if (stmt instanceof LoadStmt load) {
+                    if (isUsed.contains(load.dest)) newStmts.add(stmt);
+                } else if (stmt instanceof CallStmt call) {
+                    if (isUsed.contains(call.dest)) newStmts.add(stmt);
+                } else if (stmt instanceof BinaryExprStmt binaryExpr) {
+                    if (isUsed.contains(binaryExpr.dest)) newStmts.add(stmt);
+                } else if (stmt instanceof GetElementPtrStmt getElementPtr) {
+                    if (isUsed.contains(getElementPtr.dest)) newStmts.add(stmt);
+                } else if (stmt instanceof SelectStmt select) {
+                    if (isUsed.contains(select.dest)) newStmts.add(stmt);
+                } else if (stmt instanceof UnaryExprStmt unaryExpr) {
+                    if (isUsed.contains(unaryExpr.dest)) newStmts.add(stmt);
+                } else
+                    newStmts.add(stmt);
+            }
+            block.stmts = newStmts;
         }
     }
 
@@ -121,24 +228,30 @@ public class IRFunction extends IRStmt {
                         idom[i] = j;
                         curBlock.idom = j;
                         curBlock.idomBlock = blocks.get(j);
+                        blocks.get(j).domChildren.add(curBlock);
                         break;
                     }
                 }
         }
 
+        // get dominance frontier
+        for (int i = 0; i < sz; i++) {
+            IRBlock curBlock = blocks.get(i);
+            if (curBlock.pred.size() > 1) {
+                for (IRBlock predBlock : curBlock.pred) {
+                    IRBlock runner = predBlock;
+                    while (runner != null && runner != curBlock.idomBlock) {
+                        runner.domFrontier.add(curBlock);  // 添加支配边界
+                        runner = runner.idomBlock;
+                    }
+                }
+            } else {
+                // doing nothing?
+            }
+        }
     }
 
     void activityAnalysis() {
-        clearDeadBlock(); // 消去不可达的block
-
-        // set index
-        for (int i = 0; i < blocks.size(); i++)
-            blocks.get(i).indexInFunc = i;
-
-        buildDomTree(); // 构建支配树
-
-        // 活跃分析
-
         // use and def in each block
         for (IRBlock block : blocks)
             block.activityAnalysis();
@@ -146,8 +259,90 @@ public class IRFunction extends IRStmt {
 
     }
 
+    HashMap<IRBlock, String> getLastDefMap(String varName) {
+        // 记录它在每个块中的最后一次 def (store)
+        HashMap<IRBlock, String> lastDef = new HashMap<>();
+        for (IRBlock block : blocks)
+            for (IRStmt stmt : block.stmts)
+                if (stmt instanceof StoreStmt store)
+                    if (store.dest.equals(varName))
+                        lastDef.put(block, store.val);
+        return lastDef;
+    }
+
+    HashSet<IRBlock> getWorkTable(String varName) {
+        // 记录所有包含 store(varName) 的块
+        HashSet<IRBlock> workTable = new HashSet<>();
+        for (IRBlock block : blocks)
+            for (IRStmt stmt : block.stmts)
+                if (stmt instanceof StoreStmt store)
+                    if (store.dest.equals(varName))
+                        workTable.add(block);
+        return workTable;
+    }
+
+    void getPhiPosition() {
+        // reference: https://www.cnblogs.com/lixingyang/p/17721341.html
+        HashMap<String, HashMap<IRBlock, String>> all = new HashMap<>();
+        for (String var : allocaVarMap.keySet()) {
+            // 对每个alloca出来的变量单独处理
+            debug("getPhiPosition: " + var);
+
+            // 记录它在每个块中的最后一次 def (store)
+            HashMap<IRBlock, String> lastDefMap = getLastDefMap(var);
+            all.put(var, lastDefMap);
+            // 初始化工作表
+            HashSet<IRBlock> workTable = getWorkTable(var);
+            // 初始化辅助集合
+            HashSet<IRBlock> hasPhi = new HashSet<>();
+
+            while (!workTable.isEmpty()) {
+                IRBlock curBlock = workTable.iterator().next();
+//                debug("curBlock: " + curBlock.label);
+                workTable.remove(curBlock);
+                if (!lastDefMap.containsKey(curBlock)) {
+                    // 当前块没有对该变量的赋值，但在工作表内
+                    lastDefMap.put(curBlock, null); // phiStmt as the last def
+                }
+                // 遍历当前块的支配边界，插入phi
+                for (IRBlock frontier : curBlock.domFrontier) {
+                    if (!hasPhi.contains(frontier)) {
+                        // update phiMap & workTable
+                        hasPhi.add(frontier);
+                        workTable.add(frontier);
+                    }
+                    frontier.addPhi(var, allocaVarMap.get(var).toString(), curBlock.label, lastDefMap.get(curBlock));
+                }
+            }
+        }
+    }
+
     public void mem2reg() {
-        activityAnalysis();
+        clearDeadBlock(); // 消去不可达的block
+        clearDeadStmt(); // 消去没有use的stmt
+
+        // set index
+        for (int i = 0; i < blocks.size(); i++)
+            blocks.get(i).indexInFunc = i;
+
+//        debug("begin to build dom tree");
+        buildDomTree(); // 构建支配树，确定支配边界
+
+//        debug("begin to activity analysis");
+        // 遍历allocaMap中每个局部变量，获取需要插入phi的所有位置
+        getPhiPosition();
+
+//        debug("allocaMap: " + allocaVarMap);
+
+//        debug("begin to mem2reg");
+
+        debug(0);
+
+        // 逐个块进行mem2reg
+        HashMap<String, Integer> varCounter = new HashMap<>();
+        for (IRBlock block : blocks)
+            block.mem2reg(varCounter);
+
     }
 
     @Override

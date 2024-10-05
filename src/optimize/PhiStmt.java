@@ -2,28 +2,39 @@ package optimize;
 
 import IR.IRStmts.IRStmt;
 
+import java.util.HashMap;
+
 public class PhiStmt extends IRStmt {
     public String dest;
-    public String src1;
-    public String src2;
-    public String label1;
-    public String label2;
+    public String originDest;
+    public String type;
+    public HashMap<String, String> val = new HashMap<>(); // blockLabel -> val
 
-    public PhiStmt(String dest, String src1, String src2, String label1, String label2) {
-        this.dest = dest;
-        this.src1 = src1;
-        this.src2 = src2;
-        this.label1 = label1;
-        this.label2 = label2;
+    public PhiStmt(String originDest, String type) {
+        this.originDest = originDest;
+        this.dest = originDest; // todo
+        this.type = type;
+    }
+
+    public void addVal(String val, String blockLabel) {
+        this.val.put(val, blockLabel);
     }
 
     @Override
     public String toString() {
-        return dest + " = phi i32 [" + src1 + ", %" + label1 + "], [" + src2 + ", %" + label2 + "]";
+        StringBuilder sb = new StringBuilder();
+        sb.append(dest).append(" = phi ").append(type).append(" ");
+        boolean flag = false;
+        for (String v : val.keySet()) {
+            if (flag) sb.append(", ");
+            flag = true;
+            sb.append("[ ").append(val.get(v)).append(", ").append(v).append(" ] ");
+        }
+        return sb.toString();
     }
 
     @Override
     public int getSpSize() {
-        return 1;
+        return 1; // todo
     }
 }

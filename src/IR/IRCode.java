@@ -7,6 +7,10 @@ import java.util.ArrayList;
 
 // blocks for optimization
 public class IRCode{
+    private static void debug(String msg) {
+//        System.out.println("IRCode: " + msg);
+    }
+
     DeclarationStmt declarationStmt;
     public ArrayList<IRFunction> funcStmts = new ArrayList<>();
     public ArrayList<StringDeclareStmt> stringDeclarations = new ArrayList<>();
@@ -54,7 +58,9 @@ public class IRCode{
     public void optimize() {
         // mem2reg
         for (IRFunction func : funcStmts) {
+            debug(func.name);
             func.mem2reg();
         }
+        debug("mem2reg finished");
     }
 }

@@ -7,7 +7,7 @@ public class GetElementPtrStmt extends IRStmt {
     public String dest;
     public String pointer;
     public IRType type;
-    public ArrayList<String> index;
+    public String index;
 
     public boolean hasZero = false;
 
@@ -15,8 +15,7 @@ public class GetElementPtrStmt extends IRStmt {
         this.pointer = pointer;
         this.dest = dest;
         this.type = type;
-        this.index = new ArrayList<>();
-        this.index.add(index);
+        this.index = index;
         this.hasZero = hasZero;
     }
 
@@ -26,9 +25,7 @@ public class GetElementPtrStmt extends IRStmt {
         sb.append(dest).append(" = getelementptr ").append(type.toString()).append(", ptr ").append(pointer);
         if (hasZero)
             sb.append(", i32 0"); // 从第0个元素（基址）进行偏移
-        for (String idx : index) {
-            sb.append(", i32 ").append(idx);
-        }
+        sb.append(", i32 ").append(index);
         return sb.toString();
     }
 

@@ -76,7 +76,7 @@ public class Main {
             ir.toString(irCode);
 
             // optimization
-            irCode.optimize();
+             irCode.optimize();
 
             // print IR
             System.out.println(irCode.toString()); // for debug

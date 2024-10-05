@@ -11,7 +11,7 @@ asm_output:
 
 .PHONY: ir_output
 ir_output:
-	java -cp /ulib/antlr-4.13.2-complete.jar:bin Main < test.mx > teset.ll -emit-llvm
+	java -cp /ulib/antlr-4.13.2-complete.jar:bin Main < test.mx > test.ll -emit-llvm
 
 .PHONY: ir_single
 ir_single:
@@ -39,7 +39,7 @@ clang:
 
 .PHONY: debug
 debug:
-	reimu --debug -i=test.in -o=output.s
+	reimu --debug -i=test.mx -o=output.s
 
 .PHONY: asm_oj # same condition as Online Judge
 asm_oj:

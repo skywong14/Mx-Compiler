@@ -60,7 +60,6 @@ public class IRBuilder  {
     }
 
     public void toString(IRCode irCode) {
-        // declaration?
         for (IRStmt stmt : constantStmts) {
             if (stmt instanceof StringDeclareStmt)
                 irCode.stringDeclarations.add((StringDeclareStmt) stmt);

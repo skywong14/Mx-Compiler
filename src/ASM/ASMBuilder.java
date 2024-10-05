@@ -192,7 +192,7 @@ public class ASMBuilder {
     void visitGetElementPtrStmt(GetElementPtrStmt irStmt, ASMFunction func) {
         if (irStmt.hasZero) {
             resolveRegister(irStmt.pointer, "t0", func);
-            resolveRegister(irStmt.index.get(0), "t1", func);
+            resolveRegister(irStmt.index, "t1", func);
             // slli t2, t1, 2      # 计算偏移量：t1 << 2，相当于乘以4（因为i32是4字节）
             // add t2, t0, t2      # 计算结果地址：t0 + 偏移量
             func.addInst(new ArithImmInst("<<", "t1", "t1", 2));
@@ -202,7 +202,7 @@ public class ASMBuilder {
             func.addInst(Sw("t2", offset, "sp"));
         } else {
             resolveRegister(irStmt.pointer, "t0", func);
-            resolveRegister(irStmt.index.get(0), "t1", func);
+            resolveRegister(irStmt.index, "t1", func);
             //slli t1, t1, 2      # 计算偏移量：t1 << 2
             // add t2, t0, t1      # 计算结果地址：t0 + 偏移量
             func.addInst(new ArithImmInst("<<", "t1", "t1", 2));
