@@ -31,30 +31,31 @@ public class IRBlock extends IRStmt {
     public int indexInFunc = -1;
     // all phi stmts (phi函数的名字和对应的块和值)
     public HashMap<String, PhiStmt> phiStmts = new HashMap<>();
+    // lstDef
+    HashMap<String, String> lstDef = new HashMap<>();
 
     private void debug(String msg) {
-        System.out.println(label + ": " + msg);
+//        System.out.println(label + ": " + msg);
     }
 
     String getInPred(String var) {
         IRBlock predBlock = idomBlock;
         while (predBlock != null) {
-            debug("getInPred: " + predBlock.label);
-            if (predBlock.phiStmts.containsKey(var)) {
-                return predBlock.phiStmts.get(var).dest;
+            // debug("getInPred: " + predBlock.label);
+            if (predBlock.lstDef.containsKey(var)) {
+                return predBlock.lstDef.get(var);
             }
             predBlock = predBlock.idomBlock;
         }
         throw new RuntimeException("IRBlock: getInPred: no pred block contains var: " + var);
     }
 
-    HashMap<String, String> lstDef;
     String getReg(String reg) {
         if (lstDef.containsKey(reg)) reg = lstDef.get(reg);
         return reg;
     }
-    public void mem2reg(HashMap<String, Integer> varCounter) {
-        lstDef = new HashMap<>();
+    public void mem2reg(HashMap<String, Integer> varCounter, HashMap<String, BasicIRType> allocaVarMap) {
+//        lstDef = new HashMap<>();
         // 收集phi中的def，替换phi中的use
         for (String phi : phiStmts.keySet()) {
             PhiStmt phiStmt = phiStmts.get(phi);
@@ -65,18 +66,18 @@ public class IRBlock extends IRStmt {
             lstDef.put(phiStmt.originDest, phiStmt.dest);
             varCounter.put(phiStmt.originDest, index + 1);
         }
-        // 遍历block内的stmt，并复制
+        // 遍历block内的stmt，复制
         ArrayList<IRStmt> newStmts = new ArrayList<>();
         for (IRStmt stmt : stmts) {
-            debug(stmt.toString());
+            // debug(stmt.toString());
             if (stmt instanceof StoreStmt store) {
-                if (store.dest.startsWith("@")){
-                    newStmts.add(store);
+                if (!allocaVarMap.containsKey(store.dest)) {
+                    newStmts.add(new StoreStmt(store.type, getReg(store.val), store.dest));
                 } else {
                     lstDef.put(store.dest, store.val);
                 }
             } else if (stmt instanceof LoadStmt load) {
-                if (load.pointer.startsWith("@")) {
+                if (!allocaVarMap.containsKey(load.pointer)) {
                     newStmts.add(load);
                 } else {
                     if (lstDef.containsKey(load.pointer))
@@ -93,7 +94,7 @@ public class IRBlock extends IRStmt {
                 newStmts.add(new CallStmt(call.retType, call.funcName, call.argTypes, newArgs, call.dest));
             } else if (stmt instanceof GetElementPtrStmt getElementPtr) {
                 newStmts.add(new GetElementPtrStmt(getElementPtr.type, getReg(getElementPtr.pointer),
-                        getElementPtr.index, getElementPtr.dest, getElementPtr.hasZero));
+                        getReg(getElementPtr.index), getElementPtr.dest, getElementPtr.hasZero));
             } else if (stmt instanceof UnaryExprStmt unaryExpr) {
                 newStmts.add(new UnaryExprStmt(unaryExpr.operator, unaryExpr.type, getReg(unaryExpr.register), unaryExpr.dest));
             } else if (stmt instanceof SelectStmt select) {
@@ -105,7 +106,6 @@ public class IRBlock extends IRStmt {
                 newStmts.add(new ReturnStmt(ret.type, getReg(ret.src)));
                 break;
             } else {
-                if (stmt instanceof CallStmt) throw new RuntimeException("IRBlock: mem2reg: call stmt:" + stmt);
                 throw new RuntimeException("IRBlock: mem2reg: unknown stmt: " + stmt);
             }
         }

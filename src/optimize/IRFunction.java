@@ -29,9 +29,11 @@ public class IRFunction extends IRStmt {
     private HashMap<String, ArrayList<StringPair>> phiMap = new HashMap<>(); // phi函数的名字和对应的块和值
 
     private static void debug(String msg) {
-        System.out.println("IRFunc: " + msg);
+//        System.out.println("IRFunc: " + msg);
     }
     private void debug(int status) {
+        boolean flag = true;
+        if (flag) return;
         // 0: print idom
         if (status == 0) {
             System.out.println("---idom---");
@@ -362,7 +364,7 @@ public class IRFunction extends IRStmt {
         // 逐个块进行mem2reg
         HashMap<String, Integer> varCounter = new HashMap<>();
         for (IRBlock block : blocks)
-            block.mem2reg(varCounter);
+            block.mem2reg(varCounter, allocaVarMap);
 
     }
 

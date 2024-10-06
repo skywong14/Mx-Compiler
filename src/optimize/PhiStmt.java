@@ -17,7 +17,7 @@ public class PhiStmt extends IRStmt {
     }
 
     public void addVal(String val, String blockLabel) {
-        this.val.put(val, blockLabel);
+        this.val.put(blockLabel, val);
     }
 
     @Override
@@ -28,7 +28,7 @@ public class PhiStmt extends IRStmt {
         for (String v : val.keySet()) {
             if (flag) sb.append(", ");
             flag = true;
-            sb.append("[ ").append(val.get(v)).append(", ").append(v).append(" ] ");
+            sb.append("[ ").append(val.get(v)).append(", %").append(v).append(" ] ");
         }
         return sb.toString();
     }
