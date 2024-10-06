@@ -45,6 +45,29 @@ public class IRFunction extends IRStmt {
             }
             System.out.println("-------");
         }
+        if (status == 1) {
+            System.out.println("---domFrontier---");
+            for (IRBlock block : blocks) {
+                System.out.print(block.label + ": ");
+                for (IRBlock frontier : block.domFrontier) {
+                    System.out.print(frontier.label + " ");
+                }
+                System.out.println();
+            }
+            System.out.println("-------");
+        }
+        if (status == 2) {
+            System.out.println("---dom---");
+            for (int i = 0; i < blocks.size(); i++) {
+                System.out.print(blocks.get(i).label + ": ");
+                for (int j = 0; j < blocks.size(); j++) {
+                    if (blocks.get(i).dom.get(j))
+                        System.out.print(blocks.get(j).label + " ");
+                }
+                System.out.println();
+            }
+            System.out.println("-------");
+        }
     }
 
     public IRFunction(FunctionImplementStmt func) {
@@ -196,7 +219,6 @@ public class IRFunction extends IRStmt {
     }
     void buildDomTree() {
         // 目前使用朴素算法
-        // todo: 数据流迭代
         int sz = blocks.size();
         for (int i = 0; i < sz; i++)
             blocks.get(i).dom = new BitSet(sz); // init: false
@@ -215,17 +237,15 @@ public class IRFunction extends IRStmt {
         }
         // immediate dominator
         for (int i = 1; i < sz; i++) {
-            int[] idom = new int[sz]; // for debug only
             IRBlock curBlock = blocks.get(i);
             for (int j = 0; j < sz; j++)
                 if (curBlock.dom.get(j)) {
-                    // tmp = (dom[v] & dom[u]) ^ dom[u];
-                    BitSet tmp = (BitSet) curBlock.dom.clone();
-                    tmp.and(blocks.get(j).dom);
-                    tmp.xor(blocks.get(j).dom);
+                    // tmp = (dom[j] & dom[i]) ^ dom[i];
+                    BitSet tmp = (BitSet) blocks.get(j).dom.clone();
+                    tmp.and(curBlock.dom);
+                    tmp.xor(curBlock.dom);
 
                     if (tmp.cardinality() == 1 && tmp.get(i)) {
-                        idom[i] = j;
                         curBlock.idom = j;
                         curBlock.idomBlock = blocks.get(j);
                         blocks.get(j).domChildren.add(curBlock);
@@ -337,6 +357,7 @@ public class IRFunction extends IRStmt {
 //        debug("begin to mem2reg");
 
         debug(0);
+        debug(2);
 
         // 逐个块进行mem2reg
         HashMap<String, Integer> varCounter = new HashMap<>();
