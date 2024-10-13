@@ -1,14 +1,13 @@
-package IR;
+package optimize;
 
 import IR.IRStmts.*;
-import optimize.IRFunction;
 
 import java.util.ArrayList;
 
 // blocks for optimization
 public class IRCode{
     private static void debug(String msg) {
-//        System.out.println("IRCode: " + msg);
+        System.out.println("; [IRCode]: " + msg);
     }
 
     DeclarationStmt declarationStmt;
@@ -56,11 +55,9 @@ public class IRCode{
     }
 
     public void optimize() {
-        // mem2reg
+        // mem2reg in IR
         for (IRFunction func : funcStmts) {
-            debug(func.name);
             func.mem2reg();
         }
-        debug("mem2reg finished");
     }
 }

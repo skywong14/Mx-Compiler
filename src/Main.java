@@ -1,6 +1,5 @@
-import ASM.ASMBuilder;
 import IR.IRBuilder;
-import IR.IRCode;
+import optimize.IRCode;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
@@ -13,10 +12,6 @@ import semantic.ASTNodes.ProgramNode;
 import java.io.*;
 
 public class Main {
-    private static void debug(String msg) {
-//        System.out.println("Main: " + msg);
-    }
-
     public static void printBuiltin() {
         String file = "./src/IR/builtin/builtin.s";
         String content = "";
@@ -53,8 +48,6 @@ public class Main {
             ASTBuilder astBuilder = new ASTBuilder();
             ASTNode programNode = astBuilder.visit(parseTreeRoot);
 
-            debug("AST built successfully");
-
             // collect symbol
             ScopeManager scopeManager = new ScopeManager((ProgramNode) programNode);
             GlobalScope globalScope = (GlobalScope) scopeManager.getCurrentScope();
@@ -67,7 +60,6 @@ public class Main {
 //            new ASTOptimizer().visit((ProgramNode) programNode);
 
             // 生成IR
-            debug("begin to generate IR");
             IRBuilder ir = new IRBuilder((ProgramNode) programNode);
             ir.visitProgramNode((ProgramNode) programNode);
 
@@ -88,7 +80,6 @@ public class Main {
 //            System.out.println(asmBuilder.toString());
 
             // success
-            debug("Success!");
         } catch (Exception e) {
             System.out.println("Error: " + e.getMessage());
 //            System.out.println(e.getMessage().split("\\[")[1].split("]")[0]);

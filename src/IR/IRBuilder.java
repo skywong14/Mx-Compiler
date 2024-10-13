@@ -1,5 +1,6 @@
 package IR;
 
+import optimize.IRCode;
 import semantic.ASTNodes.*;
 
 import java.util.ArrayList;
@@ -484,7 +485,6 @@ public class IRBuilder  {
         if (it.isMethod()) {
             // expression '.' IDENTIFIER '(' argListNode ')'
             String classInstance = visitExpressionNode(it.getExpression());
-            String classInstanceLeftVal = leftValuePtr;
             ArrayList<String> args = new ArrayList<>();
             ArrayList<BasicIRType> argTypes = new ArrayList<>();
             argTypes.add(new BasicIRType("ptr"));

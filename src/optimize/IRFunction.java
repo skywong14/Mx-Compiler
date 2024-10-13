@@ -2,14 +2,9 @@ package optimize;
 
 import IR.IRStmts.*;
 
-import javax.print.attribute.HashPrintJobAttributeSet;
-import java.util.ArrayList;
-import java.util.BitSet;
-import java.util.HashMap;
-import java.util.HashSet;
+import java.util.*;
 
 public class IRFunction extends IRStmt {
-    public String typeName;
     public String name;
     public BasicIRType returnType;
     public ArrayList<BasicIRType> argTypes;
@@ -17,7 +12,7 @@ public class IRFunction extends IRStmt {
     public ArrayList<IRBlock> blocks;
     public HashMap<String, IRBlock> blockMap = new HashMap<>(); // string(Name) -> IRBlock
 
-    private HashMap<String, BasicIRType> allocaVarMap = new HashMap<>();// alloca出来的函数名字和对应类型
+    private HashMap<String, BasicIRType> allocaVarType = new HashMap<>();// alloca出来的函数名字和对应类型
     class StringPair {
         String block;
         String value;
@@ -28,8 +23,8 @@ public class IRFunction extends IRStmt {
     }
     private HashMap<String, ArrayList<StringPair>> phiMap = new HashMap<>(); // phi函数的名字和对应的块和值
 
-    private static void debug(String msg) {
-//        System.out.println("IRFunc: " + msg);
+    private void debug(String msg) {
+        System.out.println("; [Func: " + name + "] " + msg);
     }
     private void debug(int status) {
         boolean flag = true;
@@ -117,31 +112,31 @@ public class IRFunction extends IRStmt {
         if (func.allocaFlag) {
             for (int i = 0; i < func.allocaStmts.size(); i++) {
                 AllocaStmt allocaStmt = func.allocaStmts.get(i);
-                allocaVarMap.put(allocaStmt.dest, func.allocaStmts.get(i).type);
+                allocaVarType.put(allocaStmt.dest, func.allocaStmts.get(i).type);
                 phiMap.put(allocaStmt.dest, new ArrayList<>());
             }
         }
         // 复制每个Block
         for (int i = 0; i < func.blocks.size(); i++) {
-            IRBlock newBlock = new IRBlock(func.blocks.get(i));
-            if (i == 0) newBlock.label = this.name; // the entry of the function
-            blocks.add(newBlock);
-            blockMap.put(newBlock.label, newBlock);
+            if (func.blocks.get(i).stmts.isEmpty()) continue;
+            IRBlock block = new IRBlock(func.blocks.get(i));
+            if (i == 0) block.label = this.name; // the entry of the function
+            blocks.add(block);
+            blockMap.put(block.label, block);
         }
         // 更新每个Block的前驱和后继
-        for (int i = 0; i < func.blocks.size(); i++) {
-            IRBlock newBlock = blocks.get(i);
-            if (newBlock.tailStmt instanceof BranchStmt branch) {
+        for (IRBlock block : blocks) {
+            if (block.tailStmt instanceof BranchStmt branch) {
                 if (branch.condition == null) {
                     // jump
-                    newBlock.succ.add(blockMap.get(branch.trueLabel));
-                    blockMap.get(branch.trueLabel).pred.add(newBlock);
+                    block.succ.add(blockMap.get(branch.trueLabel));
+                    blockMap.get(branch.trueLabel).pred.add(block);
                 } else {
                     // branch
-                    newBlock.succ.add(blockMap.get(branch.trueLabel));
-                    blockMap.get(branch.trueLabel).pred.add(newBlock);
-                    newBlock.succ.add(blockMap.get(branch.falseLabel));
-                    blockMap.get(branch.falseLabel).pred.add(newBlock);
+                    block.succ.add(blockMap.get(branch.trueLabel));
+                    blockMap.get(branch.trueLabel).pred.add(block);
+                    block.succ.add(blockMap.get(branch.falseLabel));
+                    blockMap.get(branch.falseLabel).pred.add(block);
                 }
             }
         }
@@ -149,13 +144,19 @@ public class IRFunction extends IRStmt {
 
     void clearDeadBlock() {
         // 消除不可达的block
-        for (IRBlock block : blocks) {
-            if (!block.isHead && block.pred.isEmpty()) {
-                throw new RuntimeException("IRFunction: clearDeadBlock: unreachable block");
-                // todo
+        for (int i = 0; i < blocks.size(); i++) {
+            IRBlock block = blocks.get(i);
+            if (block.isHead) continue;
+            if (block.pred.isEmpty()) {
+                // unreachable block
+                for (IRBlock succBlock : block.succ)
+                    succBlock.pred.remove(block);
+                blocks.remove(block);
+                i--;
             }
         }
     }
+
     void clearDeadStmt() {
         // 消除没有use的stmt
         HashSet<String> isUsed = new HashSet<>();
@@ -193,8 +194,6 @@ public class IRFunction extends IRStmt {
             for (IRStmt stmt : block.stmts) {
                 if (stmt instanceof LoadStmt load) {
                     if (isUsed.contains(load.dest)) newStmts.add(stmt);
-                } else if (stmt instanceof CallStmt call) {
-                    if (isUsed.contains(call.dest)) newStmts.add(stmt);
                 } else if (stmt instanceof BinaryExprStmt binaryExpr) {
                     if (isUsed.contains(binaryExpr.dest)) newStmts.add(stmt);
                 } else if (stmt instanceof GetElementPtrStmt getElementPtr) {
@@ -207,6 +206,43 @@ public class IRFunction extends IRStmt {
                     newStmts.add(stmt);
             }
             block.stmts = newStmts;
+        }
+    }
+
+    void clearJumpBlock() {
+        // 消除只有jump的block
+        for (int i = 0; i < blocks.size(); i++) {
+            IRBlock block = blocks.get(i);
+            if (block.succ.size() == 1 && block.stmts.get(0) instanceof BranchStmt branch && branch.condition == null) {
+                // only jump
+                IRBlock succBlock = block.succ.get(0);
+                blocks.remove(block);
+                succBlock.pred.addAll(block.pred);
+                succBlock.pred.remove(block);
+
+                for (IRBlock predBlock : block.pred) {
+                    predBlock.succ.remove(block);
+                    predBlock.succ.add(succBlock);
+                    IRStmt tailStmt = predBlock.stmts.get(predBlock.stmts.size() - 1);
+                    if (tailStmt instanceof BranchStmt branchStmt) {
+                        if (branchStmt.condition == null) {
+                            branchStmt.trueLabel = succBlock.label;
+                        } else {
+                            if (branchStmt.trueLabel.equals(block.label))
+                                branchStmt.trueLabel = succBlock.label;
+                            if (branchStmt.falseLabel.equals(block.label))
+                                branchStmt.falseLabel = succBlock.label;
+                            if (branchStmt.trueLabel.equals(branchStmt.falseLabel)){
+                                predBlock.stmts.remove(tailStmt);
+                                predBlock.stmts.add(new BranchStmt(branchStmt.trueLabel));
+                            }
+                        }
+                    } else {
+                        throw new RuntimeException("clearJumpBlock: unknown tail stmt: " + tailStmt);
+                    }
+                }
+                i--;
+            }
         }
     }
 
@@ -267,8 +303,6 @@ public class IRFunction extends IRStmt {
                         runner = runner.idomBlock;
                     }
                 }
-            } else {
-                // doing nothing?
             }
         }
     }
@@ -279,17 +313,6 @@ public class IRFunction extends IRStmt {
             block.activityAnalysis();
         // liveIn and liveOut among blocks
 
-    }
-
-    HashMap<IRBlock, String> getLastDefMap(String varName) {
-        // 记录它在每个块中的最后一次 def (store)
-        HashMap<IRBlock, String> lastDef = new HashMap<>();
-        for (IRBlock block : blocks)
-            for (IRStmt stmt : block.stmts)
-                if (stmt instanceof StoreStmt store)
-                    if (store.dest.equals(varName))
-                        lastDef.put(block, store.val);
-        return lastDef;
     }
 
     HashSet<IRBlock> getWorkTable(String varName) {
@@ -304,15 +327,8 @@ public class IRFunction extends IRStmt {
     }
 
     void getPhiPosition() {
-        // reference: https://www.cnblogs.com/lixingyang/p/17721341.html
-        HashMap<String, HashMap<IRBlock, String>> all = new HashMap<>();
-        for (String var : allocaVarMap.keySet()) {
+        for (String var : allocaVarType.keySet()) {
             // 对每个alloca出来的变量单独处理
-            debug("getPhiPosition: " + var);
-
-            // 记录它在每个块中的最后一次 def (store)
-            HashMap<IRBlock, String> lastDefMap = getLastDefMap(var);
-            all.put(var, lastDefMap);
             // 初始化工作表
             HashSet<IRBlock> workTable = getWorkTable(var);
             // 初始化辅助集合
@@ -320,12 +336,7 @@ public class IRFunction extends IRStmt {
 
             while (!workTable.isEmpty()) {
                 IRBlock curBlock = workTable.iterator().next();
-//                debug("curBlock: " + curBlock.label);
                 workTable.remove(curBlock);
-                if (!lastDefMap.containsKey(curBlock)) {
-                    // 当前块没有对该变量的赋值，但在工作表内
-                    lastDefMap.put(curBlock, null); // phiStmt as the last def
-                }
                 // 遍历当前块的支配边界，插入phi
                 for (IRBlock frontier : curBlock.domFrontier) {
                     if (!hasPhi.contains(frontier)) {
@@ -333,39 +344,125 @@ public class IRFunction extends IRStmt {
                         hasPhi.add(frontier);
                         workTable.add(frontier);
                     }
-                    frontier.addPhi(var, allocaVarMap.get(var).toString(), curBlock.label, lastDefMap.get(curBlock));
+                    frontier.addPhi(var, allocaVarType.get(var).toString());
                 }
             }
         }
     }
 
+    String getReg(HashMap<String, String> lstDef, String var) {
+        if (!lstDef.containsKey(var)) return var;
+        return lstDef.get(var);
+    }
+
+    void renameVarInBlock(IRBlock curBlock, HashMap<String, Stack<String>> varName, HashMap<String, Integer> newItemNum, HashMap<String, String> lstDef) {
+        ArrayList<IRStmt> newStmts = new ArrayList<>();
+        for (IRStmt stmt : curBlock.stmts) {
+            if (stmt instanceof StoreStmt store) {
+                if (!varName.containsKey(store.dest)) {
+                    newStmts.add(new StoreStmt(store.type, getReg(lstDef, store.val), store.dest));
+                } else {
+                    // is local variable
+                    varName.get(store.dest).add(getReg(lstDef, store.val));
+                    newItemNum.put(store.dest, newItemNum.get(store.dest) + 1);
+                }
+            } else if (stmt instanceof LoadStmt load) {
+                if (!varName.containsKey(load.pointer)) {
+                    newStmts.add(load);
+                } else {
+                    lstDef.put(load.dest, varName.get(load.pointer).peek());
+                }
+            } else if (stmt instanceof BinaryExprStmt binaryExpr) {
+                newStmts.add(new BinaryExprStmt(binaryExpr.operator,binaryExpr.type,
+                        getReg(lstDef, binaryExpr.register1), getReg(lstDef, binaryExpr.register2), binaryExpr.dest));
+            } else if (stmt instanceof CallStmt call) {
+                ArrayList<String> newArgs = new ArrayList<>();
+                for (String arg : call.args) newArgs.add(getReg(lstDef, arg));
+                newStmts.add(new CallStmt(call.retType, call.funcName, call.argTypes, newArgs, call.dest));
+            } else if (stmt instanceof GetElementPtrStmt getElementPtr) {
+                newStmts.add(new GetElementPtrStmt(getElementPtr.type, getReg(lstDef, getElementPtr.pointer),
+                        getReg(lstDef, getElementPtr.index), getElementPtr.dest, getElementPtr.hasZero));
+            } else if (stmt instanceof UnaryExprStmt unaryExpr) {
+                newStmts.add(new UnaryExprStmt(unaryExpr.operator, unaryExpr.type, getReg(lstDef, unaryExpr.register), unaryExpr.dest));
+            } else if (stmt instanceof SelectStmt select) {
+                newStmts.add(new SelectStmt(select.type, select.cond, getReg(lstDef, select.trueVal), getReg(lstDef, select.falseVal), select.dest));
+            } else if (stmt instanceof BranchStmt branch) {
+                newStmts.add(new BranchStmt(getReg(lstDef, branch.condition), branch.trueLabel, branch.falseLabel));
+                break;
+            } else if (stmt instanceof ReturnStmt ret) {
+                newStmts.add(new ReturnStmt(ret.type, getReg(lstDef, ret.src)));
+                break;
+            } else {
+                throw new RuntimeException("[rename]: unknown stmt: " + stmt);
+            }
+        }
+        curBlock.stmts = newStmts;
+    }
+
+    void setPhiVal(IRBlock curBlock, IRBlock predBlock, HashMap<String, Stack<String>> varName) {
+        for (String var : curBlock.phiStmts.keySet()) {
+            PhiStmt phiStmt = curBlock.phiStmts.get(var);
+            if (!varName.get(var).isEmpty()) {
+                phiStmt.addVal(varName.get(var).peek(), predBlock.label);
+            } else {
+                phiStmt.addEmptyVal(predBlock.label);
+            }
+        }
+    }
+
+    void renameVar(IRBlock curBlock, HashMap<String, Stack<String>> varName, HashMap<String, String> lstDef) {
+        HashMap<String, Integer> newItemNum = new HashMap<>();
+        for (String var : varName.keySet())
+            newItemNum.put(var, 0);
+
+        // 先处理phi
+        for (String originName: curBlock.phiStmts.keySet()) {
+            PhiStmt phiStmt = curBlock.phiStmts.get(originName);
+            phiStmt.setDest(phiStmt.originDest + ".phi." +curBlock.indexInFunc);
+            varName.get(phiStmt.originDest).push(phiStmt.dest);
+            newItemNum.put(phiStmt.originDest, newItemNum.get(phiStmt.originDest) + 1);
+        }
+
+        // 遍历block内的stmt，更新stmt中的变量名，去掉store/load
+        renameVarInBlock(curBlock, varName, newItemNum, lstDef);
+
+        // 向CFG上的后继的phi语句传入新的varName
+        for (IRBlock succBlock : curBlock.succ) {
+            setPhiVal(succBlock, curBlock, varName);
+        }
+
+        // 递归进入dom-tree上的子树
+        for (IRBlock domChild : curBlock.domChildren) {
+            renameVar(domChild, varName, lstDef);
+        }
+
+        // pop stack
+        for (String var : newItemNum.keySet()) {
+            for (int i = 0; i < newItemNum.get(var); i++)
+                varName.get(var).pop();
+        }
+    }
+
     public void mem2reg() {
-        clearDeadBlock(); // 消去不可达的block
+        clearDeadBlock(); // 消除不可达的block
         clearDeadStmt(); // 消去没有use的stmt
+        clearJumpBlock(); // 消除只有jump的block
 
         // set index
         for (int i = 0; i < blocks.size(); i++)
             blocks.get(i).indexInFunc = i;
 
-//        debug("begin to build dom tree");
         buildDomTree(); // 构建支配树，确定支配边界
 
-//        debug("begin to activity analysis");
         // 遍历allocaMap中每个局部变量，获取需要插入phi的所有位置
         getPhiPosition();
 
-//        debug("allocaMap: " + allocaVarMap);
-
-//        debug("begin to mem2reg");
-
-        debug(0);
-        debug(2);
-
-        // 逐个块进行mem2reg
-        HashMap<String, Integer> varCounter = new HashMap<>();
-        for (IRBlock block : blocks)
-            block.mem2reg(varCounter, allocaVarMap);
-
+        // rename var
+        HashMap<String, Stack<String>> varName = new HashMap<>(); // curName for each alloca var
+        for (String var : allocaVarType.keySet())
+            varName.put(var, new Stack<>());
+        HashMap<String, String> lstDef = new HashMap<>();
+        renameVar(blocks.get(0), varName, lstDef);
     }
 
     @Override

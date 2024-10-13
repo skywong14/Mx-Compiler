@@ -35,108 +35,19 @@ public class IRBlock extends IRStmt {
     HashMap<String, String> lstDef = new HashMap<>();
 
     private void debug(String msg) {
-//        System.out.println(label + ": " + msg);
+        System.out.println("; [IRBlock: " + label + "]: " + msg);
     }
 
-    String getInPred(String var) {
-        IRBlock predBlock = idomBlock;
-        while (predBlock != null) {
-            // debug("getInPred: " + predBlock.label);
-            if (predBlock.lstDef.containsKey(var)) {
-                return predBlock.lstDef.get(var);
-            }
-            predBlock = predBlock.idomBlock;
-        }
-        throw new RuntimeException("IRBlock: getInPred: no pred block contains var: " + var);
-    }
-
-    String getReg(String reg) {
-        if (lstDef.containsKey(reg)) reg = lstDef.get(reg);
-        return reg;
-    }
-    public void mem2reg(HashMap<String, Integer> varCounter, HashMap<String, BasicIRType> allocaVarMap) {
-//        lstDef = new HashMap<>();
-        // 收集phi中的def，替换phi中的use
-        for (String phi : phiStmts.keySet()) {
-            PhiStmt phiStmt = phiStmts.get(phi);
-            if (!varCounter.containsKey(phiStmt.originDest))
-                varCounter.put(phiStmt.originDest, 0);
-            int index = varCounter.get(phiStmt.originDest);
-            phiStmt.dest = phiStmt.originDest + "." + index;
-            lstDef.put(phiStmt.originDest, phiStmt.dest);
-            varCounter.put(phiStmt.originDest, index + 1);
-        }
-        // 遍历block内的stmt，复制
-        ArrayList<IRStmt> newStmts = new ArrayList<>();
-        for (IRStmt stmt : stmts) {
-            // debug(stmt.toString());
-            if (stmt instanceof StoreStmt store) {
-                if (!allocaVarMap.containsKey(store.dest)) {
-                    newStmts.add(new StoreStmt(store.type, getReg(store.val), store.dest));
-                } else {
-                    lstDef.put(store.dest, store.val);
-                }
-            } else if (stmt instanceof LoadStmt load) {
-                if (!allocaVarMap.containsKey(load.pointer)) {
-                    newStmts.add(load);
-                } else {
-                    if (lstDef.containsKey(load.pointer))
-                        lstDef.put(load.dest, lstDef.get(load.pointer));
-                    else
-                        lstDef.put(load.dest, getInPred(load.pointer));
-                }
-            } else if (stmt instanceof BinaryExprStmt binaryExpr) {
-                newStmts.add(new BinaryExprStmt(binaryExpr.operator,binaryExpr.type,
-                        getReg(binaryExpr.register1), getReg(binaryExpr.register2), binaryExpr.dest));
-            } else if (stmt instanceof CallStmt call) {
-                ArrayList<String> newArgs = new ArrayList<>();
-                for (String arg : call.args) newArgs.add(getReg(arg));
-                newStmts.add(new CallStmt(call.retType, call.funcName, call.argTypes, newArgs, call.dest));
-            } else if (stmt instanceof GetElementPtrStmt getElementPtr) {
-                newStmts.add(new GetElementPtrStmt(getElementPtr.type, getReg(getElementPtr.pointer),
-                        getReg(getElementPtr.index), getElementPtr.dest, getElementPtr.hasZero));
-            } else if (stmt instanceof UnaryExprStmt unaryExpr) {
-                newStmts.add(new UnaryExprStmt(unaryExpr.operator, unaryExpr.type, getReg(unaryExpr.register), unaryExpr.dest));
-            } else if (stmt instanceof SelectStmt select) {
-                newStmts.add(new SelectStmt(select.type, select.cond, getReg(select.trueVal), getReg(select.falseVal), select.dest));
-            } else if (stmt instanceof BranchStmt branch) {
-                newStmts.add(new BranchStmt(getReg(branch.condition), branch.trueLabel, branch.falseLabel));
-                break;
-            } else if (stmt instanceof ReturnStmt ret) {
-                newStmts.add(new ReturnStmt(ret.type, getReg(ret.src)));
-                break;
-            } else {
-                throw new RuntimeException("IRBlock: mem2reg: unknown stmt: " + stmt);
-            }
-        }
-        stmts = newStmts;
-        // 处理succ
-        if (succ.size() == 1) {
-            return;
-        }
-
-        for (IRBlock succBlock : succ) {
-            for (String phi : succBlock.phiStmts.keySet()) {
-                if (lstDef.containsKey(phi)) {
-                    succBlock.phiStmts.get(phi).addVal(lstDef.get(phi), label);
-                }
-            }
-        }
-
-    }
-
-    public void addPhi(String dest, String type, String block, String value) {
+    public void addPhi(String dest, String type) {
         if (!phiStmts.containsKey(dest)) {
             phiStmts.put(dest, new PhiStmt(dest, type));
         }
-        phiStmts.get(dest).addVal(value, block);
     }
 
     public IRBlock(Block block) {
         block.updateBlock(); // remove all stmts after branch or return
 
         label = block.label;
-
         if (block.label.isEmpty()) isHead = true; // the first block of a function
         if (block.stmts.get(block.stmts.size() - 1) instanceof ReturnStmt) isTail = true; // one of the last blocks of a function
 
@@ -144,8 +55,8 @@ public class IRBlock extends IRStmt {
             if (stmt instanceof NewClassStmt newClassStmt) {
                 stmts.add(newClassStmt.mallocStmt);
                 if (newClassStmt.callStmt != null) stmts.add(newClassStmt.callStmt);
-            } else if (stmt instanceof NewArrayStmt newArrayStmt) {
-
+            } else if (stmt instanceof NewArrayStmt) {
+                throw new RuntimeException("IRBlock: shouldn't have NewArrayStmt");
             } else {
                 stmts.add(stmt);
             }
@@ -234,7 +145,8 @@ public class IRBlock extends IRStmt {
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        if (!isHead) sb.append(label).append(":\n");
+//        if (!isHead)
+            sb.append(label).append(":\n");
         for (String phi : phiStmts.keySet()) {
             sb.append("\t").append(phiStmts.get(phi).toString()).append("\n");
         }

@@ -15,7 +15,7 @@ ir_output:
 
 .PHONY: ir_single
 ir_single:
-	testcases/codegen/scripts/test_llvm_ir.bash 'java -cp /ulib/antlr-4.13.2-complete.jar:bin Main -emit-llvm' testcases/codegen/t4.mx src/IR/builtin/builtin.ll
+	testcases/codegen/scripts/test_llvm_ir.bash 'java -cp /ulib/antlr-4.13.2-complete.jar:bin Main -emit-llvm' testcases/codegen/t57.mx src/IR/builtin/builtin.ll
 
 .PHONY: ir_all
 ir_all:
