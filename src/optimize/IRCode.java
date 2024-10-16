@@ -60,4 +60,10 @@ public class IRCode{
             func.mem2reg();
         }
     }
+
+    public void erasePhi() {
+        for (IRFunction func : funcStmts) {
+            func.erasePhi();
+        }
+    }
 }

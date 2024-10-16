@@ -465,6 +465,25 @@ public class IRFunction extends IRStmt {
         renameVar(blocks.get(0), varName, lstDef);
     }
 
+    void updateBlockMap() {
+        blockMap.clear();
+        for (IRBlock block : blocks)
+            blockMap.put(block.label, block);
+    }
+
+    public void erasePhi() {
+        updateBlockMap();
+        for (IRBlock block : blocks) {
+            if (block.phiStmts.isEmpty()) continue;
+            for (String phi : block.phiStmts.keySet()) {
+                PhiStmt phiStmt = block.phiStmts.get(phi);
+                for (String blockLabel : phiStmt.val.keySet())
+                    blockMap.get(blockLabel).stmts.add(new MoveStmt(phiStmt.dest + ".tmp", phiStmt.val.get(blockLabel)));
+                block.stmts.addFirst(new MoveStmt(phiStmt.dest, phiStmt.dest + ".tmp"));
+            }
+        }
+    }
+
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();

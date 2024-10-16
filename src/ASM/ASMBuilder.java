@@ -8,6 +8,9 @@ import ASM.section.RodataSection;
 import ASM.section.TextSection;
 import IR.IRBuilder;
 import IR.IRStmts.*;
+import optimize.IRCode;
+import optimize.IRFunction;
+import optimize.RegAllocator;
 
 import java.util.ArrayList;
 
@@ -20,6 +23,8 @@ public class ASMBuilder {
     public DataSection dataSection = new DataSection();
     public RodataSection rodataSection = new RodataSection();
 
+    public IRCode irCode;
+
     public int functionCnt = 0;
 
     static boolean outOfBound(int imm) {
@@ -27,7 +32,7 @@ public class ASMBuilder {
     }
 
     void debug(String msg) {
-        System.out.println("ASM: " + msg);
+        System.out.println("; ASM: " + msg);
     }
 
     public ArrayList<ASMInst> Lw(String rd, int offset, String rs) {
@@ -69,11 +74,28 @@ public class ASMBuilder {
         }
     }
 
-    void init(IRBuilder irBuilder_) {
+    public ASMBuilder(IRBuilder irBuilder_) {
         irBuilder = irBuilder_;
     }
-    public ASMBuilder(IRBuilder irBuilder_) {
-        init(irBuilder_);
+
+    public ASMBuilder(IRCode irCode_) {
+        irCode = irCode_;
+    }
+
+    void buildFunction(IRFunction func) {
+        RegAllocator allocator = new RegAllocator(func);
+
+
+    }
+
+    public void build() {
+        buildStringConst();
+
+        buildGlobalVariables();
+
+        // Functions, Methods
+        for (IRFunction func : irCode.funcStmts)
+            buildFunction(func);
     }
 
     void buildStringConst() {
@@ -177,9 +199,16 @@ public class ASMBuilder {
             visitGetElementPtrStmt((GetElementPtrStmt) irStmt, func);
         } else if (irStmt instanceof NewClassStmt) {
             visitClassStmt((NewClassStmt) irStmt, func);
-        } else {
+        } else if (irStmt instanceof MoveStmt) {
+            visitMoveStmt((MoveStmt) irStmt, func);
+        }
+        else {
             throw new RuntimeException("unknown IRStmt: " + irStmt);
         }
+    }
+
+    void visitMoveStmt(MoveStmt irStmt, ASMFunction func) {
+        // todo
     }
 
     void visitClassStmt(NewClassStmt irStmt, ASMFunction func) {
@@ -258,6 +287,17 @@ public class ASMBuilder {
 
         int offset = func.getVirtualReg(irStmt.dest);
         func.addInst(Sw("t3", offset, "sp"));
+    }
+
+    boolean isRegister(String regName) {
+        return regName.startsWith("%") || regName.startsWith("@");
+    }
+    int getValue(String regName) {
+        if (isRegister(regName)) throw new RuntimeException(regName + " is not a value");
+        if (regName.equals("true")) return 1;
+        if (regName.equals("false")) return 0;
+        if (regName.equals("null")) return 0;
+        return Integer.parseInt(regName);
     }
 
     void resolveRegister(String regName, String destReg, ASMFunction func) {

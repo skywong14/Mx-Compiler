@@ -1,6 +1,4 @@
-package optimize;
-
-import IR.IRStmts.IRStmt;
+package IR.IRStmts;
 
 import java.util.HashMap;
 

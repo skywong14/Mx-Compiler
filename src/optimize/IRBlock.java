@@ -18,9 +18,6 @@ public class IRBlock extends IRStmt {
     // advanced info
     public ArrayList<IRBlock> succ = new ArrayList<>();
     public ArrayList<IRBlock> pred = new ArrayList<>();
-    // activity analysis
-    public HashSet<String> liveIn = new HashSet<>();
-    public HashSet<String> liveOut = new HashSet<>();
     // dominant nodes
     public int idom = -1;
     public IRBlock idomBlock = null;
@@ -28,11 +25,9 @@ public class IRBlock extends IRStmt {
     public BitSet dom = null;
     public ArrayList<IRBlock> domFrontier = new ArrayList<>(); // 支配边界
     // block id
-    public int indexInFunc = -1;
+    public int indexInFunc = -1, topoIndex = -1;
     // all phi stmts (phi函数的名字和对应的块和值)
     public HashMap<String, PhiStmt> phiStmts = new HashMap<>();
-    // lstDef
-    HashMap<String, String> lstDef = new HashMap<>();
 
     private void debug(String msg) {
         System.out.println("; [IRBlock: " + label + "]: " + msg);
@@ -70,86 +65,22 @@ public class IRBlock extends IRStmt {
         throw new RuntimeException("IRBlock: unknown tail stmt: " + tailStmt);
     }
 
-    HashSet<String> getUse(IRStmt stmt) {
-        HashSet<String> ret = new HashSet<>();
-        if (stmt instanceof BranchStmt branch){
-            ret.add(branch.condition);
+    public String toStringWithPhi() {
+        StringBuilder sb = new StringBuilder();
+        sb.append(label).append(":\n");
+        for (String phi : phiStmts.keySet()) {
+            sb.append("\t").append(phiStmts.get(phi).toString()).append("\n");
         }
-        if (stmt instanceof BinaryExprStmt binaryExpr){
-            ret.add(binaryExpr.register1);
-            ret.add(binaryExpr.register2);
-        }
-        if (stmt instanceof CallStmt call){
-            ret.addAll(call.args);
-        }
-        if (stmt instanceof GetElementPtrStmt getElementPtr){
-            ret.add(getElementPtr.pointer);
-            ret.add(getElementPtr.index); //todo modify? if has only one element
-        }
-        if (stmt instanceof LoadStmt load){
-            ret.add(load.pointer); //todo
-        }
-        if (stmt instanceof ReturnStmt retStmt){
-            if (retStmt.src != null) ret.add(retStmt.src);
-        }
-        if (stmt instanceof SelectStmt select){
-            ret.add(select.cond);
-            ret.add(select.trueVal);
-            ret.add(select.falseVal);
-        }
-        if (stmt instanceof StoreStmt store){
-            ret.add(store.dest); // todo
-            ret.add(store.val);
-        }
-        if (stmt instanceof UnaryExprStmt unaryExpr){
-            ret.add(unaryExpr.register);
-        }
-        if (stmt instanceof AllocaStmt)
-            throw new RuntimeException("IRBlock: getUse: alloca stmt");
-        return ret;
-    }
-    HashSet<String> getDef(IRStmt stmt) {
-        HashSet<String> ret = new HashSet<>();
-        if (stmt instanceof BinaryExprStmt binaryExpr)
-            ret.add(binaryExpr.dest);
-        if (stmt instanceof CallStmt call)
-            ret.add(call.dest);
-        if (stmt instanceof GetElementPtrStmt getElementPtr)
-            ret.add(getElementPtr.dest);
-        if (stmt instanceof LoadStmt load)
-            ret.add(load.dest);
-        if (stmt instanceof SelectStmt select)
-            ret.add(select.dest);
-        if (stmt instanceof UnaryExprStmt unaryExpr)
-            ret.add(unaryExpr.dest);
-        if (stmt instanceof AllocaStmt)
-            throw new RuntimeException("IRBlock: getDef: alloca stmt");
-        return ret;
-    }
-
-    HashSet<String> use = new HashSet<>();
-    HashSet<String> def = new HashSet<>();
-    public void activityAnalysis() {
-        // use[pn] = use[p] V (use[n] - def[n])
-        // def[pn] = def[p] V def[n]
         for (IRStmt stmt : stmts) {
-            HashSet<String> curUse = getUse(stmt);
-            HashSet<String> curDef = getDef(stmt);
-            if (!curDef.isEmpty())
-                curUse.remove(curDef);
-            use.addAll(curUse);
-            def.addAll(curDef);
+            sb.append("\t").append(stmt.toString()).append("\n");
         }
+        return sb.toString();
     }
 
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-//        if (!isHead)
             sb.append(label).append(":\n");
-        for (String phi : phiStmts.keySet()) {
-            sb.append("\t").append(phiStmts.get(phi).toString()).append("\n");
-        }
         for (IRStmt stmt : stmts) {
             sb.append("\t").append(stmt.toString()).append("\n");
         }

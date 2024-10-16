@@ -1,3 +1,4 @@
+import ASM.ASMBuilder;
 import IR.IRBuilder;
 import optimize.IRCode;
 import org.antlr.v4.runtime.CharStreams;
@@ -71,15 +72,21 @@ public class Main {
              irCode.optimize();
 
             // print IR
-            System.out.println(irCode.toString()); // for debug
+//            System.out.println(irCode.toString());
+
+            // erase phi
+            irCode.erasePhi();
 
             // asm
-//            printBuiltin();
+            printBuiltin();
+
+            ASMBuilder asmBuilder = new ASMBuilder(irCode);
+            asmBuilder.build();
+            System.out.println(asmBuilder.toString());
+
 //            ASMBuilder asmBuilder = new ASMBuilder(ir);
 //            asmBuilder.visitProgram();
 //            System.out.println(asmBuilder.toString());
-
-            // success
         } catch (Exception e) {
             System.out.println("Error: " + e.getMessage());
 //            System.out.println(e.getMessage().split("\\[")[1].split("]")[0]);
