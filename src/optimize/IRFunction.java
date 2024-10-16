@@ -307,14 +307,6 @@ public class IRFunction extends IRStmt {
         }
     }
 
-    void activityAnalysis() {
-        // use and def in each block
-        for (IRBlock block : blocks)
-            block.activityAnalysis();
-        // liveIn and liveOut among blocks
-
-    }
-
     HashSet<IRBlock> getWorkTable(String varName) {
         // 记录所有包含 store(varName) 的块
         HashSet<IRBlock> workTable = new HashSet<>();
