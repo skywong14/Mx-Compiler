@@ -27,7 +27,4 @@ public class BranchStmt extends IRStmt {
             return "br i1 " + condition + ", label %" + trueLabel + ", label %" + falseLabel;
         }
     }
-
-    @Override
-    public int getSpSize() { return 0; }
 }

@@ -13,7 +13,4 @@ public class AssignStmt extends IRStmt {
     public String toString() {
         return dest + " = " + src;
     }
-
-    @Override
-    public int getSpSize() { return 1; }
 }

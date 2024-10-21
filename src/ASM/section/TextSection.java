@@ -1,15 +1,17 @@
 package ASM.section;
 
+import optimize.ASMFunc;
+
 import java.util.ArrayList;
 
 public class TextSection extends ASMSection {
     String name = ".text";
-    public ArrayList<ASMFunction> functions = new ArrayList<>();
+    public ArrayList<ASMFunc> functions = new ArrayList<>();
 
     public TextSection() {
     }
 
-    public void addFunction(ASMFunction func) {
+    public void addFunction(ASMFunc func) {
         functions.add(func);
     }
 
@@ -17,7 +19,7 @@ public class TextSection extends ASMSection {
     public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append(".section ").append(name).append("\n");
-        for (ASMFunction func : functions) {
+        for (ASMFunc func : functions) {
             sb.append(func.toString());
         }
         return sb.toString();

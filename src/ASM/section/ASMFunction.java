@@ -16,7 +16,6 @@ public class ASMFunction {
 
     public PhysicalReg physicalReg;
 
-    public int indexInProgram = 0;
     public String blockHead = null;
 
     public HashMap<String, Integer> virtualRegMap;
@@ -29,7 +28,7 @@ public class ASMFunction {
         this.physicalReg = new PhysicalReg();
         this.curSpOffset = 0; // 从底开始分配
         this.virtualRegMap = new HashMap<>();
-        curBlock = new ASMBlock(name, true, 2, this);
+        curBlock = new ASMBlock(name, true, 2);
         this.blocks.add(curBlock);
     }
 
@@ -53,7 +52,7 @@ public class ASMFunction {
     }
 
     public void newBlock(String label) {
-        curBlock = new ASMBlock(label, this);
+        curBlock = new ASMBlock(label);
         blocks.add(curBlock);
     }
 

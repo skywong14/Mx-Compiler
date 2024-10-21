@@ -39,7 +39,4 @@ public class ClassTypeDefineStmt extends IRStmt{
         ret.append("}");
         return ret.toString();
     }
-
-    @Override
-    public int getSpSize() { return 0; }
 }

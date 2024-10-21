@@ -28,7 +28,4 @@ public class GetElementPtrStmt extends IRStmt {
         sb.append(", i32 ").append(index);
         return sb.toString();
     }
-
-    @Override
-    public int getSpSize() { return 1; }
 }

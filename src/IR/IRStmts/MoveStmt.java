@@ -13,9 +13,4 @@ public class MoveStmt extends IRStmt {
     public String toString() {
         return dest + " = " + src;
     }
-
-    @Override
-    public int getSpSize() {
-        return 0;
-    }
 }

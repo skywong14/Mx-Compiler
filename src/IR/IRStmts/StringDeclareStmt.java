@@ -82,9 +82,4 @@ public class StringDeclareStmt extends IRStmt{
     public String toString() {
         return dest + " = private unnamed_addr constant [" + length + " x i8] c\"" + printValue + "\\00\"";
     }
-
-    @Override
-    public int getSpSize() {
-        return 0;
-    }
 }

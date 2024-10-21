@@ -9,24 +9,21 @@ public class ASMBlock{
     public boolean isGlobal;
     public int alignSize;
     public String label;
-    public ASMFunction parentFunc;
     // instructions
     public ArrayList<ASMInst> insts;
 
-    public ASMBlock(String label, ASMFunction function) {
+    public ASMBlock(String label) {
         this.label = label;
         this.insts = new ArrayList<>();
         this.isGlobal = false;
         this.alignSize = 0;
-        this.parentFunc = function;
     }
 
-    public ASMBlock(String label, boolean isGlobal_, int alignSize_, ASMFunction function) {
+    public ASMBlock(String label, boolean isGlobal_, int alignSize_) {
         this.label = label;
         this.insts = new ArrayList<>();
         this.isGlobal = isGlobal_;
         this.alignSize = alignSize_;
-        this.parentFunc = function;
     }
 
     public void addInst(ASMInst inst) {

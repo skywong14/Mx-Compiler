@@ -14,7 +14,4 @@ public class ReturnStmt extends IRStmt {
         if (src == null) return "ret " + type.toString();
         return "ret " + type.toString() + " " + src;
     }
-
-    @Override
-    public int getSpSize() { return 0; }
 }

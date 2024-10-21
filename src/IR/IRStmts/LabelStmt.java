@@ -11,7 +11,4 @@ public class LabelStmt extends IRStmt {
     public String toString() {
         return label + ":";
     }
-
-    @Override
-    public int getSpSize() { return 0; }
 }

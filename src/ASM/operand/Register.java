@@ -4,6 +4,7 @@ public class Register{
     public String name;
     public int value;
     public int id;
+    public boolean isBusy = false;
     public Register(String name, int id){
         this.name = name;
         this.id = id;

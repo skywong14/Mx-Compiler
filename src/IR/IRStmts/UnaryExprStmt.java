@@ -33,7 +33,4 @@ public class UnaryExprStmt extends IRStmt{
         }
         throw new RuntimeException("UnaryExprStmt: operator not found: " + operator);
     }
-
-    @Override
-    public int getSpSize() { return 1; }
 }

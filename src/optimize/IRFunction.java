@@ -491,10 +491,4 @@ public class IRFunction extends IRStmt {
         sb.append("}\n");
         return sb.toString();
     }
-
-    @Override
-    public int getSpSize() {
-        //todo
-        return 0;
-    }
 }

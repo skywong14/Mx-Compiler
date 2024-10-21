@@ -56,13 +56,4 @@ public class FunctionImplementStmt extends IRStmt {
         sb.append("}\n");
         return sb.toString();
     }
-
-    @Override
-    public int getSpSize() {
-        int spSize = 0;
-        for (Block block : blocks) {
-            spSize += block.getSpSize();
-        }
-        return spSize + argNames.size();
-    }
 }

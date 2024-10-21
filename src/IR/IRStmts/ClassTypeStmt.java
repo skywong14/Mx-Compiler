@@ -14,7 +14,4 @@ public class ClassTypeStmt extends IRType{
     public String toString() {
         return "%class." + className;
     }
-
-    @Override
-    public int getSpSize() { return 0; }
 }

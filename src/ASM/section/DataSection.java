@@ -12,7 +12,7 @@ public class DataSection extends ASMSection{
     public DataSection() {}
 
     public void addGlobalVariable(String label, String literal) {
-        ASMBlock block = new ASMBlock(label, true, 4, null);
+        ASMBlock block = new ASMBlock(label, true, 4);
         block.addInst(new Directive(".word", literal));
         data.add(block);
     }

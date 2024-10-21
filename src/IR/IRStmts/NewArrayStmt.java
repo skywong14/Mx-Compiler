@@ -97,13 +97,4 @@ public class NewArrayStmt extends IRStmt{
         }
         return sb.toString();
     }
-
-    @Override
-    public int getSpSize() {
-        int spSize = 0;
-        for (IRStmt stmt : stmts) {
-            spSize += stmt.getSpSize();
-        }
-        return spSize;
-    }
 }

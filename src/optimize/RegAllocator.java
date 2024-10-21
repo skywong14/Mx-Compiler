@@ -2,15 +2,15 @@ package optimize;
 
 import IR.IRStmts.*;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
+import java.util.*;
+
+import static java.lang.Integer.max;
+import static java.lang.Integer.min;
 
 public class RegAllocator {
     IRFunction func;
 
-    ArrayList<IRBlock> linearOrder;
+    public ArrayList<IRBlock> linearOrder;
     boolean[] visited;
 
     void topoSort(IRBlock block) {
@@ -31,24 +31,43 @@ public class RegAllocator {
         }
     }
 
-    public class Interval {
+    // 左闭右开 [start, end)
+    public class Interval implements Comparable<Interval> {
         int start, end;
-        String regName;
-        Interval(int start, int end) {
+        String regName = null;
+        boolean spiltFlag = false;
+        int useReg = -1, useEnd = -1;
+//        int inherit = -1; // joint
+        Interval(int start, int end, String regName) {
             this.start = start;
             this.end = end;
+            this.regName = regName;
+        }
+
+        public int compareByEnd(Interval other) {
+            return Integer.compare(other.end, this.end); // end值大的优先
+        }
+
+        public int compareByStart(Interval other) {
+            return Integer.compare(other.end, this.end); // 按start值升序排列
+        }
+
+        @Override
+        public int compareTo(Interval other) {
+            return Integer.compare(this.start, other.start); // 按start值升序排列
         }
     }
 
-    HashMap<String, Interval> intervals;
-    ArrayList<IRStmt> linearStmts;
+    public HashMap<String, Interval> intervals;
+    public ArrayList<IRStmt> linearStmts;
     ArrayList<HashSet<String>> liveIn, liveOut;
     HashMap<String, Integer> blockHeadNumber;
 
     void numberStmt() {
         linearStmts = new ArrayList<>();
         blockHeadNumber = new HashMap<>();
-        int cnt = 0;
+        linearStmts.add(new FuncHeadStmt(func));
+        int cnt = 1;
         for (IRBlock block : linearOrder) {
             blockHeadNumber.put(block.label, cnt);
             linearStmts.addAll(block.stmts);
@@ -95,8 +114,22 @@ public class RegAllocator {
         }
     }
 
-    void calcIntervals() {
+    void updateInterval(String reg, int stmtIndex) {
+        if (!intervals.containsKey(reg)) {
+            intervals.put(reg, new Interval(stmtIndex, stmtIndex, reg));
+            return;
+        }
+        intervals.get(reg).start = min(intervals.get(reg).start, stmtIndex);
+        intervals.get(reg).end = max(stmtIndex, intervals.get(reg).end);
+    }
 
+    void calcIntervals() {
+        for (int i = 0; i < linearStmts.size(); i++) {
+            IRStmt stmt = linearStmts.get(i);
+            for (String reg : liveOut.get(i)) {
+                updateInterval(reg, i);
+            }
+        }
     }
 
     void getLiveIntervals() {
@@ -104,6 +137,105 @@ public class RegAllocator {
         numberStmt();
         livenessAnalysis();
         calcIntervals();
+    }
+
+    HashSet<Integer> freeRegs;
+    ArrayList<Interval> occupiedIntervals; // 当前占有寄存器的区间，按end值的大根堆
+    ArrayList<Interval> freeIntervals; // 存入所有变量的interval
+    HashMap<Interval, Integer> tempMap; // interval和对应的寄存器
+    ArrayList<Interval> spiltIntervals; // 被溢出的interval
+
+    void spill(Interval curInterval, int startIndex) {
+        curInterval.spiltFlag = true;
+        spiltIntervals.add(curInterval);
+    }
+
+    void trySpill(Interval curInterval) {
+        Interval maxEndInterval = occupiedIntervals.get(0);
+        int ind = 0;
+        for (int i = 1; i < occupiedIntervals.size(); i++)
+            if (occupiedIntervals.get(i).end > maxEndInterval.end){
+                ind = i;
+                maxEndInterval = occupiedIntervals.get(i);
+            }
+        if (maxEndInterval.end > curInterval.end) {
+            // spill
+            int reg = tempMap.get(maxEndInterval);
+            occupiedIntervals.remove(ind);
+            maxEndInterval.useEnd = curInterval.start;
+            curInterval.useReg = reg;
+            tempMap.put(curInterval, reg);
+            occupiedIntervals.add(curInterval);
+            spill(maxEndInterval, curInterval.start);
+        } else {
+            spill(curInterval, curInterval.start);
+        }
+    }
+
+    void allocateRegisters() {
+        int freeRegNum = 10; //todo
+        freeRegs = new HashSet<>();
+        for (int i = 0; i < freeRegNum; i++) freeRegs.add(i);
+        occupiedIntervals = new ArrayList<>(); // 当前占有寄存器的区间，按end值的大根堆
+        freeIntervals = new ArrayList<>(intervals.values()); // 存入所有变量的interval
+        freeIntervals.sort(Interval::compareByStart); // 按start值升序排列
+        tempMap = new HashMap<>(); // interval和对应的寄存器
+        spiltIntervals = new ArrayList<>();
+
+        // init for function arguments
+        for (int i = 0; i < func.argNames.size(); i++) {
+            String argName = func.argNames.get(i);
+            if (!intervals.containsKey(argName))
+                continue;
+            if (i < 8) {
+                freeRegs.remove(i);
+                Interval curInterval = intervals.get(argName);
+                curInterval.useReg = i; // 0~7: a0~a7
+                tempMap.put(curInterval, i);
+                occupiedIntervals.add(curInterval);
+                freeIntervals.remove(curInterval);
+            } else {
+                continue;
+            }
+        }
+
+        while (!freeIntervals.isEmpty()) {
+            Interval curInterval = freeIntervals.get(0);
+            freeIntervals.remove(0);
+            // 尝试接合
+            if (linearStmts.get(curInterval.start) instanceof MoveStmt moveStmt) // dest = src
+                if (intervals.get(moveStmt.src).end == curInterval.start) {
+                    Interval prevInterval = intervals.get(moveStmt.src);
+                    if (prevInterval.useReg != -1) { // 如果src的区间已经分配了寄存器
+                        curInterval.useReg = prevInterval.useReg;
+                        tempMap.put(curInterval, prevInterval.useReg);
+                        occupiedIntervals.add(curInterval);
+                        occupiedIntervals.remove(prevInterval);
+                        continue;
+                    }
+                }
+            // 释放过期的寄存器
+            for (int i = 0; i < occupiedIntervals.size(); i++)
+                if (occupiedIntervals.get(i).end <= curInterval.start) {
+                    freeRegs.add(tempMap.get(occupiedIntervals.get(i)));
+                    occupiedIntervals.remove(i);
+                    i--;
+                }
+
+            if (freeRegs.isEmpty()) {
+                trySpill(curInterval);
+            } else {
+                // get one freeReg
+                int reg = freeRegs.iterator().next();
+                freeRegs.remove(reg);
+                // add the binding
+                curInterval.useReg = reg;
+                tempMap.put(curInterval, reg);
+                occupiedIntervals.add(curInterval);
+            }
+
+        }
+
     }
 
     public RegAllocator(IRFunction func_) {
@@ -115,6 +247,7 @@ public class RegAllocator {
         getLiveIntervals();
 
         // allocate registers
+        allocateRegisters();
     }
 
     HashSet<String> getUse(IRStmt stmt) {
@@ -131,7 +264,7 @@ public class RegAllocator {
         }
         if (stmt instanceof GetElementPtrStmt getElementPtr) {
             ret.add(getElementPtr.pointer);
-            ret.add(getElementPtr.index); //todo modify? if has only one element
+            ret.add(getElementPtr.index);
         }
         if (stmt instanceof LoadStmt load) {
             ret.add(load.pointer);
@@ -145,7 +278,7 @@ public class RegAllocator {
             ret.add(select.falseVal);
         }
         if (stmt instanceof StoreStmt store) {
-            ret.add(store.dest); // todo
+            ret.add(store.dest);
             ret.add(store.val);
         }
         if (stmt instanceof UnaryExprStmt unaryExpr) {
@@ -172,6 +305,27 @@ public class RegAllocator {
             ret.add(unaryExpr.dest);
         if (stmt instanceof MoveStmt move)
             ret.add(move.dest);
+        if (stmt instanceof FuncHeadStmt funcHead)
+            ret.addAll(funcHead.params);
         return ret;
+    }
+
+    public int getAllocaState(String regName, int index) {
+        Interval interval = intervals.get(regName);
+        if (index < interval.start || index > interval.end) throw new RuntimeException("getAllocaState: index out of range");
+        if (interval.spiltFlag) {
+            if (index < interval.useEnd) return interval.useReg;
+            return -1;
+        }
+        return interval.useReg;
+    }
+    public boolean isSpilt(String regName) {
+        return intervals.get(regName).spiltFlag;
+    }
+    public int hasReg(String regName) {
+        return intervals.get(regName).useReg;
+    }
+    public int getSpillTime(String regName) {
+        return intervals.get(regName).useEnd;
     }
 }

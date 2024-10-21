@@ -23,7 +23,4 @@ public class DeclarationStmt extends IRStmt {
         }
         return content;
     }
-
-    @Override
-    public int getSpSize() { return 0; }
 }

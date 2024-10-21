@@ -1,8 +1,11 @@
 package ASM.operand;
 
+import java.util.HashMap;
+
 public class PhysicalReg {
     public Register zero, ra, sp, gp, tp;
     public Register[] a, s, t; // a: 0~7  s: 0~11  t: 0~6
+    public HashMap<Integer, Register> regMap;
     public PhysicalReg(){
         zero = new Register("zero", 0);
         ra = new Register("ra", 1);
@@ -25,5 +28,17 @@ public class PhysicalReg {
         t[4] = new Register("t4", 29);
         t[5] = new Register("t5", 30);
         t[6] = new Register("t6", 31);
+
+        regMap = new HashMap<>();
+        for (int i = 0; i < 8; i++)
+            regMap.put(i, a[i]);
+        for (int i = 0; i < 12; i++)
+            regMap.put(i + 9, s[i]);
+        for (int i = 0; i < 7; i++)
+            regMap.put(i + 20, t[i]);
+    }
+
+    public Register getReg(int index) {
+        return regMap.get(index);
     }
 }

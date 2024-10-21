@@ -45,7 +45,4 @@ public class BasicIRType extends IRType {
     public String toString() {
         return this.typeName;
     }
-
-    @Override
-    public int getSpSize() { return 0; }
 }

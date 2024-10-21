@@ -46,9 +46,4 @@ public class PhiStmt extends IRStmt {
         }
         return sb.toString();
     }
-
-    @Override
-    public int getSpSize() {
-        return 1; // todo
-    }
 }
