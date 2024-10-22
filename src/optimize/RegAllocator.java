@@ -310,15 +310,6 @@ public class RegAllocator {
         return ret;
     }
 
-    public int getAllocaState(String regName, int index) {
-        Interval interval = intervals.get(regName);
-        if (index < interval.start || index > interval.end) throw new RuntimeException("getAllocaState: index out of range");
-        if (interval.spiltFlag) {
-            if (index < interval.useEnd) return interval.useReg;
-            return -1;
-        }
-        return interval.useReg;
-    }
     public boolean isSpilt(String regName) {
         return intervals.get(regName).spiltFlag;
     }

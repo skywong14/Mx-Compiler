@@ -1,6 +1,7 @@
 package optimize;
 
 import ASM.inst.ASMInst;
+import ASM.inst.RetInst;
 import ASM.section.ASMBlock;
 import ASM.section.ASMFunction;
 
@@ -11,12 +12,13 @@ public class ASMFunc {
     public ArrayList<ASMBlock> blocks;
     public ASMBlock curBlock;
     public int spOffset;
+    public ArrayList<ASMInst> epilogue;
 
     public ArrayList<ASMInst> inits, ends;
 
-    public ASMFunc(String name) {
+    public ASMFunc(String name, int funcCnt) {
         this.name = name;
-        this.blockHead = name + "_head.";
+        this.blockHead = "B" + funcCnt + ".";
         blocks = new ArrayList<>();
         inits = new ArrayList<>();
         ends = new ArrayList<>();
@@ -27,6 +29,10 @@ public class ASMFunc {
     public void newBlock(String label) {
         curBlock = new ASMBlock(label);
         blocks.add(curBlock);
+    }
+
+    public void setEpilogue(ArrayList<ASMInst> epilogue) {
+        this.epilogue = epilogue;
     }
 
     public void addInst(ASMInst inst) {
