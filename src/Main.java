@@ -78,15 +78,11 @@ public class Main {
             irCode.erasePhi();
 
             // asm
-            printBuiltin();
+            // printBuiltin();
 
             ASMBuilder asmBuilder = new ASMBuilder(irCode);
             asmBuilder.build();
             System.out.println(asmBuilder.toString());
-
-//            ASMBuilder asmBuilder = new ASMBuilder(ir);
-//            asmBuilder.visitProgram();
-//            System.out.println(asmBuilder.toString());
         } catch (Exception e) {
             System.out.println("Error: " + e.getMessage());
 //            System.out.println(e.getMessage().split("\\[")[1].split("]")[0]);

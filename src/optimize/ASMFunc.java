@@ -44,7 +44,11 @@ public class ASMFunc {
 
     @Override
     public String toString() {
-        // todo
-        return "";
+        StringBuilder sb = new StringBuilder();
+        sb.append(name).append(":\n");
+        for (ASMBlock block : blocks) {
+            sb.append(block.toString());
+        }
+        return sb.toString();
     }
 }

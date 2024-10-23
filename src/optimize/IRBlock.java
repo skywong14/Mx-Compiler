@@ -86,10 +86,4 @@ public class IRBlock extends IRStmt {
         }
         return sb.toString();
     }
-
-    @Override
-    public int getSpSize() {
-        //todo
-        return 0;
-    }
 }

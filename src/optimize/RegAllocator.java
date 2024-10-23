@@ -31,6 +31,10 @@ public class RegAllocator {
         }
     }
 
+    void debug(String str) {
+        System.out.println("; [RegAllocator]: " + str);
+    }
+
     // 左闭右开 [start, end)
     public class Interval implements Comparable<Interval> {
         int start, end;
@@ -173,7 +177,7 @@ public class RegAllocator {
     }
 
     void allocateRegisters() {
-        int freeRegNum = 10; //todo
+        int freeRegNum = 20; // [0, 20)
         freeRegs = new HashSet<>();
         for (int i = 0; i < freeRegNum; i++) freeRegs.add(i);
         occupiedIntervals = new ArrayList<>(); // 当前占有寄存器的区间，按end值的大根堆
@@ -190,7 +194,7 @@ public class RegAllocator {
             if (i < 8) {
                 freeRegs.remove(i);
                 Interval curInterval = intervals.get(argName);
-                curInterval.useReg = i; // 0~7: a0~a7
+                curInterval.useReg = i; // 0 ~ 7: a0 ~ a7
                 tempMap.put(curInterval, i);
                 occupiedIntervals.add(curInterval);
                 freeIntervals.remove(curInterval);
@@ -203,6 +207,8 @@ public class RegAllocator {
             Interval curInterval = freeIntervals.get(0);
             freeIntervals.remove(0);
             // 尝试接合
+            /*
+                todo
             if (linearStmts.get(curInterval.start) instanceof MoveStmt moveStmt) // dest = src
                 if (intervals.get(moveStmt.src).end == curInterval.start) {
                     Interval prevInterval = intervals.get(moveStmt.src);
@@ -214,6 +220,7 @@ public class RegAllocator {
                         continue;
                     }
                 }
+             */
             // 释放过期的寄存器
             for (int i = 0; i < occupiedIntervals.size(); i++)
                 if (occupiedIntervals.get(i).end <= curInterval.start) {
@@ -248,6 +255,8 @@ public class RegAllocator {
 
         // allocate registers
         allocateRegisters();
+
+        debug("RegAllocator finished at" + func.name);
     }
 
     HashSet<String> getUse(IRStmt stmt) {

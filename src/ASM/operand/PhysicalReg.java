@@ -29,13 +29,18 @@ public class PhysicalReg {
         t[5] = new Register("t5", 30);
         t[6] = new Register("t6", 31);
 
+        // able to use: a0~a7, s0~s11, sp, tp
         regMap = new HashMap<>();
+        // [0, 8)
         for (int i = 0; i < 8; i++)
             regMap.put(i, a[i]);
+        // [8, 20)
         for (int i = 0; i < 12; i++)
-            regMap.put(i + 9, s[i]);
+            regMap.put(i + 8, s[i]);
+        regMap.put(20, sp);
+        regMap.put(21, tp);
         for (int i = 0; i < 7; i++)
-            regMap.put(i + 20, t[i]);
+            regMap.put(i + 22, t[i]);
     }
 
     public Register getReg(int index) {

@@ -471,7 +471,7 @@ public class IRFunction extends IRStmt {
                 PhiStmt phiStmt = block.phiStmts.get(phi);
                 for (String blockLabel : phiStmt.val.keySet())
                     blockMap.get(blockLabel).stmts.add(new MoveStmt(phiStmt.dest + ".tmp", phiStmt.val.get(blockLabel)));
-                block.stmts.addFirst(new MoveStmt(phiStmt.dest, phiStmt.dest + ".tmp"));
+                block.stmts.add(0, new MoveStmt(phiStmt.dest, phiStmt.dest + ".tmp"));
             }
         }
     }

@@ -23,7 +23,7 @@ ir_all:
 
 .PHONY: asm_single
 asm_single:
-	testcases/codegen/scripts/test_asm.bash 'java -cp /ulib/antlr-4.13.2-complete.jar:bin Main -S' testcases/codegen/t75.mx src/IR/builtin/builtin.s
+	testcases/codegen/scripts/test_asm.bash 'java -cp /ulib/antlr-4.13.2-complete.jar:bin Main -S' testcases/codegen/t62.mx src/IR/builtin/builtin.s
 
 .PHONY: asm_all
 asm_all:
@@ -41,6 +41,6 @@ clang:
 debug:
 	reimu --debug -i=test.mx -o=output.s
 
-.PHONY: asm_oj # same condition as Online Judge
-asm_oj:
+.PHONY: oj_test # same condition as Online Judge
+oj_test:
 	testcases/codegen/scripts/test_asm_all.bash 'java -cp /ulib/antlr-4.13.2-complete.jar:bin Main -S' testcases/codegen  src/IR/builtin/empty.s
