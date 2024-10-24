@@ -17,7 +17,6 @@ public class CallStmt extends IRStmt {
         this.funcName = funcName;
     }
 
-
     @Override
     public String toString() {
         if (retType.typeName.equals("void")) {

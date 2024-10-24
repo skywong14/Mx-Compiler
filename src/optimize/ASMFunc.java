@@ -3,7 +3,6 @@ package optimize;
 import ASM.inst.ASMInst;
 import ASM.inst.RetInst;
 import ASM.section.ASMBlock;
-import ASM.section.ASMFunction;
 
 import java.util.ArrayList;
 
@@ -45,7 +44,6 @@ public class ASMFunc {
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        sb.append(name).append(":\n");
         for (ASMBlock block : blocks) {
             sb.append(block.toString());
         }

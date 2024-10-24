@@ -31,6 +31,15 @@ public class Main {
         System.out.println(content);
     }
 
+    public static String commentType(String s) {
+        StringBuilder sb = new StringBuilder();
+        String[] lines = s.split("\n");
+        for (String line : lines) {
+            sb.append("# ").append(line).append("\n");
+        }
+        return sb.toString();
+    }
+
     public static void main(String[] args) throws Exception{
         InputStream input = System.in;
         try {
@@ -73,9 +82,13 @@ public class Main {
 
             // print IR
 //            System.out.println(irCode.toString());
+//            System.out.println(commentType(irCode.toString()));
 
             // erase phi
             irCode.erasePhi();
+
+            // print IR
+            System.out.println(commentType(irCode.toString()));
 
             // asm
             // printBuiltin();

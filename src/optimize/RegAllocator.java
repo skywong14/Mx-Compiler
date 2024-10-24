@@ -1,6 +1,8 @@
 package optimize;
 
 import IR.IRStmts.*;
+import optimize.utils.FuncHeadStmt;
+import optimize.utils.LivenessAnalysis;
 
 import java.util.*;
 
@@ -32,7 +34,7 @@ public class RegAllocator {
     }
 
     void debug(String str) {
-        System.out.println("; [RegAllocator]: " + str);
+        System.out.println("# [RegAllocator]: " + str);
     }
 
     // 左闭右开 [start, end)
@@ -70,10 +72,13 @@ public class RegAllocator {
     void numberStmt() {
         linearStmts = new ArrayList<>();
         blockHeadNumber = new HashMap<>();
-        linearStmts.add(new FuncHeadStmt(func));
-        int cnt = 1;
+        int cnt = 0;
         for (IRBlock block : linearOrder) {
             blockHeadNumber.put(block.label, cnt);
+            if (block.isHead){
+                linearStmts.add(new FuncHeadStmt(func)); // the declaration of function, [def]
+                cnt++;
+            }
             linearStmts.addAll(block.stmts);
             cnt += block.stmts.size();
         }
@@ -89,24 +94,40 @@ public class RegAllocator {
         }
 
         boolean changeFlag = true;
+        LivenessAnalysis util = new LivenessAnalysis();
         while (changeFlag) {
             changeFlag = false;
             for (int i = linearStmts.size() - 1; i >= 0; i--) {
                 IRStmt stmt = linearStmts.get(i);
                 HashSet<String> newLiveOut = new HashSet<>(), newLiveIn = new HashSet<>();
                 // liveOut[s] = union liveIn[succ]
-                if (stmt instanceof BranchStmt branchStmt && branchStmt.condition != null) {
-                    int succIndex = blockHeadNumber.get(branchStmt.trueLabel);
-                    newLiveOut.addAll(liveIn.get(succIndex));
-                    succIndex = blockHeadNumber.get(branchStmt.falseLabel);
-                    newLiveOut.addAll(liveIn.get(succIndex));
+                if (stmt instanceof BranchStmt branchStmt) {
+                    if (branchStmt.condition != null) {
+                        int succIndex = blockHeadNumber.get(branchStmt.trueLabel);
+                        newLiveOut.addAll(liveIn.get(succIndex));
+                        succIndex = blockHeadNumber.get(branchStmt.falseLabel);
+                        newLiveOut.addAll(liveIn.get(succIndex));
+                    } else {
+                        int succIndex = blockHeadNumber.get(branchStmt.trueLabel);
+                        newLiveOut.addAll(liveIn.get(succIndex));
+                    }
+                } else if (stmt instanceof ReturnStmt returnStmt) {
+                    // do nothing
                 } else if (i + 1 < linearStmts.size()) {
                     newLiveOut.addAll(liveIn.get(i + 1));
                 }
                 // liveIn[s] = use[s] + (liveOut[s] - def[s])
                 newLiveIn.addAll(newLiveOut);
-                newLiveIn.removeAll(getDef(stmt));
-                newLiveIn.addAll(getUse(stmt));
+                newLiveIn.removeAll(util.getDef(stmt));
+                newLiveIn.addAll(util.getUse(stmt));
+
+                if (util.getUse(stmt).contains("@x") || util.getDef(stmt).contains("@x")) {
+                    debug("{stmt}: " + i + " | " + linearStmts.get(i));
+                    debug("     liveIn: " + newLiveIn);
+                    debug("     liveOut: " + newLiveOut);
+                    debug("     def: " + util.getDef(stmt));
+                    debug("     use: " + util.getUse(stmt));
+                }
 
                 // check if changed
                 if (!newLiveIn.equals(liveIn.get(i)) || !newLiveOut.equals(liveOut.get(i))) {
@@ -120,16 +141,15 @@ public class RegAllocator {
 
     void updateInterval(String reg, int stmtIndex) {
         if (!intervals.containsKey(reg)) {
-            intervals.put(reg, new Interval(stmtIndex, stmtIndex, reg));
+            intervals.put(reg, new Interval(stmtIndex, stmtIndex + 1, reg));
             return;
         }
         intervals.get(reg).start = min(intervals.get(reg).start, stmtIndex);
-        intervals.get(reg).end = max(stmtIndex, intervals.get(reg).end);
+        intervals.get(reg).end = max(stmtIndex, intervals.get(reg).end + 1);
     }
 
     void calcIntervals() {
         for (int i = 0; i < linearStmts.size(); i++) {
-            IRStmt stmt = linearStmts.get(i);
             for (String reg : liveOut.get(i)) {
                 updateInterval(reg, i);
             }
@@ -149,7 +169,7 @@ public class RegAllocator {
     HashMap<Interval, Integer> tempMap; // interval和对应的寄存器
     ArrayList<Interval> spiltIntervals; // 被溢出的interval
 
-    void spill(Interval curInterval, int startIndex) {
+    void spill(Interval curInterval) {
         curInterval.spiltFlag = true;
         spiltIntervals.add(curInterval);
     }
@@ -166,13 +186,14 @@ public class RegAllocator {
             // spill
             int reg = tempMap.get(maxEndInterval);
             occupiedIntervals.remove(ind);
-            maxEndInterval.useEnd = curInterval.start;
+            maxEndInterval.useReg = -1;
+            tempMap.remove(maxEndInterval);
             curInterval.useReg = reg;
             tempMap.put(curInterval, reg);
             occupiedIntervals.add(curInterval);
-            spill(maxEndInterval, curInterval.start);
+            spill(maxEndInterval);
         } else {
-            spill(curInterval, curInterval.start);
+            spill(curInterval);
         }
     }
 
@@ -208,7 +229,7 @@ public class RegAllocator {
             freeIntervals.remove(0);
             // 尝试接合
             /*
-                todo
+            todo
             if (linearStmts.get(curInterval.start) instanceof MoveStmt moveStmt) // dest = src
                 if (intervals.get(moveStmt.src).end == curInterval.start) {
                     Interval prevInterval = intervals.get(moveStmt.src);
@@ -255,68 +276,6 @@ public class RegAllocator {
 
         // allocate registers
         allocateRegisters();
-
-        debug("RegAllocator finished at" + func.name);
-    }
-
-    HashSet<String> getUse(IRStmt stmt) {
-        HashSet<String> ret = new HashSet<>();
-        if (stmt instanceof BranchStmt branch) {
-            ret.add(branch.condition);
-        }
-        if (stmt instanceof BinaryExprStmt binaryExpr) {
-            ret.add(binaryExpr.register1);
-            ret.add(binaryExpr.register2);
-        }
-        if (stmt instanceof CallStmt call) {
-            ret.addAll(call.args);
-        }
-        if (stmt instanceof GetElementPtrStmt getElementPtr) {
-            ret.add(getElementPtr.pointer);
-            ret.add(getElementPtr.index);
-        }
-        if (stmt instanceof LoadStmt load) {
-            ret.add(load.pointer);
-        }
-        if (stmt instanceof ReturnStmt retStmt) {
-            if (retStmt.src != null) ret.add(retStmt.src);
-        }
-        if (stmt instanceof SelectStmt select) {
-            ret.add(select.cond);
-            ret.add(select.trueVal);
-            ret.add(select.falseVal);
-        }
-        if (stmt instanceof StoreStmt store) {
-            ret.add(store.dest);
-            ret.add(store.val);
-        }
-        if (stmt instanceof UnaryExprStmt unaryExpr) {
-            ret.add(unaryExpr.register);
-        }
-        if (stmt instanceof MoveStmt move) {
-            ret.add(move.src);
-        }
-        return ret;
-    }
-    HashSet<String> getDef(IRStmt stmt) {
-        HashSet<String> ret = new HashSet<>();
-        if (stmt instanceof BinaryExprStmt binaryExpr)
-            ret.add(binaryExpr.dest);
-        if (stmt instanceof CallStmt call)
-            ret.add(call.dest);
-        if (stmt instanceof GetElementPtrStmt getElementPtr)
-            ret.add(getElementPtr.dest);
-        if (stmt instanceof LoadStmt load)
-            ret.add(load.dest);
-        if (stmt instanceof SelectStmt select)
-            ret.add(select.dest);
-        if (stmt instanceof UnaryExprStmt unaryExpr)
-            ret.add(unaryExpr.dest);
-        if (stmt instanceof MoveStmt move)
-            ret.add(move.dest);
-        if (stmt instanceof FuncHeadStmt funcHead)
-            ret.addAll(funcHead.params);
-        return ret;
     }
 
     public boolean isSpilt(String regName) {
@@ -327,5 +286,18 @@ public class RegAllocator {
     }
     public int getSpillTime(String regName) {
         return intervals.get(regName).useEnd;
+    }
+
+    public void outputAllocaResult() {
+        for (String regName : intervals.keySet()) {
+            if (intervals.get(regName).useReg != -1) {
+                if (isSpilt(regName))
+                    System.out.println("# [spilt] " + regName + ": "  + intervals.get(regName).useReg + ", time:" + getSpillTime(regName));
+                else
+                    System.out.println("# [alloc] " + regName + ": " + intervals.get(regName).useReg);
+            } else {
+                System.out.println("# [stack] " + regName);
+            }
+        }
     }
 }

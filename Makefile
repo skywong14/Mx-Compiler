@@ -15,7 +15,7 @@ ir_output:
 
 .PHONY: ir_single
 ir_single:
-	testcases/codegen/scripts/test_llvm_ir.bash 'java -cp /ulib/antlr-4.13.2-complete.jar:bin Main -emit-llvm' testcases/codegen/t57.mx src/IR/builtin/builtin.ll
+	testcases/codegen/scripts/test_llvm_ir.bash 'java -cp /ulib/antlr-4.13.2-complete.jar:bin Main -emit-llvm' testcases/codegen/t22.mx src/IR/builtin/builtin.ll
 
 .PHONY: ir_all
 ir_all:
@@ -23,7 +23,7 @@ ir_all:
 
 .PHONY: asm_single
 asm_single:
-	testcases/codegen/scripts/test_asm.bash 'java -cp /ulib/antlr-4.13.2-complete.jar:bin Main -S' testcases/codegen/t62.mx src/IR/builtin/builtin.s
+	testcases/codegen/scripts/test_asm.bash 'java -cp /ulib/antlr-4.13.2-complete.jar:bin Main -S' testcases/codegen/t22.mx src/IR/builtin/builtin.s
 
 .PHONY: asm_all
 asm_all:
@@ -39,7 +39,7 @@ clang:
 
 .PHONY: debug
 debug:
-	reimu --debug -i=test.mx -o=output.s
+	reimu --debug -i=test.s -o=output.s
 
 .PHONY: oj_test # same condition as Online Judge
 oj_test:

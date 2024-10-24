@@ -1,6 +1,8 @@
 package optimize;
 
 import IR.IRStmts.*;
+import optimize.utils.FuncHeadStmt;
+import optimize.utils.LivenessAnalysis;
 
 import java.util.*;
 
@@ -457,6 +459,8 @@ public class IRFunction extends IRStmt {
         renameVar(blocks.get(0), varName, lstDef);
     }
 
+    // -------------------------
+
     void updateBlockMap() {
         blockMap.clear();
         for (IRBlock block : blocks)
@@ -465,17 +469,96 @@ public class IRFunction extends IRStmt {
 
     public void erasePhi() {
         updateBlockMap();
+
+        // erase phi in stmt
         for (IRBlock block : blocks) {
-            if (block.phiStmts.isEmpty()) continue;
-            for (String phi : block.phiStmts.keySet()) {
-                PhiStmt phiStmt = block.phiStmts.get(phi);
-                for (String blockLabel : phiStmt.val.keySet())
-                    blockMap.get(blockLabel).stmts.add(new MoveStmt(phiStmt.dest + ".tmp", phiStmt.val.get(blockLabel)));
+            ArrayList<PhiStmt> phiList = new ArrayList<>();
+            for (int i = 0; i < block.stmts.size(); i++){
+                if (block.stmts.get(i) instanceof PhiStmt){
+                    phiList.add((PhiStmt) block.stmts.get(i));
+                    block.stmts.remove(i);
+                    i--;
+                } else break;
+            }
+
+            for (PhiStmt phiStmt : phiList) {
+                for (String blockLabel : phiStmt.val.keySet()){
+                    int pos = blockMap.get(blockLabel).stmts.size() - 1;
+                    blockMap.get(blockLabel).stmts.add(pos, new MoveStmt(phiStmt.dest + ".tmp", phiStmt.val.get(blockLabel)));
+                }
                 block.stmts.add(0, new MoveStmt(phiStmt.dest, phiStmt.dest + ".tmp"));
             }
         }
     }
 
+    // -------------------------
+
+    boolean useEmpty(String var) {
+        LivenessAnalysis util = new LivenessAnalysis();
+        for (IRBlock block : blocks)
+            for (IRStmt stmt : block.stmts) {
+                HashSet<String> use = util.getUse(stmt);
+                if (use.contains(var)) return false;
+            }
+        return true;
+    }
+
+    HashSet<String> collectAllVariables() {
+        LivenessAnalysis util = new LivenessAnalysis();
+        HashSet<String> ret = new HashSet<>();
+        for (IRBlock block : blocks)
+            for (IRStmt stmt : block.stmts) {
+                ret.addAll(util.getUse(stmt));
+                ret.addAll(util.getDef(stmt));
+            }
+        return ret;
+    }
+
+    public void DCE() {
+        // all variables in the function
+        LivenessAnalysis util = new LivenessAnalysis();
+        HashSet<String> workTable = collectAllVariables();
+        while (!workTable.isEmpty()) {
+            String var = workTable.iterator().next();
+            workTable.remove(var);
+            if (useEmpty(var)) {
+                // remove all def stmt of var (if no side effect)
+                for (IRBlock block : blocks)
+                    for (int i = 0; i < block.stmts.size(); i++) {
+                        IRStmt stmt = block.stmts.get(i);
+                        if (util.getDef(stmt).contains(var) && !(stmt instanceof CallStmt) && !(stmt instanceof FuncHeadStmt)) {
+                            block.stmts.remove(i);
+                            i--;
+                            workTable.addAll(util.getUse(stmt));
+                        }
+                    }
+            }
+        }
+    }
+
+    public void aggressiveDCE() {
+        //todo
+    }
+
+    // -------------------------
+
+    public void addPhi() {
+        for (IRBlock block : blocks) {
+            if (block.phiStmts.isEmpty()) continue;
+            for (String phi : block.phiStmts.keySet()) {
+                PhiStmt phiStmt = block.phiStmts.get(phi);
+                block.stmts.add(0, phiStmt);
+            }
+        }
+    }
+
+    // -------------------------
+
+    public void constantPropagation() {
+        //todo
+    }
+
+    // -------------------------
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();

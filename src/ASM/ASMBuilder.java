@@ -11,6 +11,7 @@ import optimize.*;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 
 public class ASMBuilder {
     public PhysicalReg physicalReg = new PhysicalReg();
@@ -30,7 +31,7 @@ public class ASMBuilder {
     }
 
     void debug(String msg) {
-        System.out.println("; ASM: " + msg);
+        System.out.println("# ASM: " + msg);
     }
 
     public ArrayList<ASMInst> Lw(String rd, int offset, String rs) {
@@ -114,6 +115,19 @@ public class ASMBuilder {
         }
     }
 
+    void outputAllocaResult() {
+        for (String regName : allocaStateMap.keySet()) {
+            AllocaState state = allocaStateMap.get(regName);
+            if (state.state == 0)
+                System.out.println("# [alloc] " + regName + ": Reg = " + physicalReg.getReg(state.physicRegId).name);
+            else if (state.state == 1)
+                System.out.println("# [stack] " + regName + ": offset = " + state.offset);
+            else
+                System.out.println("# [spilt] " + regName + ": offset = " + state.offset + ", physicRegId = " + state.physicRegId + ", spillTime=" + state.spillTime);
+
+        }
+    }
+
     void buildFunction(IRFunction func, int funcCnt) {
         regAllocator = new RegAllocator(func); // allocate virtual registers to physical registers
 
@@ -136,40 +150,68 @@ public class ASMBuilder {
         allocaStateMap = new HashMap<>();
         int tmpOffset = asmFunc.spOffset - 84 - 4;
         for (String regName : regAllocator.intervals.keySet()) {
-            if (regAllocator.isSpilt(regName)) {
-                allocaStateMap.put(regName, new AllocaState(2, tmpOffset, regAllocator.hasReg(regName), regAllocator.getSpillTime(regName)));
-                tmpOffset -= 4;
-                spiltRegMap.put(regAllocator.getSpillTime(regName), regName); // 放入spiltRegMap
-            } else if (regAllocator.hasReg(regName) != -1) {
-                allocaStateMap.put(regName, new AllocaState(0, -1, regAllocator.hasReg(regName), -1));
+            if (regAllocator.hasReg(regName) != -1) {
+                if (regAllocator.isSpilt(regName)) {
+                    allocaStateMap.put(regName, new AllocaState(2, tmpOffset, regAllocator.hasReg(regName), regAllocator.getSpillTime(regName)));
+                    tmpOffset -= 4;
+                    spiltRegMap.put(regAllocator.getSpillTime(regName), regName); // 放入spiltRegMap
+                } else {
+                    allocaStateMap.put(regName, new AllocaState(0, -1, regAllocator.hasReg(regName), -1));
+                }
             } else {
                 allocaStateMap.put(regName, new AllocaState(1, tmpOffset, -1, -1));
                 tmpOffset -= 4;
             }
         }
 
+        outputAllocaResult();
+
         // init usedReg
         colloectUsedReg();
-
-        // todo: 特殊处理栈上存的入参
 
         // asmFunc.prologue: move sp, store ra, s0 ~ s11, arguments
         asmFunc.addInst(ArithImm("+", "sp", "sp", -asmFunc.spOffset)); // move sp
         asmFunc.addInst(Sw("ra", asmFunc.spOffset - 4, "sp")); // store ra
-        // store s0 ~ s11 (todo: if is used)
-        for (int i = 0; i < 12; i++) {
-            asmFunc.addInst(Sw("s" + i, asmFunc.spOffset - 40 - i * 4, "sp"));
+        // store s0 ~ s11
+        for (int i = 0; i < 12; i++)
+            if (usedReg[i + 8]){
+                asmFunc.addInst(Sw("s" + i, asmFunc.spOffset - 40 - i * 4, "sp"));
+            }
+
+        // store arguments
+        // todo: optimize!
+        for (int i = 0; i < func.argNames.size() && i < 8; i++) {
+            asmFunc.addInst(Sw("a" + i, asmFunc.spOffset - 8 - i * 4, "sp"));
         }
+
+        for (int i = 0; i < func.argNames.size(); i++)
+            if (i < 8){
+                AllocaState state = allocaStateMap.get("%" + func.argNames.get(i));
+                if (state == null) throw new RuntimeException("argName is not in allocaStateMap: %" + func.argNames.get(i));
+                if (state.state == 0) {
+                    String destReg = physicalReg.getReg(state.physicRegId).name;
+                    if (destReg.equals("a" + i)) continue;
+                    asmFunc.addInst(Lw(destReg, asmFunc.spOffset - 8 - i * 4, "sp"));
+                } else if (state.state == 1) {
+                    asmFunc.addInst(Sw("a" + i, state.offset, "sp"));
+                } else {
+                    throw new RuntimeException("something goes wrong");
+                }
+            } else {
+                // todo: 特殊处理栈上存的入参
+            }
+        asmFunc.addInst(new CommentInst(""));
 
 
         // asmFunc.epilogue: restore ra, sp, s0 ~ s11, return
         ArrayList<ASMInst> epilogue = new ArrayList<>();
         epilogue.addAll(Lw("ra", asmFunc.spOffset - 4, "sp")); // restore ra
-        epilogue.add(new ArithImmInst("+", "sp", "sp", asmFunc.spOffset)); // restore sp
-        // restore s0 ~ s11(todo: if is used)
-        for (int i = 0; i < 12; i++) {
-            epilogue.addAll(Lw("s" + i, asmFunc.spOffset - 40 - i * 4, "sp"));
-        }
+        // restore s0 ~ s11
+        for (int i = 0; i < 12; i++)
+            if (usedReg[i + 8]){
+                epilogue.addAll(Lw("s" + i, asmFunc.spOffset - 40 - i * 4, "sp"));
+            }
+        epilogue.addAll(ArithImm("+", "sp", "sp", asmFunc.spOffset)); // restore sp
         epilogue.add(new RetInst()); // return
         asmFunc.setEpilogue(epilogue);
 
@@ -177,8 +219,10 @@ public class ASMBuilder {
         boolean firstBlock = true;
         int stmtCnt = -1;
         for (IRBlock irBlock : regAllocator.linearOrder) {
-            if (firstBlock) firstBlock = false;
-            else asmFunc.newBlock(asmFunc.blockHead + irBlock.label);
+            if (irBlock.label.equals(asmFunc.name))
+                asmFunc.curBlock = asmFunc.blocks.get(0);
+            else
+                asmFunc.newBlock(asmFunc.blockHead + irBlock.label);
             for (IRStmt irStmt : irBlock.stmts) {
                 stmtCnt++;
                 checkSpiltReg(asmFunc, stmtCnt);
@@ -255,6 +299,11 @@ public class ASMBuilder {
 
     void visitMoveStmt(MoveStmt irStmt, ASMFunc func, int stmtCnt) {
         AllocaState destState = allocaStateMap.get(irStmt.dest);
+        if (destState == null) {
+            // todo : this value is not used, optimize in IRBuilder
+            return;
+            //throw new RuntimeException("MoveStmt: dest is not in allocaStateMap:" + irStmt.dest);
+        }
         if (destState.state == 0 || destState.state == 2 && destState.spillTime < stmtCnt) {
             if (!isRegister(irStmt.src)) {
                 int val = resolveValue(irStmt.src);
@@ -274,6 +323,10 @@ public class ASMBuilder {
                 func.addInst(new LiInst("t6", val));
                 func.addInst(Sw("t6", offset, "sp"));
             } else {
+                if (!allocaStateMap.containsKey(irStmt.src)) {
+                    throw new RuntimeException("{MoveStmt}: src is not in allocaStateMap:" + irStmt.toString());
+                }
+
                 String src = resolveRegister(irStmt.src, func, stmtCnt, "t6");
                 func.addInst(Sw(src, offset, "sp"));
             }
@@ -300,8 +353,8 @@ public class ASMBuilder {
 
         String index = resolveRegister(irStmt.index, func, stmtCnt, "t1");
 
-        func.addInst(new ArithImmInst("<<", index, index, 2));
-        func.addInst(new ArithInst("+", dest, ptr, index));
+        func.addInst(new ArithImmInst("<<", "t1", index, 2));
+        func.addInst(new ArithInst("+", dest, ptr, "t1"));
 
         writeBackReg(dest, irStmt.dest, func);
     }
@@ -319,10 +372,20 @@ public class ASMBuilder {
     }
 
     void visitSelectStmt(SelectStmt irStmt, ASMFunc func, int stmtCnt) {
-        String condReg = resolveRegister(irStmt.cond, func, stmtCnt, "t0");
-        String trueReg = resolveRegister(irStmt.trueVal, func, stmtCnt, "t1");
-        String falseReg = resolveRegister(irStmt.falseVal, func, stmtCnt, "t2");
         String destReg = getDestReg(irStmt.dest, stmtCnt, "t3");
+        String condReg = "t0";
+        String trueReg = "t1";
+        String falseReg = "t2";
+
+        if (isRegister(irStmt.cond)) condReg = resolveRegister(irStmt.cond, func, stmtCnt, "t0");
+        else func.addInst(new LiInst("t0", resolveValue(irStmt.cond)));
+
+        if (isRegister(irStmt.trueVal)) trueReg = resolveRegister(irStmt.trueVal, func, stmtCnt, "t1");
+        else func.addInst(new LiInst("t1", resolveValue(irStmt.trueVal)));
+
+        if (isRegister(irStmt.falseVal)) falseReg = resolveRegister(irStmt.falseVal, func, stmtCnt, "t2");
+        else func.addInst(new LiInst("t2", resolveValue(irStmt.falseVal)));
+
         // # 首先，根据条件构造一个全为0或全为1的掩码
         //sltu t3, x0, t0    # t3 = (t0 != 0) ? 1 : 0，t3现在是1或0
         //neg t3, t3         # t3 = -t3，如果t3是1，则t3=-1（即全1的掩码）；否则是0
@@ -352,6 +415,9 @@ public class ASMBuilder {
         // [use] of a register
         if (regName.startsWith("%")) {
             AllocaState state = allocaStateMap.get(regName);
+            if (state == null) {
+                throw new RuntimeException("resolveRegister: regName is not in allocaStateMap: " + regName);
+            }
             if (state.state == 0) {
                 // in physical register
                 return physicalReg.getReg(state.physicRegId).name;
@@ -388,6 +454,13 @@ public class ASMBuilder {
     String getDestReg(String regName, int stmtCnt, String tempReg) {
         // [def] of a register
         AllocaState destState = allocaStateMap.get(regName);
+        if (destState == null) {
+            // todo: this value is not used, optimize in IRBuilder
+            return "t6";
+            // throw new RuntimeException("getDestReg: dest is not in allocaStateMap:" + regName);
+        }
+
+
         String destReg = tempReg;
         if (destState.state == 0 || destState.state == 2 && destState.spillTime < stmtCnt)
             destReg = physicalReg.getReg(destState.physicRegId).name;
@@ -399,19 +472,30 @@ public class ASMBuilder {
 
     void writeBackReg(String destReg, String regName, ASMFunc func) {
         if (destReg.startsWith("t")) {
-            // store t0 to stack
             int offset = getOffset(regName);
-            func.addInst(Sw("t0", offset, "sp"));
+            func.addInst(Sw(destReg, offset, "sp"));
         }
     }
 
     void visitBinaryExprStmt(BinaryExprStmt irStmt, ASMFunc func, int stmtCnt) {
         String reg1 = null;
         String reg2 = null;
+        if (allocaStateMap.get(irStmt.dest) == null) {
+            // this value is not used
+            throw new RuntimeException("!!!BinaryStmt: dest is not in allocaStateMap:" + irStmt.toString());
+//            return;
+        }
         String destReg = getDestReg(irStmt.dest, stmtCnt, "t0");
 
+        if (!isRegister(irStmt.register1) && !isRegister(irStmt.register2)) {
+            // todo : both are value, optimize in IRBuilder
+            int val1 = resolveValue(irStmt.register1);
+            int val2 = resolveValue(irStmt.register2);
+            func.addInst(new LiInst("t1", val1));
+            func.addInst(new LiInst("t2", val2));
+            reg1 = "t1"; reg2 = "t2";
+        } else
         if (!isRegister(irStmt.register1) || !isRegister(irStmt.register2)) {
-            if (!isRegister(irStmt.register1) && !isRegister(irStmt.register2)) throw new RuntimeException("BinaryStmt: both are not register");
             boolean nextFlag = false;
             if (!isRegister(irStmt.register2)) {
                 // register1 is register, register2 is value
@@ -577,9 +661,15 @@ public class ASMBuilder {
     }
 
     void visitUnaryExprStmt(UnaryExprStmt irStmt, ASMFunc func, int stmtCnt) {
-        if (!isRegister(irStmt.register)) throw new RuntimeException("UnaryStmt: register is not register");
-        String srcReg = resolveRegister(irStmt.register, func, stmtCnt, "t1");
+        String srcReg = "t1";
         String destReg = getDestReg(irStmt.dest, stmtCnt, "t0");
+        if (!isRegister(irStmt.register)) {
+            //todo optimize in irBuilder
+            int val = resolveValue(irStmt.register);
+            func.addInst(new LiInst("t1", val));
+        } else {
+            srcReg = resolveRegister(irStmt.register, func, stmtCnt, "t1");
+        }
         switch (irStmt.operator) {
             case "!":
                 func.addInst(new ArithImmInst("^", destReg, srcReg, 1));
@@ -626,15 +716,21 @@ public class ASMBuilder {
 
     void visitReturnStmt(ReturnStmt irStmt, ASMFunc func, int stmtCnt) {
         if (irStmt.src != null) {
-            String src = resolveRegister(irStmt.src, func, stmtCnt, "ra");
-            if (!src.equals("a0")) {
-                func.addInst(new MvInst("a0", src));
+            if (!isRegister(irStmt.src)) {
+                int val = resolveValue(irStmt.src);
+                func.addInst(new LiInst("a0", val));
+            } else {
+                String src = resolveRegister(irStmt.src, func, stmtCnt, "ra");
+                if (!src.equals("a0")) {
+                    func.addInst(new MvInst("a0", src));
+                }
             }
         }
         func.addInst(func.epilogue);
     }
 
     void visitCallStmt(CallStmt irStmt, ASMFunc func, int stmtCnt) {
+        func.addInst(new CommentInst(""));
         // save a0 ~ a7 on stack before call
         // store a7 ~ a0 on [top - 36 , top - 4)
         for (int i = 0; i < 8; i++) {
@@ -642,20 +738,34 @@ public class ASMBuilder {
         }
 
         // store arguments to a0 ~ a7, or more to stack
+        //todo optimize!
         for (int i = irStmt.args.size() - 1; i >= 0; i--) {
             if (i < 8) {
-                String srcReg = resolveRegister(irStmt.args.get(i), func, stmtCnt, "t0");
-                if (srcReg.startsWith("a")) {
-                    // load srcReg to a_i
-                    if (!srcReg.equals("a" + i)) {
-                        func.addInst(Lw("a" + i, func.spOffset - 36 + (7 - i) * 4, "sp"));
+                if (isRegister(irStmt.args.get(i))) {
+                    String srcReg = resolveRegister(irStmt.args.get(i), func, stmtCnt, "t0");
+                    if (srcReg.startsWith("a")) {
+                        // load srcReg to a_i
+                        if (!srcReg.equals("a" + i)) {
+                            int id = Integer.parseInt(srcReg.substring(1));
+                            int offset = func.spOffset - 36 + (7 - id) * 4;
+                            func.addInst(Lw("a" + i, offset, "sp"));
+                        }
+                    } else {
+                        func.addInst(new MvInst("a" + i, srcReg));
                     }
                 } else {
-                    func.addInst(new MvInst("a" + i, srcReg));
+                    int val = resolveValue(irStmt.args.get(i));
+                    func.addInst(new LiInst("a" + i, val));
                 }
             } else {
                 int offset = (i - 8) * 4;
-                String srcReg = resolveRegister(irStmt.args.get(i), func, stmtCnt, "t0");
+                String srcReg;
+                if (isRegister(irStmt.args.get(i))) srcReg = resolveRegister(irStmt.args.get(i), func, stmtCnt, "t0");
+                else {
+                    int val = resolveValue(irStmt.args.get(i));
+                    func.addInst(new LiInst("t0", val));
+                    srcReg = "t0";
+                }
                 func.addInst(Sw(srcReg, offset, "sp"));
             }
         }
@@ -668,6 +778,7 @@ public class ASMBuilder {
             for (int i = 0; i < 8; i++) {
                 func.addInst(Lw("a" + i, func.spOffset - 36 + (7 - i) * 4, "sp"));
             }
+            func.addInst(new CommentInst(""));
             return;
         }
 
@@ -679,17 +790,15 @@ public class ASMBuilder {
                 func.addInst(Sw("a0", offset, "sp"));
             } else {
                 // dest has physical register
-                func.addInst(new MvInst("a0", destReg));
+                func.addInst(new MvInst(destReg, "a0"));
             }
         }
-
         // restore a0 ~ a7
-        if (!destReg.equals("a0")) {
-            func.addInst(Lw("a0", func.spOffset - 8, "sp"));
-        }
-        for (int i = 1; i < 8; i++) {
-            func.addInst(Lw("a" + i, func.spOffset - 36 + (7 - i) * 4, "sp"));
-        }
+        for (int i = 0; i < 8; i++)
+            if (!destReg.equals("a" + i)) {
+                func.addInst(Lw("a" + i, func.spOffset - 36 + (7 - i) * 4, "sp"));
+            }
+        func.addInst(new CommentInst(""));
     }
 
     public String toString() {

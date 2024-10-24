@@ -1,6 +1,7 @@
-package optimize;
+package optimize.utils;
 
 import IR.IRStmts.IRStmt;
+import optimize.IRFunction;
 
 import java.util.ArrayList;
 

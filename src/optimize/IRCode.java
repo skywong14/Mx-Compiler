@@ -59,6 +59,25 @@ public class IRCode{
         for (IRFunction func : funcStmts) {
             func.mem2reg();
         }
+        // add phi_stmts to stmts
+        for (IRFunction func : funcStmts) {
+            func.addPhi();
+        }
+
+        // constant propagation in IR
+        for (IRFunction func : funcStmts) {
+            func.constantPropagation();
+        }
+
+        // dead code elimination in IR
+        for (IRFunction func : funcStmts) {
+            func.DCE();
+        }
+
+        // aggressive dead code elimination
+        for (IRFunction func : funcStmts) {
+            func.aggressiveDCE();
+        }
     }
 
     public void erasePhi() {
