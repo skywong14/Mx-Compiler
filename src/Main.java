@@ -91,15 +91,15 @@ public class Main {
             System.out.println(commentType(irCode.toString()));
 
             // asm
-             printBuiltin();
+//             printBuiltin();
 
             ASMBuilder asmBuilder = new ASMBuilder(irCode);
             asmBuilder.build();
             System.out.println(asmBuilder.toString());
         } catch (Exception e) {
-            System.out.println("Error: " + e.getMessage());
-//            System.out.println(e.getMessage().split("\\[")[1].split("]")[0]);
-             e.printStackTrace();
+//            System.out.println("Error: " + e.getMessage());
+            System.out.println(e.getMessage().split("\\[")[1].split("]")[0]);
+//             e.printStackTrace();
             System.exit(2);
         }
     }
