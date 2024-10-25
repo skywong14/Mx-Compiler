@@ -49,9 +49,9 @@ public class ASMBuilder {
     public ArrayList<ASMInst> Sw(String src, int offset, String rd) {
         ArrayList<ASMInst> insts = new ArrayList<>();
         if (outOfBound(offset)) {
-            insts.add(new LiInst("t6", offset));
-            insts.add(new ArithInst("+", "t6", rd, "t6"));
-            insts.add(new SwInst(src, 0, "t6"));
+            insts.add(new LiInst("t5", offset));
+            insts.add(new ArithInst("+", "t5", rd, "t5"));
+            insts.add(new SwInst(src, 0, "t5"));
         } else {
             insts.add(new SwInst(src, offset, rd));
         }
@@ -61,8 +61,8 @@ public class ASMBuilder {
     public ArrayList<ASMInst> ArithImm(String op, String rd, String rs, int imm) {
         ArrayList<ASMInst> insts = new ArrayList<>();
         if (outOfBound(imm)) {
-            insts.add(new LiInst("t6", imm));
-            insts.add(new ArithInst(op, rd, rs, "t6"));
+            insts.add(new LiInst("t5", imm));
+            insts.add(new ArithInst(op, rd, rs, "t5"));
             return insts;
         } else {
             insts.add(new ArithImmInst(op, rd, rs, imm));
@@ -187,7 +187,10 @@ public class ASMBuilder {
         for (int i = 0; i < func.argNames.size(); i++)
             if (i < 8){
                 AllocaState state = allocaStateMap.get("%" + func.argNames.get(i));
-                if (state == null) throw new RuntimeException("argName is not in allocaStateMap: %" + func.argNames.get(i));
+                if (state == null) {
+                    continue; // useless argument
+                    //throw new RuntimeException("argName is not in allocaStateMap: %" + func.argNames.get(i));
+                }
                 if (state.state == 0) {
                     String destReg = physicalReg.getReg(state.physicRegId).name;
                     if (destReg.equals("a" + i)) continue;
@@ -305,6 +308,7 @@ public class ASMBuilder {
             //throw new RuntimeException("MoveStmt: dest is not in allocaStateMap:" + irStmt.dest);
         }
         if (destState.state == 0 || destState.state == 2 && destState.spillTime < stmtCnt) {
+            // has physical register
             if (!isRegister(irStmt.src)) {
                 int val = resolveValue(irStmt.src);
                 String dest = physicalReg.getReg(destState.physicRegId).name;
@@ -323,10 +327,6 @@ public class ASMBuilder {
                 func.addInst(new LiInst("t6", val));
                 func.addInst(Sw("t6", offset, "sp"));
             } else {
-                if (!allocaStateMap.containsKey(irStmt.src)) {
-                    throw new RuntimeException("{MoveStmt}: src is not in allocaStateMap:" + irStmt.toString());
-                }
-
                 String src = resolveRegister(irStmt.src, func, stmtCnt, "t6");
                 func.addInst(Sw(src, offset, "sp"));
             }
@@ -345,18 +345,18 @@ public class ASMBuilder {
         if (!isRegister(irStmt.index)) {
             int indexVal = resolveValue(irStmt.index);
             indexVal *= 4;
-            func.addInst(new ArithImmInst("+", dest, ptr, indexVal));
+            func.addInst(ArithImm("+", dest, ptr, indexVal));
 
-            writeBackReg(dest, irStmt.dest, func);
+            writeBackReg(dest, irStmt.dest, func, "t2");
             return;
         }
 
         String index = resolveRegister(irStmt.index, func, stmtCnt, "t1");
 
-        func.addInst(new ArithImmInst("<<", "t1", index, 2));
+        func.addInst(ArithImm("<<", "t1", index, 2));
         func.addInst(new ArithInst("+", dest, ptr, "t1"));
 
-        writeBackReg(dest, irStmt.dest, func);
+        writeBackReg(dest, irStmt.dest, func, "t2");
     }
 
     void visitBranchStmt(BranchStmt irStmt, ASMFunc func, int stmtCnt) {
@@ -366,7 +366,10 @@ public class ASMBuilder {
             String condReg = resolveRegister(irStmt.condition, func, stmtCnt, "t0");
             // bnez t0, if_true  # 如果 t0 不为 0，跳转到 if_true
             // j if_false        # 否则，跳转到 if_false
-            func.addInst(new BranchIfInst("bnez", condReg, null, func.blockHead + irStmt.trueLabel));
+            // todo optimize
+            String blockForJump = func.curBlock.getBlockForJump(func.blockHead + irStmt.trueLabel);
+            func.addInst(new BranchIfInst("bnez", condReg, null, blockForJump));
+//            func.addInst(new BranchIfInst("bnez", condReg, null, func.blockHead + irStmt.trueLabel));
             func.addInst(new JInst(func.blockHead + irStmt.falseLabel));
         }
     }
@@ -392,19 +395,19 @@ public class ASMBuilder {
         //# 用掩码选择true_val或false_val
         //and t4, t1, t3     # t4 = true_val & t3，如果t3全为1，则t4 = true_val；否则t4 = 0
         //not t3, t3         # 反转t3，即t3 = ~t3
-        //and t5, t2, t3     # t5 = false_val & ~t3，如果t3全为0，则t5 = false_val；否则t5 = 0
+        //and t3, t2, t3     # t3 = false_val & ~t3，如果t3全为0，则t3 = false_val；否则t3 = 0
         //# 最后将选择的值合并
-        //or t3, t4, t5      # t3 = t4 | t5，得到最终的选择结果
+        //or t3, t4, t3      # t3 = t4 | t3，得到最终的选择结果
         func.addInst(new ArithInst("<u", "t3", "x0", condReg));
         func.addInst(new UnaryRegInst("neg", "t3", "t3"));
 
         func.addInst(new ArithInst("&", "t4", trueReg, "t3"));
         func.addInst(new UnaryRegInst("not", "t3", "t3"));
-        func.addInst(new ArithInst("&", "t5", falseReg, "t3"));
+        func.addInst(new ArithInst("&", "t3", falseReg, "t3"));
 
-        func.addInst(new ArithInst("|", destReg, "t4", "t5"));
+        func.addInst(new ArithInst("|", destReg, "t4", "t3"));
 
-        writeBackReg(destReg, irStmt.dest, func);
+        writeBackReg(destReg, irStmt.dest, func, "t3");
     }
 
     boolean isRegister(String regName) {
@@ -470,8 +473,8 @@ public class ASMBuilder {
         return allocaStateMap.get(regName).offset;
     }
 
-    void writeBackReg(String destReg, String regName, ASMFunc func) {
-        if (destReg.startsWith("t")) {
+    void writeBackReg(String destReg, String regName, ASMFunc func, String tempReg) {
+        if (destReg.equals(tempReg)) {
             int offset = getOffset(regName);
             func.addInst(Sw(destReg, offset, "sp"));
         }
@@ -503,39 +506,39 @@ public class ASMBuilder {
                 int val2 = resolveValue(irStmt.register2);
                 switch (irStmt.operator) {
                     case "add":
-                        func.addInst(new ArithImmInst("+", destReg, reg1, val2));
+                        func.addInst(ArithImm("+", destReg, reg1, val2));
                         break;
                     case "sub":
-                        func.addInst(new ArithImmInst("+", destReg, reg1, -val2));
+                        func.addInst(ArithImm("+", destReg, reg1, -val2));
                         break;
                     case "and":
-                        func.addInst(new ArithImmInst("&", destReg, reg1, val2));
+                        func.addInst(ArithImm("&", destReg, reg1, val2));
                         break;
                     case "or":
-                        func.addInst(new ArithImmInst("|", destReg, reg1, val2));
+                        func.addInst(ArithImm("|", destReg, reg1, val2));
                         break;
                     case "xor":
-                        func.addInst(new ArithImmInst("^", destReg, reg1, val2));
+                        func.addInst(ArithImm("^", destReg, reg1, val2));
                         break;
                     case "shl":
-                        func.addInst(new ArithImmInst("<<", destReg, reg1, val2));
+                        func.addInst(ArithImm("<<", destReg, reg1, val2));
                         break;
                     case "ashr":
-                        func.addInst(new ArithImmInst(">>", destReg, reg1, val2));
+                        func.addInst(ArithImm(">>", destReg, reg1, val2));
                         break;
                     case "icmp eq":
                         // xor t3, t1, val2     # t3 = t1 ^ val2，如果相等则 t3 = 0，否则 t3 !=0
                         // sltiu t0, t3, 1    # 如果 t3 < 1 (t3 == 0)，则 t0 = 1，否则 t0 = 0
-                        func.addInst(new ArithImmInst("^", "t3", reg1, val2));
-                        func.addInst(new ArithImmInst("<u", destReg, "t3", 1));
+                        func.addInst(ArithImm("^", "t3", reg1, val2));
+                        func.addInst(ArithImm("<u", destReg, "t3", 1));
                         break;
                     case "icmp ne":
-                        func.addInst(new ArithImmInst("^", "t3", reg1, val2));
-                        func.addInst(new ArithImmInst("<u", "t3", "t3", 1));
-                        func.addInst(new ArithImmInst("^", destReg, "t3", 1));
+                        func.addInst(ArithImm("^", "t3", reg1, val2));
+                        func.addInst(ArithImm("<u", "t3", "t3", 1));
+                        func.addInst(ArithImm("^", destReg, "t3", 1));
                         break;
                     case "icmp slt": // <
-                        func.addInst(new ArithImmInst("<", destReg, reg1, val2));
+                        func.addInst(ArithImm("<", destReg, reg1, val2));
                         break;
                     default:
                         nextFlag = true;
@@ -544,7 +547,7 @@ public class ASMBuilder {
                     reg2 = "t2";
                     func.addInst(new LiInst("t2", val2));
                 } else {
-                    writeBackReg(destReg, irStmt.dest, func);
+                    writeBackReg(destReg, irStmt.dest, func, "t0");
                     return;
                 }
             } else {
@@ -553,30 +556,30 @@ public class ASMBuilder {
                 int val1 = resolveValue(irStmt.register1);
                 switch (irStmt.operator) {
                     case "add":
-                        func.addInst(new ArithImmInst("+", destReg, reg2, val1));
+                        func.addInst(ArithImm("+", destReg, reg2, val1));
                         break;
                     case "and":
-                        func.addInst(new ArithImmInst("&", destReg, reg2, val1));
+                        func.addInst(ArithImm("&", destReg, reg2, val1));
                         break;
                     case "or":
-                        func.addInst(new ArithImmInst("|", destReg, reg2, val1));
+                        func.addInst(ArithImm("|", destReg, reg2, val1));
                         break;
                     case "xor":
-                        func.addInst(new ArithImmInst("^", destReg, reg2, val1));
+                        func.addInst(ArithImm("^", destReg, reg2, val1));
                         break;
                     case "icmp eq":
                         // xor t3, t2, val1     # t3 = t2 ^ val1，如果相等则 t3 = 0，否则 t3 !=0
                         // sltiu t0, t3, 1    # 如果 t3 < 1 (t3 == 0)，则 t0 = 1，否则 t0 = 0
-                        func.addInst(new ArithImmInst("^", "t3", reg2, val1));
-                        func.addInst(new ArithImmInst("<u", destReg, "t3", 1));
+                        func.addInst(ArithImm("^", "t3", reg2, val1));
+                        func.addInst(ArithImm("<u", destReg, "t3", 1));
                         break;
                     case "icmp ne":
-                        func.addInst(new ArithImmInst("^", "t3", reg2, val1));
-                        func.addInst(new ArithImmInst("<u", "t3", "t3", 1));
-                        func.addInst(new ArithImmInst("^", destReg, "t3", 1));
+                        func.addInst(ArithImm("^", "t3", reg2, val1));
+                        func.addInst(ArithImm("<u", "t3", "t3", 1));
+                        func.addInst(ArithImm("^", destReg, "t3", 1));
                         break;
                     case "icmp sgt": // >
-                        func.addInst(new ArithImmInst("<", destReg, reg2, val1));
+                        func.addInst(ArithImm("<", destReg, reg2, val1));
                         break;
                     default:
                         nextFlag = true;
@@ -585,7 +588,7 @@ public class ASMBuilder {
                     reg1 = "t1";
                     func.addInst(new LiInst("t1", val1));
                 } else {
-                    writeBackReg(destReg, irStmt.dest, func);
+                    writeBackReg(destReg, irStmt.dest, func, "t0");
                     return;
                 }
             }
@@ -632,12 +635,12 @@ public class ASMBuilder {
                 // xor t3, t1, t2     # t3 = t1 ^ t2，如果相等则 t3 = 0，否则 t3 !=0
                 // sltiu t0, t3, 1    # 如果 t3 < 1 (t3 == 0)，则 t0 = 1，否则 t0 = 0
                 func.addInst(new ArithInst("^", "t3", reg1, reg2));
-                func.addInst(new ArithImmInst("<u", destReg, "t3", 1));
+                func.addInst(ArithImm("<u", destReg, "t3", 1));
                 break;
             case "icmp ne":
                 func.addInst(new ArithInst("^", "t3", reg1, reg2));
-                func.addInst(new ArithImmInst("<u", "t3", "t3", 1));
-                func.addInst(new ArithImmInst("^", destReg, "t3", 1));
+                func.addInst(ArithImm("<u", "t3", "t3", 1));
+                func.addInst(ArithImm("^", destReg, "t3", 1));
                 break;
             case "icmp slt": // <
                 func.addInst(new ArithInst("<", destReg, reg1, reg2));
@@ -647,17 +650,17 @@ public class ASMBuilder {
                 break;
             case "icmp sle": // <=
                 func.addInst(new ArithInst("<", "t0", reg2, reg1));
-                func.addInst(new ArithImmInst("^", destReg, "t0", 1));
+                func.addInst(ArithImm("^", destReg, "t0", 1));
                 break;
             case "icmp sge": // >=
                 func.addInst(new ArithInst("<", "t0", reg1, reg2));
-                func.addInst(new ArithImmInst("^", destReg, "t0", 1));
+                func.addInst(ArithImm("^", destReg, "t0", 1));
                 break;
             default:
                 throw new RuntimeException("unknown operator at BinaryStmt: " + irStmt.operator);
         }
 
-        writeBackReg(destReg, irStmt.dest, func);
+        writeBackReg(destReg, irStmt.dest, func, "t0");
     }
 
     void visitUnaryExprStmt(UnaryExprStmt irStmt, ASMFunc func, int stmtCnt) {
@@ -672,24 +675,24 @@ public class ASMBuilder {
         }
         switch (irStmt.operator) {
             case "!":
-                func.addInst(new ArithImmInst("^", destReg, srcReg, 1));
+                func.addInst(ArithImm("^", destReg, srcReg, 1));
                 break;
             case "~":
-                func.addInst(new ArithImmInst("^", destReg, srcReg, -1));
+                func.addInst(ArithImm("^", destReg, srcReg, -1));
                 break;
             case "-":
                 func.addInst(new UnaryRegInst("neg", destReg, srcReg));
                 break;
             case "++":
-                func.addInst(new ArithImmInst("+", destReg, srcReg, 1));
+                func.addInst(ArithImm("+", destReg, srcReg, 1));
                 break;
             case "--":
-                func.addInst(new ArithImmInst("+", destReg, srcReg, -1));
+                func.addInst(ArithImm("+", destReg, srcReg, -1));
                 break;
             default:
                 throw new RuntimeException("unknown operator at UnaryStmt: " + irStmt.operator);
         }
-        writeBackReg(destReg, irStmt.dest, func);
+        writeBackReg(destReg, irStmt.dest, func, "t0");
     }
 
     void visitStoreStmt(StoreStmt irStmt, ASMFunc func, int stmtCnt) {
@@ -706,12 +709,12 @@ public class ASMBuilder {
     }
 
     void visitLoadStmt(LoadStmt irStmt, ASMFunc func, int stmtCnt) {
-        String ptr = resolveRegister(irStmt.pointer, func, stmtCnt, "t0");
-        String dest = getDestReg(irStmt.dest, stmtCnt, "t1");
+        String ptr = resolveRegister(irStmt.pointer, func, stmtCnt, "t1");
+        String dest = getDestReg(irStmt.dest, stmtCnt, "t0");
 
         func.addInst(new LwInst(dest, 0, ptr)); // load t1, 0(t0)
 
-        writeBackReg(dest, irStmt.dest, func);
+        writeBackReg(dest, irStmt.dest, func, "t0");
     }
 
     void visitReturnStmt(ReturnStmt irStmt, ASMFunc func, int stmtCnt) {
@@ -784,8 +787,9 @@ public class ASMBuilder {
 
         String destReg = getDestReg(irStmt.dest, stmtCnt, "t0");
         if (!destReg.equals("a0")) {
-            if (destReg.startsWith("t")) {
+            if (destReg.equals("t0")) {
                 // dest does not have physical register
+
                 int offset = getOffset(irStmt.dest);
                 func.addInst(Sw("a0", offset, "sp"));
             } else {

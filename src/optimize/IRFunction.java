@@ -28,7 +28,7 @@ public class IRFunction extends IRStmt {
     private void debug(String msg) {
         System.out.println("; [Func: " + name + "] " + msg);
     }
-    private void debug(int status) {
+    private void debugCFG(int status) {
         boolean flag = true;
         if (flag) return;
         // 0: print idom
@@ -120,7 +120,15 @@ public class IRFunction extends IRStmt {
         }
         // 复制每个Block
         for (int i = 0; i < func.blocks.size(); i++) {
-            if (func.blocks.get(i).stmts.isEmpty()) continue;
+            if (func.blocks.get(i).stmts.isEmpty()) {
+                // ATTENTION: codegen/t64.mx has function without return
+                Block block = func.blocks.get(i);
+                if (func.returnType.typeName.equals("void")) {
+                    block.addStmt(new ReturnStmt(new BasicIRType("void"), null));
+                } else {
+                    block.addStmt(new ReturnStmt(new BasicIRType(func.returnType.typeName), "0"));
+                }
+            }
             IRBlock block = new IRBlock(func.blocks.get(i));
             if (i == 0) block.label = this.name; // the entry of the function
             blocks.add(block);

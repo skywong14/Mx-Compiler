@@ -21,7 +21,7 @@ public class Block extends IRStmt {
     }
 
     public void updateBlock() {
-        if (stmts.isEmpty()) label = "";
+        if (stmts.isEmpty()) throw new RuntimeException("IRBlock: empty block:" + label);
         else {
             int sz = stmts.size();
             for (IRStmt stmt : stmts) {
