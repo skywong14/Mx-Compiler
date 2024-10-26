@@ -198,7 +198,7 @@ public class RegAllocator {
     }
 
     void allocateRegisters() {
-        int freeRegNum = 1; // [0, 20)
+        int freeRegNum = 20; // [0, 20)
         freeRegs = new HashSet<>();
         for (int i = 0; i < freeRegNum; i++) freeRegs.add(i);
         occupiedIntervals = new ArrayList<>(); // 当前占有寄存器的区间，按end值的大根堆

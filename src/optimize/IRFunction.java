@@ -372,6 +372,8 @@ public class IRFunction extends IRStmt {
                 if (!varName.containsKey(load.pointer)) {
                     newStmts.add(load);
                 } else {
+                    if (varName.get(load.pointer).isEmpty())
+                        varName.get(load.pointer).add("0"); // [Undefined Behavior]
                     lstDef.put(load.dest, varName.get(load.pointer).peek());
                 }
             } else if (stmt instanceof BinaryExprStmt binaryExpr) {
@@ -523,6 +525,22 @@ public class IRFunction extends IRStmt {
     }
 
     public void DCE() {
+        // turn branch with constant to jump
+        for (IRBlock block : blocks) {
+            for (int i = 0; i < block.stmts.size(); i++) {
+                IRStmt stmt = block.stmts.get(i);
+                if (stmt instanceof BranchStmt branchStmt && branchStmt.condition != null)
+                    if (!branchStmt.condition.startsWith("@") && !branchStmt.condition.startsWith("%")) {
+                        // turn branch to jump
+                        block.stmts.remove(i);
+                        if (branchStmt.equals("0") || branchStmt.equals("false"))
+                            block.stmts.add(i, new BranchStmt(branchStmt.falseLabel));
+                        else
+                            block.stmts.add(i, new BranchStmt(branchStmt.trueLabel));
+                    }
+            }
+        }
+
         // all variables in the function
         LivenessAnalysis util = new LivenessAnalysis();
         HashSet<String> workTable = collectAllVariables();

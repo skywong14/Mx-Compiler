@@ -91,7 +91,7 @@ public class Main {
             System.out.println(commentType(irCode.toString()));
 
             // asm
-//             printBuiltin();
+             printBuiltin();
 
             ASMBuilder asmBuilder = new ASMBuilder(irCode);
             asmBuilder.build();

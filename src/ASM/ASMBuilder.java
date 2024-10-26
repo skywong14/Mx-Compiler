@@ -37,9 +37,9 @@ public class ASMBuilder {
     public ArrayList<ASMInst> Lw(String rd, int offset, String rs) {
         ArrayList<ASMInst> insts = new ArrayList<>();
         if (outOfBound(offset)) {
-            insts.add(new LiInst("t6", offset));
-            insts.add(new ArithInst("+", "t6", rs, "t6"));
-            insts.add(new LwInst(rd, 0, "t6"));
+            insts.add(new LiInst("t5", offset));
+            insts.add(new ArithInst("+", "t5", rs, "t5"));
+            insts.add(new LwInst(rd, 0, "t5"));
         } else {
             insts.add(new LwInst(rd, offset, rs));
         }
@@ -196,7 +196,8 @@ public class ASMBuilder {
                     if (destReg.equals("a" + i)) continue;
                     asmFunc.addInst(Lw(destReg, asmFunc.spOffset - 8 - i * 4, "sp"));
                 } else if (state.state == 1) {
-                    asmFunc.addInst(Sw("a" + i, state.offset, "sp"));
+                    asmFunc.addInst(Lw("t6", asmFunc.spOffset - 8 - i * 4, "sp"));
+                    asmFunc.addInst(Sw("t6", state.offset, "sp"));
                 } else {
                     throw new RuntimeException("something goes wrong");
                 }
@@ -646,7 +647,7 @@ public class ASMBuilder {
                 func.addInst(new ArithInst("<", destReg, reg1, reg2));
                 break;
             case "icmp sgt": // >
-                func.addInst(new ArithInst("<", destReg, "t2", reg1));
+                func.addInst(new ArithInst("<", destReg, reg2, reg1));
                 break;
             case "icmp sle": // <=
                 func.addInst(new ArithInst("<", "t0", reg2, reg1));
@@ -789,7 +790,6 @@ public class ASMBuilder {
         if (!destReg.equals("a0")) {
             if (destReg.equals("t0")) {
                 // dest does not have physical register
-
                 int offset = getOffset(irStmt.dest);
                 func.addInst(Sw("a0", offset, "sp"));
             } else {
