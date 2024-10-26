@@ -69,6 +69,30 @@ public class IRFunction extends IRStmt {
         }
     }
 
+    void updatePredAndSucc() {
+        for (IRBlock block : blocks) {
+            block.pred = new ArrayList<>();
+            block.succ = new ArrayList<>();
+        }
+
+        for (IRBlock block : blocks) {
+            IRStmt tailStmt = block.stmts.get(block.stmts.size() - 1);
+            if (tailStmt instanceof BranchStmt branch) {
+                if (branch.condition == null) {
+                    // jump
+                    block.succ.add(blockMap.get(branch.trueLabel));
+                    blockMap.get(branch.trueLabel).pred.add(block);
+                } else {
+                    // branch
+                    block.succ.add(blockMap.get(branch.trueLabel));
+                    blockMap.get(branch.trueLabel).pred.add(block);
+                    block.succ.add(blockMap.get(branch.falseLabel));
+                    blockMap.get(branch.falseLabel).pred.add(block);
+                }
+            }
+        }
+    }
+
     public IRFunction(FunctionImplementStmt func) {
         this.name = func.name;
         this.returnType = func.returnType;
@@ -135,21 +159,7 @@ public class IRFunction extends IRStmt {
             blockMap.put(block.label, block);
         }
         // 更新每个Block的前驱和后继
-        for (IRBlock block : blocks) {
-            if (block.tailStmt instanceof BranchStmt branch) {
-                if (branch.condition == null) {
-                    // jump
-                    block.succ.add(blockMap.get(branch.trueLabel));
-                    blockMap.get(branch.trueLabel).pred.add(block);
-                } else {
-                    // branch
-                    block.succ.add(blockMap.get(branch.trueLabel));
-                    blockMap.get(branch.trueLabel).pred.add(block);
-                    block.succ.add(blockMap.get(branch.falseLabel));
-                    blockMap.get(branch.falseLabel).pred.add(block);
-                }
-            }
-        }
+        updatePredAndSucc();
     }
 
     void clearDeadBlock() {
@@ -162,6 +172,7 @@ public class IRFunction extends IRStmt {
                 for (IRBlock succBlock : block.succ)
                     succBlock.pred.remove(block);
                 blocks.remove(block);
+                blockMap.remove(block.label);
                 i--;
             }
         }
@@ -447,10 +458,68 @@ public class IRFunction extends IRStmt {
         }
     }
 
+    void checkBranchAccurate() {
+        for (IRBlock block : blocks)
+            for (IRStmt stmt : block.stmts) {
+                if (stmt instanceof BranchStmt branch) {
+                    if (branch.condition == null) {
+                        // jump
+                        if (!blockMap.containsKey(branch.trueLabel)) {
+                            block.stmts.remove(stmt);
+                            if (this.returnType.typeName.equals("void"))
+                                block.stmts.add(new ReturnStmt(this.returnType, null));
+                            else
+                                block.stmts.add(new ReturnStmt(this.returnType, "0"));
+                            // [ATTENTION] 改变语义
+                        }
+                    } else {
+                        // branch
+                        if (!blockMap.containsKey(branch.trueLabel) || !blockMap.containsKey(branch.falseLabel)) {
+                            String label = null;
+                            if (blockMap.containsKey(branch.trueLabel)) label = branch.trueLabel;
+                            if (blockMap.containsKey(branch.falseLabel)) label = branch.falseLabel;
+                            if (label == null) {
+                                block.stmts.remove(stmt);
+                                if (this.returnType.typeName.equals("void"))
+                                    block.stmts.add(new ReturnStmt(this.returnType, null));
+                                else
+                                    block.stmts.add(new ReturnStmt(this.returnType, "0"));
+                                // [ATTENTION] 改变语义
+                            } else {
+                                block.stmts.remove(stmt);
+                                block.stmts.add(new BranchStmt(label));
+                            }
+                        }
+                    }
+                }
+            }
+        // turn branch with constant to jump
+        for (IRBlock block : blocks) {
+            IRStmt stmt = block.stmts.get(block.stmts.size() - 1);
+            if (stmt instanceof BranchStmt branchStmt && branchStmt.condition != null)
+                if (!branchStmt.condition.startsWith("@") && !branchStmt.condition.startsWith("%")) {
+                    // turn branch to jump
+                    int sz = block.stmts.size();
+                    IRStmt newStmt;
+                    block.stmts.remove(sz - 1);
+                    if (branchStmt.equals("0") || branchStmt.equals("false"))
+                        newStmt = new BranchStmt(branchStmt.falseLabel);
+                    else
+                        newStmt = new BranchStmt(branchStmt.trueLabel);
+                    block.stmts.add(newStmt);
+                }
+        }
+    }
+
     public void mem2reg() {
+
         clearDeadBlock(); // 消除不可达的block
         clearDeadStmt(); // 消去没有use的stmt
         clearJumpBlock(); // 消除只有jump的block
+        updateBlockMap(); // 更新blockMap
+        checkBranchAccurate(); // 检查Branch是否合法
+        clearDeadBlock(); // 消除不可达的block
+        updatePredAndSucc(); // 更新前驱和后继
 
         // set index
         for (int i = 0; i < blocks.size(); i++)
@@ -525,22 +594,6 @@ public class IRFunction extends IRStmt {
     }
 
     public void DCE() {
-        // turn branch with constant to jump
-        for (IRBlock block : blocks) {
-            for (int i = 0; i < block.stmts.size(); i++) {
-                IRStmt stmt = block.stmts.get(i);
-                if (stmt instanceof BranchStmt branchStmt && branchStmt.condition != null)
-                    if (!branchStmt.condition.startsWith("@") && !branchStmt.condition.startsWith("%")) {
-                        // turn branch to jump
-                        block.stmts.remove(i);
-                        if (branchStmt.equals("0") || branchStmt.equals("false"))
-                            block.stmts.add(i, new BranchStmt(branchStmt.falseLabel));
-                        else
-                            block.stmts.add(i, new BranchStmt(branchStmt.trueLabel));
-                    }
-            }
-        }
-
         // all variables in the function
         LivenessAnalysis util = new LivenessAnalysis();
         HashSet<String> workTable = collectAllVariables();

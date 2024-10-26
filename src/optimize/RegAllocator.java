@@ -28,7 +28,12 @@ public class RegAllocator {
         visited = new boolean[func.blocks.size()];
         topoSort(func.blocks.get(0));
         for (int i = 0; i < func.blocks.size(); i++) {
-            if (!visited[i]) throw new RuntimeException("[linearize]: block not connected");
+            if (!visited[i]) {
+                func.blocks.remove(i);
+                i--;
+                continue;
+                // throw new RuntimeException("[linearize]: block not connected: " + func.blocks.get(i).label);
+            }
             linearOrder.get(i).topoIndex = i;
         }
     }

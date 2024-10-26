@@ -14,10 +14,9 @@ public class IRBlock extends IRStmt {
     public ArrayList<IRStmt> stmts = new ArrayList<>();;
     public boolean isHead = false;
     public boolean isTail = false;
-    public IRStmt tailStmt;
     // advanced info
-    public ArrayList<IRBlock> succ = new ArrayList<>();
-    public ArrayList<IRBlock> pred = new ArrayList<>();
+    public ArrayList<IRBlock> succ;
+    public ArrayList<IRBlock> pred;
     // dominant nodes
     public int idom = -1;
     public IRBlock idomBlock = null;
@@ -58,11 +57,6 @@ public class IRBlock extends IRStmt {
         }
 
         // predecessors and successors will be set in IRFunction
-
-        // for debug only
-        tailStmt = stmts.get(stmts.size() - 1);
-        if (tailStmt instanceof ReturnStmt || tailStmt instanceof BranchStmt) return;
-        throw new RuntimeException("IRBlock: unknown tail stmt: " + tailStmt);
     }
 
     public String toStringWithPhi() {
