@@ -338,9 +338,14 @@ public class ASMBuilder {
     void visitGetElementPtrStmt(GetElementPtrStmt irStmt, ASMFunc func, int stmtCnt) {
         // slli t1, t1, 2      # 计算偏移量：t1 << 2
         // add t2, t0, t1      # 计算结果地址：t0 + 偏移量
-        if (!isRegister(irStmt.pointer)) throw new RuntimeException("GetElementPtrStmt: pointer is not register");
+        String ptr = "t0";
+        if (!isRegister(irStmt.pointer)) {
+            // [ATTENTION] something may be wrong [Undefined Behavior]
+            // throw new RuntimeException("GetElementPtrStmt: pointer is not register");
+        } else {
+            ptr = resolveRegister(irStmt.pointer, func, stmtCnt, "t0");
+        }
 
-        String ptr = resolveRegister(irStmt.pointer, func, stmtCnt, "t0");
         String dest = getDestReg(irStmt.dest, stmtCnt, "t2");
 
         if (!isRegister(irStmt.index)) {
@@ -363,7 +368,7 @@ public class ASMBuilder {
     void visitBranchStmt(BranchStmt irStmt, ASMFunc func, int stmtCnt) {
         if (irStmt.condition == null) {
             func.addInst(new JInst(func.blockHead + irStmt.trueLabel));
-        } else {
+        } else if (isRegister(irStmt.condition)) {
             String condReg = resolveRegister(irStmt.condition, func, stmtCnt, "t0");
             // bnez t0, if_true  # 如果 t0 不为 0，跳转到 if_true
             // j if_false        # 否则，跳转到 if_false
@@ -372,6 +377,13 @@ public class ASMBuilder {
             func.addInst(new BranchIfInst("bnez", condReg, null, blockForJump));
 //            func.addInst(new BranchIfInst("bnez", condReg, null, func.blockHead + irStmt.trueLabel));
             func.addInst(new JInst(func.blockHead + irStmt.falseLabel));
+        } else {
+            int val = resolveValue(irStmt.condition);
+            if (val != 0) {
+                func.addInst(new JInst(func.blockHead + irStmt.trueLabel));
+            } else {
+                func.addInst(new JInst(func.blockHead + irStmt.falseLabel));
+            }
         }
     }
 

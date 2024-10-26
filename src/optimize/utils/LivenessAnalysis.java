@@ -6,6 +6,7 @@ import java.util.HashSet;
 
 public class LivenessAnalysis {
     boolean isLocalReg(String regName) {
+        if (regName == null) return false;
         return regName.startsWith("%");
     }
     public HashSet<String> getUse(IRStmt stmt) {

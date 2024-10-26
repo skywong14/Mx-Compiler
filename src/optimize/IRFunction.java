@@ -4,6 +4,7 @@ import IR.IRStmts.*;
 import optimize.utils.FuncHeadStmt;
 import optimize.utils.LivenessAnalysis;
 
+import java.math.BigInteger;
 import java.util.*;
 
 public class IRFunction extends IRStmt {
@@ -179,6 +180,33 @@ public class IRFunction extends IRStmt {
     }
 
     void clearDeadStmt() {
+        for (IRBlock block : blocks) {
+            for (int i = 0; i < block.stmts.size(); i++) {
+                IRStmt stmt = block.stmts.get(i);
+                if (stmt instanceof BinaryExprStmt binaryExpr &&binaryExpr.dest == null) {
+                    block.stmts.remove(i);
+                    i--;
+                }
+                if (stmt instanceof GetElementPtrStmt getElementPtr && getElementPtr.dest == null) {
+                    block.stmts.remove(i);
+                    i--;
+                }
+                if (stmt instanceof SelectStmt select && select.dest == null) {
+                    block.stmts.remove(i);
+                    i--;
+                }
+                if (stmt instanceof UnaryExprStmt unaryExpr && unaryExpr.dest == null) {
+                    block.stmts.remove(i);
+                    i--;
+                }
+                if (stmt instanceof LoadStmt load && load.dest == null) {
+                    block.stmts.remove(i);
+                    i--;
+                }
+            }
+        }
+
+
         // 消除没有use的stmt
         HashSet<String> isUsed = new HashSet<>();
         for (IRBlock block : blocks) {
