@@ -61,6 +61,11 @@ public class IRCode{
             func.addPhi();
         }
 
+        // stupid optimize
+        for (IRFunction func : funcStmts) {
+            func.stupidOptimize();
+        }
+
         // constant propagation in IR
         for (IRFunction func : funcStmts) {
             func.constantPropagation();

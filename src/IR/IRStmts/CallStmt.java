@@ -11,6 +11,9 @@ public class CallStmt extends IRStmt {
 
     public ArrayList<String> liveOut; // live out variables
     public ArrayList<Integer> liveOutPhyReg; // live out physical registers
+    public ArrayList<String> liveIn; // live in variables
+    public ArrayList<Integer> liveInPhyReg; // live in physical registers
+
 
     public CallStmt(BasicIRType retType, String funcName, ArrayList<BasicIRType> argTypes, ArrayList<String> args, String dest){
         this.retType = retType;
@@ -20,6 +23,8 @@ public class CallStmt extends IRStmt {
         this.funcName = funcName;
         liveOut = new ArrayList<>();
         liveOutPhyReg = new ArrayList<>();
+        liveIn = new ArrayList<>();
+        liveInPhyReg = new ArrayList<>();
     }
 
     @Override

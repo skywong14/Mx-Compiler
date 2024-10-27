@@ -11,6 +11,7 @@ import optimize.utils.DependencyAnalysis;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 
 public class ASMBuilder {
     public PhysicalReg physicalReg = new PhysicalReg();
@@ -166,13 +167,15 @@ public class ASMBuilder {
         colloectUsedReg();
 
         // asmFunc.prologue: move sp, store ra, s0 ~ s11, arguments
-        asmFunc.addInst(ArithImm("+", "sp", "sp", -asmFunc.spOffset)); // move sp
-        asmFunc.addInst(Sw("ra", asmFunc.spOffset - 4, "sp")); // store ra
+        ArrayList<ASMInst> prologue = new ArrayList<>();
+        prologue.addAll(ArithImm("+", "sp", "sp", -asmFunc.spOffset)); // move sp
+        prologue.addAll(Sw("ra", asmFunc.spOffset - 4, "sp")); // store ra
         // store s0 ~ s11, tp, gp
         for (int i = 0; i < 14; i++)
             if (usedReg[i + 8]){
-                asmFunc.addInst(Sw(physicalReg.getName(i + 8), asmFunc.spOffset - 40 - i * 4, "sp"));
+                prologue.addAll(Sw(physicalReg.getName(i + 8), asmFunc.spOffset - 40 - i * 4, "sp"));
             }
+        asmFunc.setPrologue(prologue);
 
         // store arguments
         int argSize = Math.min(func.argNames.size(), 8);
@@ -210,8 +213,6 @@ public class ASMBuilder {
             if (usedReg[i + 8]) {
                 epilogue.addAll(Lw(physicalReg.getName(i + 8), asmFunc.spOffset - 40 - i * 4, "sp"));
             }
-        epilogue.addAll(ArithImm("+", "sp", "sp", asmFunc.spOffset)); // restore sp
-        epilogue.add(new RetInst()); // return
         asmFunc.setEpilogue(epilogue);
 
         // func body
@@ -230,6 +231,10 @@ public class ASMBuilder {
         }
 
         // add to textSection
+        asmFunc.blocks.get(0).insts.addAll(0, prologue);
+        epilogue.addAll(ArithImm("+", "sp", "sp", asmFunc.spOffset)); // restore sp
+        asmFunc.epilogue.add(new RetInst()); // return
+
         textSection.addFunction(asmFunc);
     }
 
@@ -303,7 +308,7 @@ public class ASMBuilder {
             return;
             //throw new RuntimeException("MoveStmt: dest is not in allocaStateMap:" + irStmt.dest);
         }
-        if (destState.state == 0 || destState.state == 2 && destState.spillTime < stmtCnt) {
+        if (destState.state == 0) {
             // has physical register
             if (!isRegister(irStmt.src)) {
                 int val = resolveValue(irStmt.src);
@@ -454,12 +459,11 @@ public class ASMBuilder {
     }
 
     int resolveValue(String name) {
-        int val = switch (name) {
+        return switch (name) {
             case "true" -> 1;
             case "false", "null" -> 0;
             default -> Integer.parseInt(name);
         };
-        return val;
     }
 
     String getDestReg(String regName, int stmtCnt, String tempReg) {
@@ -796,9 +800,34 @@ public class ASMBuilder {
         func.addInst(new CommentInst(""));
         // save a0 ~ a7 on stack before call
         // store a7 ~ a0 on [top - 36 , top - 4)
+
+        // use some temp regs
+        HashSet<Integer> freeRegList = new HashSet<>();
+        HashMap<String, String> useFreeReg = new HashMap<>();
+
+        for (int i = 8; i < 22; i++)
+            if (!irStmt.liveOutPhyReg.contains(i) && !irStmt.liveInPhyReg.contains(i))
+                freeRegList.add(i);
+
         for (int i = 0; i < 8; i++)
-            if (irStmt.liveOutPhyReg.contains(i))
-                func.addInst(Sw("a" + i, func.spOffset - 36 + (7 - i) * 4, "sp"));
+            if (irStmt.liveOutPhyReg.contains(i)){
+                if (freeRegList.isEmpty())
+                    func.addInst(Sw("a" + i, func.spOffset - 36 + (7 - i) * 4, "sp"));
+                else {
+                    int freeRegId = freeRegList.iterator().next();
+                    String freeReg = physicalReg.getName(freeRegId);
+                    freeRegList.remove(freeRegId);
+                    useFreeReg.put("a" + i, freeReg);
+                    func.addInst(new MvInst(freeReg, "a" + i));
+                    System.out.println("# ["+ func.name +"] use free reg: [" + freeReg + "] for [a" + i + "]");
+                    if (!usedReg[freeRegId]) {
+                        usedReg[freeRegId] = true;
+                        System.out.println("#   extra reg: [" + physicalReg.getName(freeRegId) + "]");
+                        func.prologue.add(Sw(physicalReg.getName(freeRegId), func.spOffset - 40 - freeRegId * 4, "sp"));
+                        func.epilogue.add(Lw(physicalReg.getName(freeRegId), func.spOffset - 40 - freeRegId * 4, "sp"));
+                    }
+                }
+            }
 
         // on stack
         for (int i = irStmt.args.size() - 1; i >= 8; i--) {
@@ -830,7 +859,10 @@ public class ASMBuilder {
             // void: restore a0 ~ a7
             for (int i = 0; i < 8; i++)
                 if (irStmt.liveOutPhyReg.contains(i)) {
-                    func.addInst(Lw("a" + i, func.spOffset - 36 + (7 - i) * 4, "sp"));
+                    if (!useFreeReg.containsKey("a" + i))
+                        func.addInst(Lw("a" + i, func.spOffset - 36 + (7 - i) * 4, "sp"));
+                     else
+                        func.addInst(new MvInst("a" + i, useFreeReg.get("a" + i)));
                 }
             func.addInst(new CommentInst(""));
             return;
@@ -850,7 +882,10 @@ public class ASMBuilder {
         // restore a0 ~ a7
         for (int i = 0; i < 8; i++)
             if (!destReg.equals("a" + i) && irStmt.liveOutPhyReg.contains(i)) {
-                func.addInst(Lw("a" + i, func.spOffset - 36 + (7 - i) * 4, "sp"));
+                if (!useFreeReg.containsKey("a" + i))
+                    func.addInst(Lw("a" + i, func.spOffset - 36 + (7 - i) * 4, "sp"));
+                else
+                    func.addInst(new MvInst("a" + i, useFreeReg.get("a" + i)));
             }
         func.addInst(new CommentInst(""));
     }

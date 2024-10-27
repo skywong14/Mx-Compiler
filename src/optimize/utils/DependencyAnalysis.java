@@ -94,7 +94,7 @@ public class DependencyAnalysis {
     void addBranch(int cur, int colorNum) {
         for (int child : graph.get(cur).children)
             if (color[child] == colorNum && !inLoop[child]) {
-                System.out.println("# [dependency] branch: " + id2name.get(cur) + " -> " + id2name.get(child));
+//                System.out.println("# [dependency] branch: " + id2name.get(cur) + " -> " + id2name.get(child));
                 addBranch(child, colorNum);
                 addMove(cur, child);
             }
@@ -103,7 +103,7 @@ public class DependencyAnalysis {
         loop.add(cur);
         for (int child : graph.get(cur).children)
             if (color[child] == colorNum && inLoop[child] && !loop.contains(child)) {
-                System.out.println("# [dependency] loop: " + id2name.get(cur) + " -> " + id2name.get(child));
+//                System.out.println("# [dependency] loop: " + id2name.get(cur) + " -> " + id2name.get(child));
                 getLoop(child, colorNum, loop);
             }
     }

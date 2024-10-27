@@ -1,5 +1,8 @@
 package optimize;
 
+import ASM.inst.ArithInst;
+import ASM.inst.LiInst;
+import ASM.inst.UnaryRegInst;
 import IR.IRStmts.*;
 import optimize.utils.DependencyAnalysis;
 import optimize.utils.FuncHeadStmt;
@@ -585,7 +588,6 @@ public class IRFunction extends IRStmt {
 
     public void erasePhi() {
         updateBlockMap();
-
         for (IRBlock curBlock : blocks) {
             ArrayList<PhiStmt> phiList = new ArrayList<>();
             HashMap<IRBlock, ArrayList<AssignStmt>> assignInBlock = new HashMap<>();
@@ -597,9 +599,8 @@ public class IRFunction extends IRStmt {
                     i--;
                 } else break;
             }
-
+            // collect AssignStmts
             for (PhiStmt phiStmt : phiList){
-                System.out.println("# [erasePhi] block: " + curBlock.label + " ---- phi: " + phiStmt);
                 for (String blockLabel : phiStmt.val.keySet()) {
                     String val = phiStmt.val.get(blockLabel);
                     IRBlock block = blockMap.get(blockLabel);
@@ -607,29 +608,21 @@ public class IRFunction extends IRStmt {
                     assignInBlock.get(block).add(new AssignStmt(phiStmt.dest, val));
                 }
             }
-
-
+            // insert AssignStmts
             for (IRBlock block : assignInBlock.keySet()) {
                 DependencyAnalysis dependency = new DependencyAnalysis("..temp");
-
                 ArrayList<AssignStmt> assignList = assignInBlock.get(block);
-
                 for (AssignStmt assign : assignList) {
                     dependency.addDependency(assign.val, assign.dest);
                 }
-
                 dependency.analyze();
-                dependency.debug();
-
                 String tmpName = block.label + "..temp";
                 ArrayList<String> from = dependency.getFromList(), to = dependency.getToList();
                 for (int i = 0; i < from.size(); i++) {
                     String src = from.get(i), dest = to.get(i);
                     if (dest.equals("..temp")) dest = tmpName;
                     if (src.equals("..temp")) src = tmpName;
-
-                    int pos = block.stmts.size() - 1;
-                    block.stmts.add(pos, new MoveStmt(dest, src));
+                    block.stmts.add(block.stmts.size() - 1, new MoveStmt(dest, src));
                 }
             }
         }
@@ -678,7 +671,6 @@ public class IRFunction extends IRStmt {
                     }
             }
         }
-
     }
 
     public void aggressiveDCE() {
@@ -699,7 +691,77 @@ public class IRFunction extends IRStmt {
 
     // -------------------------
 
+    int resolveValue(String name) {
+        return switch (name) {
+            case "true" -> 1;
+            case "false", "null" -> 0;
+            default -> Integer.parseInt(name);
+        };
+    }
+
+    int simplifyBinaryStmt(String operator, int val1, int val2) {
+        return switch (operator) {
+            case "add" -> val1 + val2;
+            case "sub" -> val1 - val2;
+            case "mul" -> val1 * val2;
+            case "sdiv" -> val1 / val2;
+            case "srem" -> val1 % val2;
+            case "and" -> val1 & val2;
+            case "or" -> val1 | val2;
+            case "xor" -> val1 ^ val2;
+            case "shl" -> val1 << val2;
+            case "ashr" -> val1 >> val2;
+            case "icmp eq" -> val1 == val2 ? 1 : 0;
+            case "icmp ne" -> val1 != val2 ? 1 : 0;
+            case "icmp slt" -> val1 < val2 ? 1 : 0;
+            case "icmp sgt" -> val1 > val2 ? 1 : 0;
+            case "icmp sle" -> val1 <= val2 ? 1 : 0;
+            case "icmp sge" -> val1 >= val2 ? 1 : 0;
+            default -> 0;
+        };
+    }
+
+    int simplifyUnaryStmt(String operator, int val) {
+        return switch (operator) {
+            case "!" -> val^1;
+            case "~" -> ~val;
+            case "-" -> -val;
+            case "++" -> val + 1;
+            case "--" -> val - 1;
+            default -> 0;
+        };
+    }
+
+    public void stupidOptimize() {
+        // stupid binary/unary operation
+        for (IRBlock block : blocks) {
+            for (int i = 0; i < block.stmts.size(); i++) {
+                IRStmt stmt = block.stmts.get(i);
+                if (stmt instanceof BinaryExprStmt binaryExpr) {
+                    if (binaryExpr.register1.startsWith("@") || binaryExpr.register1.startsWith("%")) continue;
+                    if (binaryExpr.register2.startsWith("@") || binaryExpr.register2.startsWith("%")) continue;
+                    int val1 = resolveValue(binaryExpr.register1);
+                    int val2 = resolveValue(binaryExpr.register2);
+                    if (binaryExpr.operator.equals("sdiv") && val2 == 0) {
+                        continue; // divided by zero
+                    }
+                    int ret = simplifyBinaryStmt(binaryExpr.operator, val1, val2);
+                    block.stmts.remove(i);
+                    block.stmts.add(i, new MoveStmt(binaryExpr.dest, String.valueOf(ret)));
+                } else if (stmt instanceof UnaryExprStmt unaryExpr) {
+                    if (unaryExpr.register.startsWith("@") || unaryExpr.register.startsWith("%")) continue;
+                    int val = resolveValue(unaryExpr.register);
+                    int ret = simplifyUnaryStmt(unaryExpr.operator, val);
+                    block.stmts.remove(i);
+                    block.stmts.add(i, new MoveStmt(unaryExpr.dest, String.valueOf(ret)));
+                }
+            }
+        }
+    }
+
     public void constantPropagation() {
+
+
         //todo
     }
 

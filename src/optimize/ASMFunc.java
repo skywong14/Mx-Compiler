@@ -3,6 +3,7 @@ package optimize;
 import ASM.inst.ASMInst;
 import ASM.inst.RetInst;
 import ASM.section.ASMBlock;
+import optimize.utils.TemplateInst;
 
 import java.util.ArrayList;
 
@@ -11,7 +12,8 @@ public class ASMFunc {
     public ArrayList<ASMBlock> blocks;
     public ASMBlock curBlock;
     public int spOffset;
-    public ArrayList<ASMInst> epilogue;
+    public TemplateInst epilogue;
+    public TemplateInst prologue;
 
     public ArrayList<ASMInst> inits, ends;
 
@@ -31,7 +33,11 @@ public class ASMFunc {
     }
 
     public void setEpilogue(ArrayList<ASMInst> epilogue) {
-        this.epilogue = epilogue;
+        this.epilogue = new TemplateInst(epilogue);
+    }
+
+    public void setPrologue(ArrayList<ASMInst> prologue) {
+        this.prologue = new TemplateInst(prologue);
     }
 
     public void addInst(ASMInst inst) {

@@ -164,7 +164,14 @@ public class RegAllocator {
     void getCallLiveOut() {
         for (int i = 0; i < linearStmts.size(); i++) {
             if (linearStmts.get(i) instanceof CallStmt callStmt) {
+                callStmt.liveIn.addAll(liveIn.get(i));
                 callStmt.liveOut.addAll(liveOut.get(i));
+                for (String reg: liveIn.get(i)) {
+                    // add to liveInPhyReg if it is a physical register
+                    if (intervals.containsKey(reg) && intervals.get(reg).useReg != -1) {
+                        callStmt.liveInPhyReg.add(intervals.get(reg).useReg);
+                    }
+                }
                 for (String reg: liveOut.get(i)) {
                     // add to liveOutPhyReg if it is a physical register
                     if (intervals.containsKey(reg) && intervals.get(reg).useReg != -1) {
@@ -217,7 +224,7 @@ public class RegAllocator {
     }
 
     void allocateRegisters() {
-        int freeRegNum = 22; // [0, 20)
+        int freeRegNum = 22; // [0, 22)
         freeRegs = new HashSet<>();
         for (int i = 0; i < freeRegNum; i++) freeRegs.add(i);
         occupiedIntervals = new ArrayList<>(); // 当前占有寄存器的区间，按end值的大根堆
@@ -238,8 +245,6 @@ public class RegAllocator {
                 tempMap.put(curInterval, i);
                 occupiedIntervals.add(curInterval);
                 freeIntervals.remove(curInterval);
-            } else {
-                continue;
             }
         }
 
@@ -280,9 +285,7 @@ public class RegAllocator {
                 tempMap.put(curInterval, reg);
                 occupiedIntervals.add(curInterval);
             }
-
         }
-
     }
 
     public RegAllocator(IRFunction func_) {
