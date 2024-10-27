@@ -118,12 +118,9 @@ public class ASMBuilder {
         for (String regName : allocaStateMap.keySet()) {
             AllocaState state = allocaStateMap.get(regName);
             if (state.state == 0)
-                System.out.println("# [alloc] " + regName + ": Reg = " + physicalReg.getReg(state.physicRegId).name);
-            else if (state.state == 1)
-                System.out.println("# [stack] " + regName + ": offset = " + state.offset);
+                System.out.println("# [alloc] " + regName + ": " + physicalReg.getReg(state.physicRegId).name);
             else
-                System.out.println("# [spilt] " + regName + ": offset = " + state.offset + ", physicRegId = " + state.physicRegId + ", spillTime=" + state.spillTime);
-
+                System.out.println("# [stack] " + regName + ": " + state.offset);
         }
     }
 
@@ -132,7 +129,7 @@ public class ASMBuilder {
 
         ASMFunc asmFunc = new ASMFunc(func.name, funcCnt);
 
-        // top -> bottom: ra, a0 ~ a7, s0 ~ s11, spilt registers, spilt arguments(bottom to top)
+        // top -> bottom: ra, a0 ~ a7, s0 ~ s11, gp, tp, spilt registers, spilt arguments(bottom to top)
         // ra : [top - 4, top)
         // a7-> a0 : [top - 36 , top - 4)
         // tp, gp, s11-> s0 : [top - 92, top - 36)
@@ -190,7 +187,16 @@ public class ASMBuilder {
         physical2Virtual(from, to, asmFunc, 0);
 
         for (int i = 8; i < func.argNames.size(); i++) {
-//           // todo: 特殊处理栈上存的入参
+            AllocaState state = allocaStateMap.get("%" + func.argNames.get(i));
+            if (state == null) continue;
+            int argumentOffset = asmFunc.spOffset + (i - 8) * 4;
+            if (state.state == 0) {
+                String regName = physicalReg.getReg(state.physicRegId).name;
+                asmFunc.addInst(Lw(regName, argumentOffset, "sp"));
+            } else {
+                asmFunc.addInst(Lw("t0", argumentOffset, "sp"));
+                asmFunc.addInst(Sw("t0", state.offset, "sp"));
+            }
         }
 
 
