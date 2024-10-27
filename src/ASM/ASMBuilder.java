@@ -2,16 +2,15 @@ package ASM;
 
 import ASM.inst.*;
 import ASM.operand.PhysicalReg;
-import ASM.section.ASMFunction;
 import ASM.section.DataSection;
 import ASM.section.RodataSection;
 import ASM.section.TextSection;
 import IR.IRStmts.*;
 import optimize.*;
+import optimize.utils.DependencyAnalysis;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 
 public class ASMBuilder {
     public PhysicalReg physicalReg = new PhysicalReg();
@@ -178,32 +177,44 @@ public class ASMBuilder {
                 asmFunc.addInst(Sw("s" + i, asmFunc.spOffset - 40 - i * 4, "sp"));
             }
 
+
         // store arguments
-        // todo: optimize!
-        for (int i = 0; i < func.argNames.size() && i < 8; i++) {
-            asmFunc.addInst(Sw("a" + i, asmFunc.spOffset - 8 - i * 4, "sp"));
+        int argSize = Math.min(func.argNames.size(), 8);
+        ArrayList<String> from = new ArrayList<>();
+        ArrayList<String> to = new ArrayList<>();
+        for (int i = 0; i < argSize; i++)
+            if (allocaStateMap.containsKey("%" + func.argNames.get(i))) {
+                from.add("a" + i);
+                to.add("%" + func.argNames.get(i));
+            }
+        physical2Virtual(from, to, asmFunc, 0);
+
+//        for (int i = 0; i < func.argNames.size() && i < 8; i++) {
+//            asmFunc.addInst(Sw("a" + i, asmFunc.spOffset - 8 - i * 4, "sp"));
+//        }
+//
+//        for (int i = 0; i < argSize; i++) {
+//                AllocaState state = allocaStateMap.get("%" + func.argNames.get(i));
+//                if (state == null) {
+//                    continue; // useless argument
+//                    //throw new RuntimeException("argName is not in allocaStateMap: %" + func.argNames.get(i));
+//                }
+//                if (state.state == 0) {
+//                    String destReg = physicalReg.getReg(state.physicRegId).name;
+//                    if (destReg.equals("a" + i)) continue;
+//                    asmFunc.addInst(Lw(destReg, asmFunc.spOffset - 8 - i * 4, "sp"));
+//                } else if (state.state == 1) {
+//                    asmFunc.addInst(Lw("t6", asmFunc.spOffset - 8 - i * 4, "sp"));
+//                    asmFunc.addInst(Sw("t6", state.offset, "sp"));
+//                } else {
+//                    throw new RuntimeException("something goes wrong");
+//                }
+//            }
+        for (int i = 8; i < func.argNames.size(); i++) {
+//           // todo: 特殊处理栈上存的入参
         }
 
-        for (int i = 0; i < func.argNames.size(); i++)
-            if (i < 8){
-                AllocaState state = allocaStateMap.get("%" + func.argNames.get(i));
-                if (state == null) {
-                    continue; // useless argument
-                    //throw new RuntimeException("argName is not in allocaStateMap: %" + func.argNames.get(i));
-                }
-                if (state.state == 0) {
-                    String destReg = physicalReg.getReg(state.physicRegId).name;
-                    if (destReg.equals("a" + i)) continue;
-                    asmFunc.addInst(Lw(destReg, asmFunc.spOffset - 8 - i * 4, "sp"));
-                } else if (state.state == 1) {
-                    asmFunc.addInst(Lw("t6", asmFunc.spOffset - 8 - i * 4, "sp"));
-                    asmFunc.addInst(Sw("t6", state.offset, "sp"));
-                } else {
-                    throw new RuntimeException("something goes wrong");
-                }
-            } else {
-                // todo: 特殊处理栈上存的入参
-            }
+
         asmFunc.addInst(new CommentInst(""));
 
 
@@ -423,6 +434,13 @@ public class ASMBuilder {
         writeBackReg(destReg, irStmt.dest, func, "t3");
     }
 
+    String getPhysicalReg(String regName) {
+        if (allocaStateMap.get(regName) == null) return null;
+        int physicRegId = allocaStateMap.get(regName).physicRegId;
+        if (physicRegId == -1) return null;
+        return physicalReg.getReg(physicRegId).name;
+    }
+
     boolean isRegister(String regName) {
         return regName.startsWith("%") || regName.startsWith("@");
     }
@@ -441,15 +459,8 @@ public class ASMBuilder {
                 // in stack: get value from stack, store to tempReg
                 func.addInst(Lw(tempReg, state.offset, "sp"));
                 return tempReg;
-            } else {
-                // spilt halfway
-                if (stmtCnt > state.spillTime) {
-                    func.addInst(Lw(tempReg, state.offset, "sp"));
-                    return tempReg;
-                } else {
-                    return physicalReg.getReg(state.physicRegId).name;
-                }
-            }
+            } else
+                throw new RuntimeException("resolveRegister: regName is not in allocaStateMap: " + regName);
         } else if (regName.startsWith("@")) {
             func.addInst(new LaInst(tempReg, regName.substring(1)));
             return tempReg;
@@ -496,11 +507,6 @@ public class ASMBuilder {
     void visitBinaryExprStmt(BinaryExprStmt irStmt, ASMFunc func, int stmtCnt) {
         String reg1 = null;
         String reg2 = null;
-        if (allocaStateMap.get(irStmt.dest) == null) {
-            // this value is not used
-            throw new RuntimeException("!!!BinaryStmt: dest is not in allocaStateMap:" + irStmt.toString());
-//            return;
-        }
         String destReg = getDestReg(irStmt.dest, stmtCnt, "t0");
 
         if (!isRegister(irStmt.register1) && !isRegister(irStmt.register2)) {
@@ -745,6 +751,63 @@ public class ASMBuilder {
         func.addInst(func.epilogue);
     }
 
+    void physical2Virtual(ArrayList<String> from_, ArrayList<String> to_, ASMFunc func, int stmtCnt) {
+        int size = from_.size();
+        DependencyAnalysis dependency = new DependencyAnalysis("t0");
+
+        for (int i = 0; i < size; i++)
+            if (getPhysicalReg(to_.get(i)) == null) {
+                int offset = getOffset(to_.get(i));
+                func.addInst(Sw(from_.get(i), offset, "sp"));
+            }
+
+        for (int i = 0; i < size; i++) {
+            String destReg = getPhysicalReg(to_.get(i));
+            if (destReg == null) continue;
+            dependency.addDependency(from_.get(i), destReg);
+        }
+
+        dependency.analyze();
+
+        ArrayList<String> from = dependency.getFromList();
+        ArrayList<String> to = dependency.getToList();
+        for (int i = 0; i < from.size(); i++) {
+            String fromReg = from.get(i), toReg = to.get(i);
+            func.addInst(new MvInst(toReg, fromReg));
+        }
+         dependency.debug();
+    }
+
+    void virtual2Physical(ArrayList<String> from_, ArrayList<String> to_, ASMFunc func, int stmtCnt) {
+        int size = from_.size();
+        DependencyAnalysis dependency = new DependencyAnalysis("t0");
+        for (int i = 0; i < size; i++) {
+            String srcReg = getPhysicalReg(from_.get(i));
+            if (srcReg == null) continue;
+            dependency.addDependency(srcReg, to_.get(i));
+        }
+
+        dependency.analyze();
+
+        ArrayList<String> from = dependency.getFromList();
+        ArrayList<String> to = dependency.getToList();
+        for (int i = 0; i < from.size(); i++) {
+            String fromReg = from.get(i), toReg = to.get(i);
+            func.addInst(new MvInst(toReg, fromReg));
+        }
+        // dependency.debug();
+        for (int i = 0; i < size; i++)
+            if (getPhysicalReg(from_.get(i)) == null) {
+                if (isRegister(from_.get(i))) {
+                    String srcReg = resolveRegister(from_.get(i), func, stmtCnt, "t0");
+                    func.addInst(new MvInst(to_.get(i), srcReg));
+                } else {
+                    int val = resolveValue(from_.get(i));
+                    func.addInst(new LiInst(to_.get(i), val));
+                }
+            }
+    }
+
     void visitCallStmt(CallStmt irStmt, ASMFunc func, int stmtCnt) {
         func.addInst(new CommentInst(""));
         // save a0 ~ a7 on stack before call
@@ -753,38 +816,28 @@ public class ASMBuilder {
             func.addInst(Sw("a" + i, func.spOffset - 36 + (7 - i) * 4, "sp"));
         }
 
-        // store arguments to a0 ~ a7, or more to stack
-        //todo optimize!
-        for (int i = irStmt.args.size() - 1; i >= 0; i--) {
-            if (i < 8) {
-                if (isRegister(irStmt.args.get(i))) {
-                    String srcReg = resolveRegister(irStmt.args.get(i), func, stmtCnt, "t0");
-                    if (srcReg.startsWith("a")) {
-                        // load srcReg to a_i
-                        if (!srcReg.equals("a" + i)) {
-                            int id = Integer.parseInt(srcReg.substring(1));
-                            int offset = func.spOffset - 36 + (7 - id) * 4;
-                            func.addInst(Lw("a" + i, offset, "sp"));
-                        }
-                    } else {
-                        func.addInst(new MvInst("a" + i, srcReg));
-                    }
-                } else {
-                    int val = resolveValue(irStmt.args.get(i));
-                    func.addInst(new LiInst("a" + i, val));
-                }
-            } else {
-                int offset = (i - 8) * 4;
-                String srcReg;
-                if (isRegister(irStmt.args.get(i))) srcReg = resolveRegister(irStmt.args.get(i), func, stmtCnt, "t0");
-                else {
-                    int val = resolveValue(irStmt.args.get(i));
-                    func.addInst(new LiInst("t0", val));
-                    srcReg = "t0";
-                }
-                func.addInst(Sw(srcReg, offset, "sp"));
+        // on stack
+        for (int i = irStmt.args.size() - 1; i >= 8; i--) {
+            int offset = (i - 8) * 4;
+            String srcReg;
+            if (isRegister(irStmt.args.get(i))) srcReg = resolveRegister(irStmt.args.get(i), func, stmtCnt, "t0");
+            else {
+                int val = resolveValue(irStmt.args.get(i));
+                func.addInst(new LiInst("t0", val));
+                srcReg = "t0";
             }
+            func.addInst(Sw(srcReg, offset, "sp"));
         }
+
+        // store arguments to a0 ~ a7
+        int argSize = Math.min(irStmt.args.size(), 8);
+        ArrayList<String> from = new ArrayList<>();
+        ArrayList<String> to = new ArrayList<>();
+        for (int i = 0; i < argSize; i++) {
+            from.add(irStmt.args.get(i));
+            to.add("a" + i);
+        }
+        virtual2Physical(from, to, func, stmtCnt);
 
         func.addInst(new CallInst(irStmt.funcName)); // call
 

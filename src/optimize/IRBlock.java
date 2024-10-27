@@ -49,8 +49,6 @@ public class IRBlock extends IRStmt {
             if (stmt instanceof NewClassStmt newClassStmt) {
                 stmts.add(newClassStmt.mallocStmt);
                 if (newClassStmt.callStmt != null) stmts.add(newClassStmt.callStmt);
-            } else if (stmt instanceof NewArrayStmt) {
-                throw new RuntimeException("IRBlock: shouldn't have NewArrayStmt");
             } else {
                 stmts.add(stmt);
             }

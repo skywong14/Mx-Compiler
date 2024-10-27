@@ -25,6 +25,10 @@ ir_all:
 asm_single:
 	testcases/codegen/scripts/test_asm.bash 'java -cp /ulib/antlr-4.13.2-complete.jar:bin Main -S' testcases/codegen/t22.mx src/IR/builtin/builtin.s
 
+.PHONY: mytest
+mytest:
+	testcases/codegen/scripts/test_asm.bash 'java -cp /ulib/antlr-4.13.2-complete.jar:bin Main -S' testcases/codegen/mytest.mx src/IR/builtin/builtin.s
+
 .PHONY: asm_all
 asm_all:
 	testcases/codegen/scripts/test_asm_all.bash 'java -cp /ulib/antlr-4.13.2-complete.jar:bin Main -S' testcases/codegen  src/IR/builtin/builtin.s

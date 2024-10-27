@@ -31,7 +31,7 @@ public class IRFunction extends IRStmt {
     }
     private void debugCFG(int status) {
         boolean flag = true;
-        if (flag) return;
+//        if (flag) return;
         // 0: print idom
         if (status == 0) {
             System.out.println("---idom---");
@@ -641,6 +641,7 @@ public class IRFunction extends IRStmt {
                     }
             }
         }
+
     }
 
     public void aggressiveDCE() {

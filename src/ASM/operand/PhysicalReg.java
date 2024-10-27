@@ -37,7 +37,7 @@ public class PhysicalReg {
         // [8, 20)
         for (int i = 0; i < 12; i++)
             regMap.put(i + 8, s[i]);
-        regMap.put(20, sp);
+        regMap.put(20, gp);
         regMap.put(21, tp);
         for (int i = 0; i < 7; i++)
             regMap.put(i + 22, t[i]);
