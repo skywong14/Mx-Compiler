@@ -161,6 +161,20 @@ public class RegAllocator {
         }
     }
 
+    void getCallLiveOut() {
+        for (int i = 0; i < linearStmts.size(); i++) {
+            if (linearStmts.get(i) instanceof CallStmt callStmt) {
+                callStmt.liveOut.addAll(liveOut.get(i));
+                for (String reg: liveOut.get(i)) {
+                    // add to liveOutPhyReg if it is a physical register
+                    if (intervals.containsKey(reg) && intervals.get(reg).useReg != -1) {
+                        callStmt.liveOutPhyReg.add(intervals.get(reg).useReg);
+                    }
+                }
+            }
+        }
+    }
+
     void getLiveIntervals() {
         intervals = new HashMap<>();
         numberStmt();
@@ -281,6 +295,8 @@ public class RegAllocator {
 
         // allocate registers
         allocateRegisters();
+
+        getCallLiveOut();
     }
 
     public boolean isSpilt(String regName) {

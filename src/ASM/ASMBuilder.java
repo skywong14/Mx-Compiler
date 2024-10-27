@@ -202,7 +202,7 @@ public class ASMBuilder {
         epilogue.addAll(Lw("ra", asmFunc.spOffset - 4, "sp")); // restore ra
         // restore s0 ~ s11, tp, gp
         for (int i = 0; i < 14; i++)
-            if (usedReg[i + 8]){
+            if (usedReg[i + 8]) {
                 epilogue.addAll(Lw(physicalReg.getName(i + 8), asmFunc.spOffset - 40 - i * 4, "sp"));
             }
         epilogue.addAll(ArithImm("+", "sp", "sp", asmFunc.spOffset)); // restore sp
@@ -791,9 +791,9 @@ public class ASMBuilder {
         func.addInst(new CommentInst(""));
         // save a0 ~ a7 on stack before call
         // store a7 ~ a0 on [top - 36 , top - 4)
-        for (int i = 0; i < 8; i++) {
-            func.addInst(Sw("a" + i, func.spOffset - 36 + (7 - i) * 4, "sp"));
-        }
+        for (int i = 0; i < 8; i++)
+            if (irStmt.liveOutPhyReg.contains(i))
+                func.addInst(Sw("a" + i, func.spOffset - 36 + (7 - i) * 4, "sp"));
 
         // on stack
         for (int i = irStmt.args.size() - 1; i >= 8; i--) {
@@ -823,9 +823,10 @@ public class ASMBuilder {
 
         if (irStmt.retType.typeName.equals("void")) {
             // void: restore a0 ~ a7
-            for (int i = 0; i < 8; i++) {
-                func.addInst(Lw("a" + i, func.spOffset - 36 + (7 - i) * 4, "sp"));
-            }
+            for (int i = 0; i < 8; i++)
+                if (irStmt.liveOutPhyReg.contains(i)) {
+                    func.addInst(Lw("a" + i, func.spOffset - 36 + (7 - i) * 4, "sp"));
+                }
             func.addInst(new CommentInst(""));
             return;
         }
@@ -843,7 +844,7 @@ public class ASMBuilder {
         }
         // restore a0 ~ a7
         for (int i = 0; i < 8; i++)
-            if (!destReg.equals("a" + i)) {
+            if (!destReg.equals("a" + i) && irStmt.liveOutPhyReg.contains(i)) {
                 func.addInst(Lw("a" + i, func.spOffset - 36 + (7 - i) * 4, "sp"));
             }
         func.addInst(new CommentInst(""));

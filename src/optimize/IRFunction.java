@@ -540,7 +540,6 @@ public class IRFunction extends IRStmt {
     }
 
     public void mem2reg() {
-
         clearDeadBlock(); // 消除不可达的block
         clearDeadStmt(); // 消去没有use的stmt
         clearJumpBlock(); // 消除只有jump的block
