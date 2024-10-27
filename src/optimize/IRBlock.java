@@ -57,18 +57,6 @@ public class IRBlock extends IRStmt {
         // predecessors and successors will be set in IRFunction
     }
 
-    public String toStringWithPhi() {
-        StringBuilder sb = new StringBuilder();
-        sb.append(label).append(":\n");
-        for (String phi : phiStmts.keySet()) {
-            sb.append("\t").append(phiStmts.get(phi).toString()).append("\n");
-        }
-        for (IRStmt stmt : stmts) {
-            sb.append("\t").append(stmt.toString()).append("\n");
-        }
-        return sb.toString();
-    }
-
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();

@@ -296,6 +296,7 @@ public class RegAllocator {
         // allocate registers
         allocateRegisters();
 
+        // live out Regs at call stmt
         getCallLiveOut();
     }
 

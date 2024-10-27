@@ -55,12 +55,9 @@ public class IRCode{
     }
 
     public void optimize() {
-        // mem2reg in IR
+        // mem2reg in IR, add phi_stmts
         for (IRFunction func : funcStmts) {
             func.mem2reg();
-        }
-        // add phi_stmts to stmts
-        for (IRFunction func : funcStmts) {
             func.addPhi();
         }
 

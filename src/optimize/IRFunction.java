@@ -1,6 +1,7 @@
 package optimize;
 
 import IR.IRStmts.*;
+import optimize.utils.DependencyAnalysis;
 import optimize.utils.FuncHeadStmt;
 import optimize.utils.LivenessAnalysis;
 
@@ -573,26 +574,63 @@ public class IRFunction extends IRStmt {
             blockMap.put(block.label, block);
     }
 
+    class AssignStmt{
+        String dest;
+        String val;
+        public AssignStmt(String dest, String val){
+            this.dest = dest;
+            this.val = val;
+        }
+    }
+
     public void erasePhi() {
         updateBlockMap();
 
-        // erase phi in stmt
-        for (IRBlock block : blocks) {
+        for (IRBlock curBlock : blocks) {
             ArrayList<PhiStmt> phiList = new ArrayList<>();
-            for (int i = 0; i < block.stmts.size(); i++){
-                if (block.stmts.get(i) instanceof PhiStmt){
-                    phiList.add((PhiStmt) block.stmts.get(i));
-                    block.stmts.remove(i);
+            HashMap<IRBlock, ArrayList<AssignStmt>> assignInBlock = new HashMap<>();
+            // collect PhiStmts
+            for (int i = 0; i < curBlock.stmts.size(); i++){
+                if (curBlock.stmts.get(i) instanceof PhiStmt phi){
+                    phiList.add(phi);
+                    curBlock.stmts.remove(i);
                     i--;
                 } else break;
             }
 
-            for (PhiStmt phiStmt : phiList) {
-                for (String blockLabel : phiStmt.val.keySet()){
-                    int pos = blockMap.get(blockLabel).stmts.size() - 1;
-                    blockMap.get(blockLabel).stmts.add(pos, new MoveStmt(phiStmt.dest + ".tmp", phiStmt.val.get(blockLabel)));
+            for (PhiStmt phiStmt : phiList){
+                System.out.println("# [erasePhi] block: " + curBlock.label + " ---- phi: " + phiStmt);
+                for (String blockLabel : phiStmt.val.keySet()) {
+                    String val = phiStmt.val.get(blockLabel);
+                    IRBlock block = blockMap.get(blockLabel);
+                    if (!assignInBlock.containsKey(block)) assignInBlock.put(block, new ArrayList<>());
+                    assignInBlock.get(block).add(new AssignStmt(phiStmt.dest, val));
                 }
-                block.stmts.add(0, new MoveStmt(phiStmt.dest, phiStmt.dest + ".tmp"));
+            }
+
+
+            for (IRBlock block : assignInBlock.keySet()) {
+                DependencyAnalysis dependency = new DependencyAnalysis("..temp");
+
+                ArrayList<AssignStmt> assignList = assignInBlock.get(block);
+
+                for (AssignStmt assign : assignList) {
+                    dependency.addDependency(assign.val, assign.dest);
+                }
+
+                dependency.analyze();
+                dependency.debug();
+
+                String tmpName = block.label + "..temp";
+                ArrayList<String> from = dependency.getFromList(), to = dependency.getToList();
+                for (int i = 0; i < from.size(); i++) {
+                    String src = from.get(i), dest = to.get(i);
+                    if (dest.equals("..temp")) dest = tmpName;
+                    if (src.equals("..temp")) src = tmpName;
+
+                    int pos = block.stmts.size() - 1;
+                    block.stmts.add(pos, new MoveStmt(dest, src));
+                }
             }
         }
     }

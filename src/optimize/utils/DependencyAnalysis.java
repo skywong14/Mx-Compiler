@@ -50,21 +50,21 @@ public class DependencyAnalysis {
         return res;
     }
 
-    public void addDependency(String dest, String src) {
+    public void addDependency(String from_, String to_) {
         // dest = src
-        if (!name2id.containsKey(dest)) {
-            name2id.put(dest, cnt++);
-            id2name.put(name2id.get(dest), dest);
-            graph.add(new Node(name2id.get(dest)));
+        if (!name2id.containsKey(from_)) {
+            name2id.put(from_, cnt++);
+            id2name.put(name2id.get(from_), from_);
+            graph.add(new Node(name2id.get(from_)));
         }
-        if (!name2id.containsKey(src)) {
-            name2id.put(src, cnt++);
-            id2name.put(name2id.get(src), src);
-            graph.add(new Node(name2id.get(src)));
+        if (!name2id.containsKey(to_)) {
+            name2id.put(to_, cnt++);
+            id2name.put(name2id.get(to_), to_);
+            graph.add(new Node(name2id.get(to_)));
         }
-        graph.get(name2id.get(dest)).children.add(name2id.get(src));
-        graph.get(name2id.get(src)).parentId = name2id.get(dest);
-         System.out.println("# [dependency] def: " + dest + " -> " + src);
+        graph.get(name2id.get(from_)).children.add(name2id.get(to_));
+        graph.get(name2id.get(to_)).parentId = name2id.get(from_);
+        System.out.println("# [dependency] def: " + from_ + " -> " + to_);
     }
 
     void dfs(int cur, int idx) {

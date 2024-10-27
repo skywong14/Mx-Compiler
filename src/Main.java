@@ -88,6 +88,7 @@ public class Main {
             irCode.erasePhi();
 
             // print IR
+//            System.out.println(irCode.toString());
 //            System.out.println(commentType(irCode.toString()));
 
             // asm

@@ -174,7 +174,6 @@ public class ASMBuilder {
                 asmFunc.addInst(Sw(physicalReg.getName(i + 8), asmFunc.spOffset - 40 - i * 4, "sp"));
             }
 
-
         // store arguments
         int argSize = Math.min(func.argNames.size(), 8);
         ArrayList<String> from = new ArrayList<>();
