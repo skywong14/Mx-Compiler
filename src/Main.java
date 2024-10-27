@@ -97,7 +97,7 @@ public class Main {
             asmBuilder.build();
             System.out.println(asmBuilder.toString());
         } catch (Exception e) {
-            System.out.println("Error: " + e.getMessage());
+//            System.out.println("Error: " + e.getMessage());
             System.out.println(e.getMessage().split("\\[")[1].split("]")[0]);
 //             e.printStackTrace();
             System.exit(2);
