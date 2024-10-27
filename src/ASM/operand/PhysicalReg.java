@@ -46,4 +46,7 @@ public class PhysicalReg {
     public Register getReg(int index) {
         return regMap.get(index);
     }
+    public String getName(int index) {
+        return regMap.get(index).name;
+    }
 }

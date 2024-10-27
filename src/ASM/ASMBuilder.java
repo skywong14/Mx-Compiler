@@ -88,7 +88,7 @@ public class ASMBuilder {
     HashMap<String, AllocaState> allocaStateMap;
 
     int calcOffset(IRFunction func) {
-        int spOffset = 84; // 84 bytes for ra, a0 ~ a7, s0 ~ s11
+        int spOffset = 92; // 92 bytes for ra, a0 ~ a7, s0 ~ s11 ,tp, gp
         for (String regName : regAllocator.intervals.keySet()) {
             if (regAllocator.hasReg(regName) != -1 || regAllocator.isSpilt(regName))
                 spOffset += 4;
@@ -135,8 +135,8 @@ public class ASMBuilder {
         // top -> bottom: ra, a0 ~ a7, s0 ~ s11, spilt registers, spilt arguments(bottom to top)
         // ra : [top - 4, top)
         // a7-> a0 : [top - 36 , top - 4)
-        // s11-> s0 : [top - 84, top - 36)
-        // spilt registers: num1 [top - 84 - num1 * 4, top - 84)
+        // tp, gp, s11-> s0 : [top - 92, top - 36)
+        // spilt registers: num1 [top - 92 - num1 * 4, top - 92)
         // spilt arguments: num2 [bottom, bottom + num2 * 4)
         // altogether: 100 + num1 * 4 + num2 * 4 (align to 16)
 
@@ -147,7 +147,7 @@ public class ASMBuilder {
         // 1.被溢出: 相对于sp的偏移量 2.分配到物理寄存器：寄存器编号
         spiltRegMap = new HashMap<>();
         allocaStateMap = new HashMap<>();
-        int tmpOffset = asmFunc.spOffset - 84 - 4;
+        int tmpOffset = asmFunc.spOffset - 92 - 4;
         for (String regName : regAllocator.intervals.keySet()) {
             if (regAllocator.hasReg(regName) != -1) {
                 if (regAllocator.isSpilt(regName)) {
@@ -171,10 +171,10 @@ public class ASMBuilder {
         // asmFunc.prologue: move sp, store ra, s0 ~ s11, arguments
         asmFunc.addInst(ArithImm("+", "sp", "sp", -asmFunc.spOffset)); // move sp
         asmFunc.addInst(Sw("ra", asmFunc.spOffset - 4, "sp")); // store ra
-        // store s0 ~ s11
-        for (int i = 0; i < 12; i++)
+        // store s0 ~ s11, tp, gp
+        for (int i = 0; i < 14; i++)
             if (usedReg[i + 8]){
-                asmFunc.addInst(Sw("s" + i, asmFunc.spOffset - 40 - i * 4, "sp"));
+                asmFunc.addInst(Sw(physicalReg.getName(i + 8), asmFunc.spOffset - 40 - i * 4, "sp"));
             }
 
 
@@ -189,27 +189,6 @@ public class ASMBuilder {
             }
         physical2Virtual(from, to, asmFunc, 0);
 
-//        for (int i = 0; i < func.argNames.size() && i < 8; i++) {
-//            asmFunc.addInst(Sw("a" + i, asmFunc.spOffset - 8 - i * 4, "sp"));
-//        }
-//
-//        for (int i = 0; i < argSize; i++) {
-//                AllocaState state = allocaStateMap.get("%" + func.argNames.get(i));
-//                if (state == null) {
-//                    continue; // useless argument
-//                    //throw new RuntimeException("argName is not in allocaStateMap: %" + func.argNames.get(i));
-//                }
-//                if (state.state == 0) {
-//                    String destReg = physicalReg.getReg(state.physicRegId).name;
-//                    if (destReg.equals("a" + i)) continue;
-//                    asmFunc.addInst(Lw(destReg, asmFunc.spOffset - 8 - i * 4, "sp"));
-//                } else if (state.state == 1) {
-//                    asmFunc.addInst(Lw("t6", asmFunc.spOffset - 8 - i * 4, "sp"));
-//                    asmFunc.addInst(Sw("t6", state.offset, "sp"));
-//                } else {
-//                    throw new RuntimeException("something goes wrong");
-//                }
-//            }
         for (int i = 8; i < func.argNames.size(); i++) {
 //           // todo: 特殊处理栈上存的入参
         }
@@ -218,13 +197,13 @@ public class ASMBuilder {
         asmFunc.addInst(new CommentInst(""));
 
 
-        // asmFunc.epilogue: restore ra, sp, s0 ~ s11, return
+        // asmFunc.epilogue: restore ra, sp, s0 ~ s11, tp, gp, return
         ArrayList<ASMInst> epilogue = new ArrayList<>();
         epilogue.addAll(Lw("ra", asmFunc.spOffset - 4, "sp")); // restore ra
-        // restore s0 ~ s11
-        for (int i = 0; i < 12; i++)
+        // restore s0 ~ s11, tp, gp
+        for (int i = 0; i < 14; i++)
             if (usedReg[i + 8]){
-                epilogue.addAll(Lw("s" + i, asmFunc.spOffset - 40 - i * 4, "sp"));
+                epilogue.addAll(Lw(physicalReg.getName(i + 8), asmFunc.spOffset - 40 - i * 4, "sp"));
             }
         epilogue.addAll(ArithImm("+", "sp", "sp", asmFunc.spOffset)); // restore sp
         epilogue.add(new RetInst()); // return
