@@ -103,6 +103,11 @@ public class IRCode{
         for (IRFunction func : funcStmts) {
             func.aggressiveDCE();
         }
+
+        // global2local in IR
+        for (IRFunction func : funcStmts) {
+            func.global2local();
+        }
     }
 
     public void erasePhi() {

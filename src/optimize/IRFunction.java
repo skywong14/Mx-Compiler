@@ -1,14 +1,10 @@
 package optimize;
 
-import ASM.inst.ArithInst;
-import ASM.inst.LiInst;
-import ASM.inst.UnaryRegInst;
 import IR.IRStmts.*;
 import optimize.utils.DependencyAnalysis;
 import optimize.utils.FuncHeadStmt;
 import optimize.utils.LivenessAnalysis;
 
-import java.math.BigInteger;
 import java.util.*;
 
 public class IRFunction extends IRStmt {
@@ -763,6 +759,140 @@ public class IRFunction extends IRStmt {
 
 
         //todo
+    }
+
+    // -------------------------
+
+    boolean hasCallStmt() {
+        for (IRBlock block : blocks)
+            for (IRStmt stmt : block.stmts)
+                if (stmt instanceof CallStmt) return true;
+        return false;
+    }
+
+
+    private HashMap<String, String> replacedWith;
+
+    String getReplacedWith(String var) {
+        if (replacedWith.containsKey(var)) return replacedWith.get(var);
+        return var;
+    }
+
+    public void global2local() {
+        // if without funcCall, then replace globalVar with localVar
+        if (hasCallStmt()) return;
+        // collect all global variables
+        replacedWith = new HashMap<>();
+        HashMap<String, BasicIRType> globalVarTypes = new HashMap<>();
+        HashMap<String, HashSet<String>> defMap = new HashMap<>();
+        for (IRBlock block : blocks)
+            for (IRStmt stmt : block.stmts) {
+                if (stmt instanceof LoadStmt load && load.pointer.startsWith("@")) {
+                    globalVarTypes.put(load.pointer, load.type);
+                    if (!defMap.containsKey(load.pointer)) defMap.put(load.pointer, new HashSet<>());
+                    defMap.get(load.pointer).add(load.dest);
+                    replacedWith.put(load.dest, "%.g2l." + load.pointer.substring(1));
+                }
+            }
+        HashSet<String> isModified = new HashSet<>();
+        HashMap<String, String> globalVars = new HashMap<>();
+        ArrayList<IRStmt> loadStmts = new ArrayList<>();
+        for (String key : globalVarTypes.keySet()) {
+            String newName = "%.g2l." + key.substring(1);
+            globalVars.put(key, newName);
+            loadStmts.add(new LoadStmt(globalVarTypes.get(key), key, newName));
+        }
+
+        // remove the load stmts, and replace the globalVar with localVar
+        for (IRBlock block : blocks){
+            ArrayList<IRStmt> newStmts = new ArrayList<>();
+            for (IRStmt stmt : block.stmts) {
+                if (stmt instanceof StoreStmt store) {
+                    if (store.dest.startsWith("@")) {
+                        if (!defMap.containsKey(store.dest)) {
+                            newStmts.add(stmt);
+                            continue;
+                        }
+                        newStmts.add(new MoveStmt(globalVars.get(store.dest), getReplacedWith(store.val)));
+                        isModified.add(store.dest);
+                    } else {
+                        store.dest = getReplacedWith(store.dest);
+                        store.val = getReplacedWith(store.val);
+                        newStmts.add(stmt);
+                    }
+                } else if (stmt instanceof LoadStmt load) {
+                    if (load.pointer.startsWith("@")) continue;
+                    load.pointer = getReplacedWith(load.pointer);
+                    load.dest = getReplacedWith(load.dest);
+                    newStmts.add(stmt);
+                } else if (stmt instanceof BinaryExprStmt binaryExpr) {
+                    binaryExpr.register1 = getReplacedWith(binaryExpr.register1);
+                    binaryExpr.register2 = getReplacedWith(binaryExpr.register2);
+                    binaryExpr.dest = getReplacedWith(binaryExpr.dest);
+                    newStmts.add(stmt);
+                } else if (stmt instanceof CallStmt call) {
+                    call.dest = getReplacedWith(call.dest);
+                    for (int i = 0; i < call.args.size(); i++)
+                        call.args.set(i, getReplacedWith(call.args.get(i)));
+                } else if (stmt instanceof GetElementPtrStmt getElementPtr) {
+                    getElementPtr.pointer = getReplacedWith(getElementPtr.pointer);
+                    getElementPtr.dest = getReplacedWith(getElementPtr.dest);
+                    getElementPtr.index = getReplacedWith(getElementPtr.index);
+                    newStmts.add(stmt);
+                } else if (stmt instanceof UnaryExprStmt unaryExpr) {
+                    unaryExpr.register = getReplacedWith(unaryExpr.register);
+                    unaryExpr.dest = getReplacedWith(unaryExpr.dest);
+                    newStmts.add(stmt);
+                } else if (stmt instanceof SelectStmt select) {
+                    select.cond = getReplacedWith(select.cond);
+                    select.trueVal = getReplacedWith(select.trueVal);
+                    select.falseVal = getReplacedWith(select.falseVal);
+                    select.dest = getReplacedWith(select.dest);
+                    newStmts.add(stmt);
+                } else if (stmt instanceof BranchStmt branch) {
+                    branch.condition = getReplacedWith(branch.condition);
+                    newStmts.add(stmt);
+                } else if (stmt instanceof ReturnStmt ret) {
+                    if (ret.src != null) ret.src = getReplacedWith(ret.src);
+                    newStmts.add(stmt);
+                } else if (stmt instanceof PhiStmt phiStmt) {
+                    phiStmt.dest = getReplacedWith(phiStmt.dest);
+                    HashMap<String, String> newVals = new HashMap<>();
+                    for (String key : phiStmt.val.keySet())
+                        newVals.put(key, getReplacedWith(phiStmt.val.get(key)));
+                    phiStmt.val = newVals;
+                    newStmts.add(stmt);
+                } else if (stmt instanceof MoveStmt moveStmt) {
+                    moveStmt.src = getReplacedWith(moveStmt.src);
+                    moveStmt.dest = getReplacedWith(moveStmt.dest);
+                    newStmts.add(stmt);
+                } else {
+                    throw new RuntimeException("[g2l]: unknown stmt: " + stmt);
+                }
+            }
+            block.stmts = newStmts;
+        }
+
+        // put newStmts to head
+        blocks.get(0).stmts.addAll(0, loadStmts);
+
+        // write back the global vars
+        ArrayList<IRStmt> storeStmts = new ArrayList<>();
+        for (String key : globalVars.keySet())
+            if (isModified.contains(key)){
+                String newName = globalVars.get(key);
+                storeStmts.add(new StoreStmt(globalVarTypes.get(key), newName, key));
+            }
+        // add store stmts in front of RetStmts
+        for (IRBlock block : blocks) {
+            for (int i = 0; i < block.stmts.size(); i++) {
+                IRStmt stmt = block.stmts.get(i);
+                if (stmt instanceof ReturnStmt) {
+                    block.stmts.addAll(i, storeStmts);
+                    break;
+                }
+            }
+        }
     }
 
     // -------------------------
