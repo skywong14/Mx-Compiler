@@ -48,19 +48,14 @@ public class RegAllocator {
         String regName = null;
         boolean spiltFlag = false;
         int useReg = -1, useEnd = -1;
-//        int inherit = -1; // joint
         Interval(int start, int end, String regName) {
             this.start = start;
             this.end = end;
             this.regName = regName;
         }
 
-        public int compareByEnd(Interval other) {
-            return Integer.compare(other.end, this.end); // end值大的优先
-        }
-
         public int compareByStart(Interval other) {
-            return Integer.compare(other.end, this.end); // 按start值升序排列
+            return Integer.compare(this.start, other.start); // 按start值升序排列
         }
 
         @Override
@@ -210,6 +205,7 @@ public class RegAllocator {
             }
         if (maxEndInterval.end > curInterval.end) {
             // spill
+            debug("[spill] allocate + {" + curInterval.regName + "}, spill + {" + maxEndInterval.regName + "}   , time:" + curInterval.end + ", " + maxEndInterval.end);
             int reg = tempMap.get(maxEndInterval);
             occupiedIntervals.remove(ind);
             maxEndInterval.useReg = -1;
@@ -295,6 +291,11 @@ public class RegAllocator {
 
         // analyze live intervals
         getLiveIntervals();
+
+        // output intervals
+        for (String regName : intervals.keySet()) {
+            System.out.println("# [interval] " + regName + ": " + intervals.get(regName).start + ", " + intervals.get(regName).end);
+        }
 
         // allocate registers
         allocateRegisters();
