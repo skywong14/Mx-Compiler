@@ -1,5 +1,6 @@
 package optimize;
 
+import IR.IRBuilder;
 import IR.IRStmts.*;
 
 import java.util.ArrayList;
@@ -54,6 +55,26 @@ public class IRCode{
         return sb.toString();
     }
 
+    void inlineInitCall() {
+        IRFunction initCallFunc = null;
+        IRFunction mainFunc = null;
+        for (IRFunction func : funcStmts)
+            if (func.name.equals("__Mx_global_var_init__"))
+                initCallFunc = func;
+            else if (func.name.equals("main"))
+                mainFunc = func;
+        if (initCallFunc == null || mainFunc == null) throw new RuntimeException("No main function / __Mx_global_var_init__ function found");
+        if (initCallFunc.blocks.size() == 1 && initCallFunc.blocks.get(0).stmts.size() == 1) {
+            funcStmts.remove(initCallFunc);
+            for (IRStmt stmt : mainFunc.blocks.get(0).stmts)
+                if (stmt instanceof CallStmt callStmt && callStmt.funcName.equals("__Mx_global_var_init__")) {
+                    mainFunc.blocks.get(0).stmts.remove(stmt);
+                    break;
+            }
+            return;
+        }
+    }
+
     public void optimize() {
         // mem2reg in IR, add phi_stmts
         for (IRFunction func : funcStmts) {
@@ -62,9 +83,11 @@ public class IRCode{
         }
 
         // stupid optimize
-        for (IRFunction func : funcStmts) {
+        for (int i = 0; i < funcStmts.size(); i++) {
+            IRFunction func = funcStmts.get(i);
             func.stupidOptimize();
         }
+        inlineInitCall();
 
         // constant propagation in IR
         for (IRFunction func : funcStmts) {

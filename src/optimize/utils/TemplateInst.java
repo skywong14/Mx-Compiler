@@ -22,7 +22,7 @@ public class TemplateInst extends ASMInst {
     public String toString() {
         StringBuilder sb = new StringBuilder();
         for (ASMInst inst : insts) {
-            sb.append(inst).append("\n");
+            sb.append("\t").append(inst).append("\n");
         }
         return sb.toString();
     }

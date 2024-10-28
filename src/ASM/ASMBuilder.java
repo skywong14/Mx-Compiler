@@ -819,10 +819,10 @@ public class ASMBuilder {
                     freeRegList.remove(freeRegId);
                     useFreeReg.put("a" + i, freeReg);
                     func.addInst(new MvInst(freeReg, "a" + i));
-                    System.out.println("# ["+ func.name +"] use free reg: [" + freeReg + "] for [a" + i + "]");
+//                    System.out.println("# ["+ func.name +"] use free reg: [" + freeReg + "] for [a" + i + "]");
                     if (!usedReg[freeRegId]) {
                         usedReg[freeRegId] = true;
-                        System.out.println("#   extra reg: [" + physicalReg.getName(freeRegId) + "]");
+//                        System.out.println("#   extra reg: [" + physicalReg.getName(freeRegId) + "]");
                         func.prologue.add(Sw(physicalReg.getName(freeRegId), func.spOffset - 40 - freeRegId * 4, "sp"));
                         func.epilogue.add(Lw(physicalReg.getName(freeRegId), func.spOffset - 40 - freeRegId * 4, "sp"));
                     }
