@@ -23,7 +23,6 @@ public class ASMBuilder {
 
     RegAllocator regAllocator = null;
 
-    HashMap<Integer, String> spiltRegMap;
     boolean[] usedReg;
 
     static boolean outOfBound(int imm) {
@@ -75,15 +74,13 @@ public class ASMBuilder {
     }
 
     static class AllocaState{
-        int state = 0; // 0: has physical register, 1: in stack, 2: spilt halfway
+        int state = 0; // 0: has physical register, 1: in stack
         int offset = -1; // if -1, not in stack
         int physicRegId = -1; // if -1, not in physical register
-        int spillTime = -1; // need to spill at spillTime
-        public AllocaState(int state, int offset, int physicRegId, int spillTime) {
+        public AllocaState(int state, int offset, int physicRegId) {
             this.state = state;
             this.offset = offset;
             this.physicRegId = physicRegId;
-            this.spillTime = spillTime;
         }
     }
     HashMap<String, AllocaState> allocaStateMap;
@@ -143,20 +140,18 @@ public class ASMBuilder {
 
         // 预处理寄存器:
         // 1.被溢出: 相对于sp的偏移量 2.分配到物理寄存器：寄存器编号
-        spiltRegMap = new HashMap<>();
         allocaStateMap = new HashMap<>();
         int tmpOffset = asmFunc.spOffset - 92 - 4;
         for (String regName : regAllocator.intervals.keySet()) {
             if (regAllocator.hasReg(regName) != -1) {
                 if (regAllocator.isSpilt(regName)) {
-                    allocaStateMap.put(regName, new AllocaState(2, tmpOffset, regAllocator.hasReg(regName), regAllocator.getSpillTime(regName)));
+                    allocaStateMap.put(regName, new AllocaState(2, tmpOffset, regAllocator.hasReg(regName)));
                     tmpOffset -= 4;
-                    spiltRegMap.put(regAllocator.getSpillTime(regName), regName); // 放入spiltRegMap
                 } else {
-                    allocaStateMap.put(regName, new AllocaState(0, -1, regAllocator.hasReg(regName), -1));
+                    allocaStateMap.put(regName, new AllocaState(0, -1, regAllocator.hasReg(regName)));
                 }
             } else {
-                allocaStateMap.put(regName, new AllocaState(1, tmpOffset, -1, -1));
+                allocaStateMap.put(regName, new AllocaState(1, tmpOffset, -1));
                 tmpOffset -= 4;
             }
         }
@@ -225,7 +220,6 @@ public class ASMBuilder {
                 asmFunc.newBlock(asmFunc.blockHead + irBlock.label);
             for (IRStmt irStmt : irBlock.stmts) {
                 stmtCnt++;
-                checkSpiltReg(asmFunc, stmtCnt);
                 visitIRStmt(irStmt, asmFunc, stmtCnt);
             }
         }
@@ -262,17 +256,6 @@ public class ASMBuilder {
     void buildGlobalVariables() {
         for (GlobalVariableDeclareStmt irStmt: irCode.globalVariables)
             dataSection.addGlobalVariable(irStmt.name, "0");
-    }
-
-    void checkSpiltReg(ASMFunc func, int stmtCnt) {
-        while (spiltRegMap.containsKey(stmtCnt)) {
-            String regName = spiltRegMap.get(stmtCnt);
-            int offset = allocaStateMap.get(regName).offset;
-            int physicRegId = allocaStateMap.get(regName).physicRegId;
-            if (physicRegId == -1) throw new RuntimeException("spilt register has no physical register");
-            func.addInst(Sw(physicalReg.getReg(physicRegId).name, offset, "sp"));
-            spiltRegMap.remove(stmtCnt);
-        }
     }
 
     void visitIRStmt(IRStmt irStmt, ASMFunc func, int stmtCnt) {
@@ -477,7 +460,7 @@ public class ASMBuilder {
 
 
         String destReg = tempReg;
-        if (destState.state == 0 || destState.state == 2 && destState.spillTime < stmtCnt)
+        if (destState.state == 0)
             destReg = physicalReg.getReg(destState.physicRegId).name;
         return destReg;
     }
@@ -498,7 +481,6 @@ public class ASMBuilder {
         String destReg = getDestReg(irStmt.dest, stmtCnt, "t0");
 
         if (!isRegister(irStmt.register1) && !isRegister(irStmt.register2)) {
-            // todo : both are value, optimize in IRBuilder
             int val1 = resolveValue(irStmt.register1);
             int val2 = resolveValue(irStmt.register2);
             func.addInst(new LiInst("t1", val1));

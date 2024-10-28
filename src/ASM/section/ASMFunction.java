@@ -6,6 +6,7 @@ import ASM.operand.PhysicalReg;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+// old version of ASMFunction
 public class ASMFunction {
     public String name;
     public ArrayList<ASMBlock> blocks;

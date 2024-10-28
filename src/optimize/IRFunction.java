@@ -803,7 +803,7 @@ public class IRFunction extends IRStmt {
             loadStmts.add(new LoadStmt(globalVarTypes.get(key), key, newName));
         }
 
-        // remove the load stmts, and replace the globalVar with localVar
+        // modify loadStmt and storeStmt
         for (IRBlock block : blocks){
             ArrayList<IRStmt> newStmts = new ArrayList<>();
             for (IRStmt stmt : block.stmts) {
@@ -813,62 +813,19 @@ public class IRFunction extends IRStmt {
                             newStmts.add(stmt);
                             continue;
                         }
-                        newStmts.add(new MoveStmt(globalVars.get(store.dest), getReplacedWith(store.val)));
+                        newStmts.add(new MoveStmt(globalVars.get(store.dest), store.val));
                         isModified.add(store.dest);
                     } else {
-                        store.dest = getReplacedWith(store.dest);
-                        store.val = getReplacedWith(store.val);
                         newStmts.add(stmt);
                     }
                 } else if (stmt instanceof LoadStmt load) {
-                    if (load.pointer.startsWith("@")) continue;
-                    load.pointer = getReplacedWith(load.pointer);
-                    load.dest = getReplacedWith(load.dest);
+                    if (load.pointer.startsWith("@")) {
+                        newStmts.add(new MoveStmt(load.dest, globalVars.get(load.pointer)));
+                    } else {
+                        newStmts.add(stmt);
+                    }
+                } else
                     newStmts.add(stmt);
-                } else if (stmt instanceof BinaryExprStmt binaryExpr) {
-                    binaryExpr.register1 = getReplacedWith(binaryExpr.register1);
-                    binaryExpr.register2 = getReplacedWith(binaryExpr.register2);
-                    binaryExpr.dest = getReplacedWith(binaryExpr.dest);
-                    newStmts.add(stmt);
-                } else if (stmt instanceof CallStmt call) {
-                    call.dest = getReplacedWith(call.dest);
-                    for (int i = 0; i < call.args.size(); i++)
-                        call.args.set(i, getReplacedWith(call.args.get(i)));
-                } else if (stmt instanceof GetElementPtrStmt getElementPtr) {
-                    getElementPtr.pointer = getReplacedWith(getElementPtr.pointer);
-                    getElementPtr.dest = getReplacedWith(getElementPtr.dest);
-                    getElementPtr.index = getReplacedWith(getElementPtr.index);
-                    newStmts.add(stmt);
-                } else if (stmt instanceof UnaryExprStmt unaryExpr) {
-                    unaryExpr.register = getReplacedWith(unaryExpr.register);
-                    unaryExpr.dest = getReplacedWith(unaryExpr.dest);
-                    newStmts.add(stmt);
-                } else if (stmt instanceof SelectStmt select) {
-                    select.cond = getReplacedWith(select.cond);
-                    select.trueVal = getReplacedWith(select.trueVal);
-                    select.falseVal = getReplacedWith(select.falseVal);
-                    select.dest = getReplacedWith(select.dest);
-                    newStmts.add(stmt);
-                } else if (stmt instanceof BranchStmt branch) {
-                    branch.condition = getReplacedWith(branch.condition);
-                    newStmts.add(stmt);
-                } else if (stmt instanceof ReturnStmt ret) {
-                    if (ret.src != null) ret.src = getReplacedWith(ret.src);
-                    newStmts.add(stmt);
-                } else if (stmt instanceof PhiStmt phiStmt) {
-                    phiStmt.dest = getReplacedWith(phiStmt.dest);
-                    HashMap<String, String> newVals = new HashMap<>();
-                    for (String key : phiStmt.val.keySet())
-                        newVals.put(key, getReplacedWith(phiStmt.val.get(key)));
-                    phiStmt.val = newVals;
-                    newStmts.add(stmt);
-                } else if (stmt instanceof MoveStmt moveStmt) {
-                    moveStmt.src = getReplacedWith(moveStmt.src);
-                    moveStmt.dest = getReplacedWith(moveStmt.dest);
-                    newStmts.add(stmt);
-                } else {
-                    throw new RuntimeException("[g2l]: unknown stmt: " + stmt);
-                }
             }
             block.stmts = newStmts;
         }

@@ -121,14 +121,6 @@ public class RegAllocator {
                 newLiveIn.removeAll(util.getDef(stmt));
                 newLiveIn.addAll(util.getUse(stmt));
 
-                if (util.getUse(stmt).contains("@x") || util.getDef(stmt).contains("@x")) {
-                    debug("{stmt}: " + i + " | " + linearStmts.get(i));
-                    debug("     liveIn: " + newLiveIn);
-                    debug("     liveOut: " + newLiveOut);
-                    debug("     def: " + util.getDef(stmt));
-                    debug("     use: " + util.getUse(stmt));
-                }
-
                 // check if changed
                 if (!newLiveIn.equals(liveIn.get(i)) || !newLiveOut.equals(liveOut.get(i))) {
                     changeFlag = true;
@@ -145,7 +137,7 @@ public class RegAllocator {
             return;
         }
         intervals.get(reg).start = min(intervals.get(reg).start, stmtIndex);
-        intervals.get(reg).end = max(stmtIndex, intervals.get(reg).end + 1);
+        intervals.get(reg).end = max(stmtIndex + 1, intervals.get(reg).end);
     }
 
     void calcIntervals() {
@@ -205,7 +197,6 @@ public class RegAllocator {
             }
         if (maxEndInterval.end > curInterval.end) {
             // spill
-            debug("[spill] allocate + {" + curInterval.regName + "}, spill + {" + maxEndInterval.regName + "}   , time:" + curInterval.end + ", " + maxEndInterval.end);
             int reg = tempMap.get(maxEndInterval);
             occupiedIntervals.remove(ind);
             maxEndInterval.useReg = -1;
@@ -220,7 +211,7 @@ public class RegAllocator {
     }
 
     void allocateRegisters() {
-        int freeRegNum = 22; // [0, 22)
+        int freeRegNum = 5; // [0, 22)
         freeRegs = new HashSet<>();
         for (int i = 0; i < freeRegNum; i++) freeRegs.add(i);
         occupiedIntervals = new ArrayList<>(); // 当前占有寄存器的区间，按end值的大根堆
@@ -293,9 +284,9 @@ public class RegAllocator {
         getLiveIntervals();
 
         // output intervals
-        for (String regName : intervals.keySet()) {
-            System.out.println("# [interval] " + regName + ": " + intervals.get(regName).start + ", " + intervals.get(regName).end);
-        }
+//        for (String regName : intervals.keySet()) {
+//            System.out.println("# [interval] " + regName + ": " + intervals.get(regName).start + ", " + intervals.get(regName).end);
+//        }
 
         // allocate registers
         allocateRegisters();

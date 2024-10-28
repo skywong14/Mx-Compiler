@@ -21,6 +21,7 @@ public class TemplateInst extends ASMInst {
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
+
         for (ASMInst inst : insts) {
             sb.append("\t").append(inst).append("\n");
         }
