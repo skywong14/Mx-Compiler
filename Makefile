@@ -1,6 +1,6 @@
 .PHONY: build
 build:
-	find src -name '*.java' | xargs javac -d bin -cp /ulib/antlr-4.13.2-complete.jar
+	find src -name '*.java' | xargs javac -d bin -cp /ulib/antlr-4.13.2-complete.jar -Xlint:none
 .PHONY: run
 run:
 	java -cp /ulib/antlr-4.13.2-complete.jar:bin Main -emit-llvm
