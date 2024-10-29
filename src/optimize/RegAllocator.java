@@ -120,6 +120,16 @@ public class RegAllocator {
             blockLiveOut.add(new HashSet<>());
             blockLiveIn.get(i).addAll(blockUse.get(i));
         }
+
+        ArrayList<ArrayList<String>> newLiveIn = new ArrayList<>(), newLiveOut = new ArrayList<>();
+        ArrayList<ArrayList<String>> lstLiveIn = new ArrayList<>();
+        for (int i = 0; i < linearOrder.size(); i++) {
+            newLiveIn.add(new ArrayList<>());
+            newLiveIn.get(i).addAll(blockLiveIn.get(i));
+            lstLiveIn.add(newLiveIn.get(i));
+            newLiveOut.add(new ArrayList<>());
+        }
+
         boolean changeFlag = true;
         while (changeFlag) {
             changeFlag = false;
@@ -128,21 +138,29 @@ public class RegAllocator {
                 HashSet<String> curLiveOut = blockLiveOut.get(i);
                 // liveOut[s] = union liveIn[succ]
                 for (IRBlock succ : block.succ) {
-                    int succIndex = linearOrder.indexOf(succ);
-                    for (String reg : blockLiveIn.get(succIndex)) {
+                    int succIndex = succ.topoIndex;
+                    for (String reg : lstLiveIn.get(succIndex)) {
                         if (curLiveOut.contains(reg)) continue;
                         changeFlag = true;
                         curLiveOut.add(reg);
+                        newLiveOut.get(i).add(reg);
                     }
                 }
                 // liveIn[s] = use[s] + (liveOut[s] - def[s])
                 HashSet<String> curLiveIn = blockLiveIn.get(i);
-                for (String reg : curLiveOut) {
+                for (String reg : newLiveOut.get(i)) {
                     if (blockDef.get(i).contains(reg)) continue;
                     if (curLiveIn.contains(reg)) continue;
                     changeFlag = true;
                     curLiveIn.add(reg);
+                    newLiveIn.get(i).add(reg);
                 }
+            }
+
+            for (int i = 0; i < linearOrder.size(); i++) {
+                lstLiveIn.set(i, newLiveIn.get(i));
+                newLiveIn.set(i, new ArrayList<>());
+                newLiveOut.set(i, new ArrayList<>());
             }
         }
 
@@ -170,13 +188,6 @@ public class RegAllocator {
                 }
             }
         }
-
-        // debug
-//        for (int i = 0; i < linearStmts.size(); i++) {
-//            System.out.println("# [RegAllocator]: " + linearStmts.get(i));
-//            System.out.println("#    [RegAllocator]: liveIn: " + liveIn.get(i));
-//            System.out.println("#    [RegAllocator]: liveOut: " + liveOut.get(i));
-//        }
     }
 
     void livenessAnalysis() {
