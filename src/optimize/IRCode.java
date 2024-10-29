@@ -114,5 +114,9 @@ public class IRCode{
         for (IRFunction func : funcStmts) {
             func.erasePhi();
         }
+
+        for (IRFunction function : funcStmts) {
+            function.stupidOptimize();
+        }
     }
 }

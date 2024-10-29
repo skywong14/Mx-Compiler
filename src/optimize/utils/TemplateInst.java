@@ -21,9 +21,11 @@ public class TemplateInst extends ASMInst {
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-
+        boolean isHead = true;
         for (ASMInst inst : insts) {
-            sb.append("\t").append(inst).append("\n");
+            if (isHead) isHead = false;
+            else sb.append("\t");
+            sb.append(inst).append("\n");
         }
         return sb.toString();
     }

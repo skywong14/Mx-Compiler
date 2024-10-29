@@ -2,6 +2,7 @@ package ASM;
 
 import ASM.inst.*;
 import ASM.operand.PhysicalReg;
+import ASM.section.ASMBlock;
 import ASM.section.DataSection;
 import ASM.section.RodataSection;
 import ASM.section.TextSection;
@@ -87,6 +88,13 @@ public class ASMBuilder {
 
     int calcOffset(IRFunction func) {
         int spOffset = 92; // 92 bytes for ra, a0 ~ a7, s0 ~ s11 ,tp, gp
+//        physicalReg.initOffset();
+//        for (int i = 0; i < 22; i++) {
+//            if (usedReg[i]) {
+//                spOffset += 4;
+//                physicalReg.setOffset(i, spOffset);
+//            }
+//        }
         for (String regName : regAllocator.intervals.keySet()) {
             if (regAllocator.hasReg(regName) != -1 || regAllocator.isSpilt(regName))
                 spOffset += 4;
@@ -123,7 +131,11 @@ public class ASMBuilder {
     }
 
     void buildFunction(IRFunction func, int funcCnt) {
+        debug("function begin: " + func.name);
+
         regAllocator = new RegAllocator(func); // allocate virtual registers to physical registers
+
+        debug("allocate finish: " + func.name);
 
         ASMFunc asmFunc = new ASMFunc(func.name, funcCnt);
 
@@ -218,14 +230,32 @@ public class ASMBuilder {
                 asmFunc.curBlock = asmFunc.blocks.get(0);
             else
                 asmFunc.newBlock(asmFunc.blockHead + irBlock.label);
-            for (IRStmt irStmt : irBlock.stmts) {
+            for (int i = 0; i < irBlock.stmts.size(); i++) {
                 stmtCnt++;
+                IRStmt irStmt = irBlock.stmts.get(i);
+                if (irStmt instanceof CallStmt callStmt && isTailRecursion(callStmt, irBlock.stmts.get(i + 1), asmFunc)) {
+                    // tail recursion
+                    visitTailRecursion(callStmt, asmFunc, stmtCnt, irBlock);
+                    break;
+                }
                 visitIRStmt(irStmt, asmFunc, stmtCnt);
             }
         }
 
         // add to textSection
-        asmFunc.blocks.get(0).insts.addAll(0, prologue);
+        if (!asmFunc.needPrologueBlock)
+            asmFunc.blocks.get(0).insts.addAll(0, prologue);
+        else {
+            // add a new block for prologue and tailRecursion
+            ASMBlock headBlock = asmFunc.blocks.get(0);
+            ASMBlock prologueBlock = new ASMBlock(headBlock.label);
+            prologueBlock.addInst(prologue); prologueBlock.isGlobal = true; prologueBlock.alignSize = 2;
+            headBlock.isGlobal = false; headBlock.alignSize = 0;
+            prologueBlock.addInst(new JInst(asmFunc.blockHead + asmFunc.name + ".prologue"));
+            headBlock.label = asmFunc.blockHead + asmFunc.name + ".prologue";
+            asmFunc.blocks.add(0, prologueBlock);
+        }
+
         epilogue.addAll(ArithImm("+", "sp", "sp", asmFunc.spOffset)); // restore sp
         asmFunc.epilogue.add(new RetInst()); // return
 
@@ -286,11 +316,8 @@ public class ASMBuilder {
 
     void visitMoveStmt(MoveStmt irStmt, ASMFunc func, int stmtCnt) {
         AllocaState destState = allocaStateMap.get(irStmt.dest);
-        if (destState == null) {
-            // todo : this value is not used, optimize in IRBuilder
+        if (destState == null)
             return;
-            //throw new RuntimeException("MoveStmt: dest is not in allocaStateMap:" + irStmt.dest);
-        }
         if (destState.state == 0) {
             // has physical register
             if (!isRegister(irStmt.src)) {
@@ -452,12 +479,8 @@ public class ASMBuilder {
     String getDestReg(String regName, int stmtCnt, String tempReg) {
         // [def] of a register
         AllocaState destState = allocaStateMap.get(regName);
-        if (destState == null) {
-            // todo: this value is not used, optimize in IRBuilder
+        if (destState == null)
             return "t6";
-            // throw new RuntimeException("getDestReg: dest is not in allocaStateMap:" + regName);
-        }
-
 
         String destReg = tempReg;
         if (destState.state == 0)
@@ -656,7 +679,6 @@ public class ASMBuilder {
         String srcReg = "t1";
         String destReg = getDestReg(irStmt.dest, stmtCnt, "t0");
         if (!isRegister(irStmt.register)) {
-            //todo optimize in irBuilder
             int val = resolveValue(irStmt.register);
             func.addInst(new LiInst("t1", val));
         } else {
@@ -778,12 +800,47 @@ public class ASMBuilder {
             }
     }
 
+    boolean isTailRecursion(CallStmt irStmt, IRStmt nxtStmt, ASMFunc func) {
+        if (!irStmt.funcName.equals(func.name)) return false;
+        if (nxtStmt instanceof ReturnStmt ret
+            && (ret.src == null || ret.src.equals(irStmt.dest))) return true;
+        return false;
+    }
+
+    void visitTailRecursion(CallStmt irStmt, ASMFunc func, int stmtCnt, IRBlock curBlock) {
+        // store arguments to a0 ~ a7
+        func.needPrologueBlock = true;
+
+        // on stack todo check correctness
+        for (int i = irStmt.args.size() - 1; i >= 8; i--) {
+            int offset = (i - 8) * 4 + func.spOffset;
+            String srcReg;
+            if (isRegister(irStmt.args.get(i))) srcReg = resolveRegister(irStmt.args.get(i), func, stmtCnt, "t0");
+            else {
+                int val = resolveValue(irStmt.args.get(i));
+                func.addInst(new LiInst("t0", val));
+                srcReg = "t0";
+            }
+            func.addInst(Sw(srcReg, offset, "sp"));
+        }
+
+        // store arguments to a0 ~ a7
+        int argSize = Math.min(irStmt.args.size(), 8);
+        ArrayList<String> from = new ArrayList<>();
+        ArrayList<String> to = new ArrayList<>();
+        for (int i = 0; i < argSize; i++) {
+            from.add(irStmt.args.get(i));
+            to.add("a" + i);
+        }
+        virtual2Physical(from, to, func, stmtCnt);
+
+        func.addInst(new JInst(func.blockHead + irStmt.funcName + ".prologue"));
+    }
+
     void visitCallStmt(CallStmt irStmt, ASMFunc func, int stmtCnt) {
         func.addInst(new CommentInst(""));
-        // save a0 ~ a7 on stack before call
-        // store a7 ~ a0 on [top - 36 , top - 4)
 
-        // use some temp regs
+        // use some temp regs to save a-registers
         HashSet<Integer> freeRegList = new HashSet<>();
         HashMap<String, String> useFreeReg = new HashMap<>();
 

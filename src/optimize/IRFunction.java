@@ -753,6 +753,9 @@ public class IRFunction extends IRStmt {
                 }
             }
         }
+        // stupid optimize in Block
+        // like: %2 = %1, %3 = %2 -> %3 = %1 (%2 used only once)
+        //todo
     }
 
     public void constantPropagation() {

@@ -5,8 +5,10 @@ import java.util.HashMap;
 public class PhysicalReg {
     public Register zero, ra, sp, gp, tp;
     public Register[] a, s, t; // a: 0~7  s: 0~11  t: 0~6
+    public int[] offset;
     public HashMap<Integer, Register> regMap;
     public PhysicalReg(){
+        offset = new int[32];
         zero = new Register("zero", 0);
         ra = new Register("ra", 1);
         sp = new Register("sp", 2);

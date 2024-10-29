@@ -14,6 +14,7 @@ public class ASMFunc {
     public int spOffset;
     public TemplateInst epilogue;
     public TemplateInst prologue;
+    public boolean needPrologueBlock = false;
 
     public ArrayList<ASMInst> inits, ends;
 
