@@ -95,38 +95,73 @@ public class RegAllocator {
 
         boolean changeFlag = true;
         LivenessAnalysis util = new LivenessAnalysis();
+        int cnt = 0;
+        // init all use and def
+        ArrayList<HashSet<String>> use = new ArrayList<>(), def = new ArrayList<>();
+        for (int i = 0; i < linearStmts.size(); i++) {
+            use.add(util.getUse(linearStmts.get(i)));
+            def.add(util.getDef(linearStmts.get(i)));
+            liveIn.get(i).addAll(use.get(i));
+        }
         while (changeFlag) {
             changeFlag = false;
+            System.out.println("# [RegAllocator]: " + func.name + ", livenessAnalysis, round: " + (++cnt));
             for (int i = linearStmts.size() - 1; i >= 0; i--) {
                 IRStmt stmt = linearStmts.get(i);
-                HashSet<String> newLiveOut = new HashSet<>(), newLiveIn = new HashSet<>();
+                HashSet<String> curLiveOut = liveOut.get(i);
                 // liveOut[s] = union liveIn[succ]
                 if (stmt instanceof BranchStmt branchStmt) {
                     if (branchStmt.condition != null) {
                         int succIndex = blockHeadNumber.get(branchStmt.trueLabel);
-                        newLiveOut.addAll(liveIn.get(succIndex));
+                        for (String reg : liveIn.get(succIndex)) {
+                            if (curLiveOut.contains(reg)) continue;
+                            changeFlag = true;
+                            curLiveOut.add(reg);
+                        }
+//                        newLiveOut.addAll(liveIn.get(succIndex));
                         succIndex = blockHeadNumber.get(branchStmt.falseLabel);
-                        newLiveOut.addAll(liveIn.get(succIndex));
+                        for (String reg : liveIn.get(succIndex)) {
+                            if (curLiveOut.contains(reg)) continue;
+                            changeFlag = true;
+                            curLiveOut.add(reg);
+                        }
+//                        newLiveOut.addAll(liveIn.get(succIndex));
                     } else {
                         int succIndex = blockHeadNumber.get(branchStmt.trueLabel);
-                        newLiveOut.addAll(liveIn.get(succIndex));
+//                        newLiveOut.addAll(liveIn.get(succIndex));
+                        for (String reg : liveIn.get(succIndex)) {
+                            if (curLiveOut.contains(reg)) continue;
+                            changeFlag = true;
+                            curLiveOut.add(reg);
+                        }
                     }
-                } else if (stmt instanceof ReturnStmt returnStmt) {
+                } else if (stmt instanceof ReturnStmt) {
                     // do nothing
                 } else if (i + 1 < linearStmts.size()) {
-                    newLiveOut.addAll(liveIn.get(i + 1));
+//                    newLiveOut.addAll(liveIn.get(i + 1));
+                    for (String reg : liveIn.get(i + 1)) {
+                        if (curLiveOut.contains(reg)) continue;
+                        changeFlag = true;
+                        curLiveOut.add(reg);
+                    }
                 }
-                // liveIn[s] = use[s] + (liveOut[s] - def[s])
-                newLiveIn.addAll(newLiveOut);
-                newLiveIn.removeAll(util.getDef(stmt));
-                newLiveIn.addAll(util.getUse(stmt));
+                // liveIn[s] += (liveOut[s] - def[s])
+                for (String reg : curLiveOut) {
+                    if (def.get(i).contains(reg)) continue;
+                    if (liveIn.get(i).contains(reg)) continue;
+                    changeFlag = true;
+                    liveIn.get(i).add(reg);
+                }
+//                newLiveIn.addAll(newLiveOut);
+//                newLiveIn.removeAll(def.get(i));
+//                newLiveIn.addAll(use.get(i));
 
                 // check if changed
-                if (!newLiveIn.equals(liveIn.get(i)) || !newLiveOut.equals(liveOut.get(i))) {
-                    changeFlag = true;
-                    liveIn.set(i, newLiveIn);
-                    liveOut.set(i, newLiveOut);
-                }
+//                if (!newLiveIn.equals(liveIn.get(i)) || !newLiveOut.equals(liveOut.get(i))) {
+//                    changeFlag = true;
+//                    liveIn.set(i, newLiveIn);
+//                    liveOut.set(i, newLiveOut);
+//                }
             }
         }
     }
@@ -171,8 +206,11 @@ public class RegAllocator {
 
     void getLiveIntervals() {
         intervals = new HashMap<>();
+        System.out.println("# [RegAllocator]: " + func.name + ", numberStmt");
         numberStmt();
+        System.out.println("# [RegAllocator]: " + func.name + ", livenessAnalysis");
         livenessAnalysis();
+        System.out.println("# [RegAllocator]: " + func.name + ", calcIntervals");
         calcIntervals();
     }
 
