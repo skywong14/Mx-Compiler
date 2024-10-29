@@ -223,11 +223,8 @@ public class RegAllocator {
 
     void getLiveIntervals() {
         intervals = new HashMap<>();
-        System.out.println("# [RegAllocator]: " + func.name + ", numberStmt");
         numberStmt();
-        System.out.println("# [RegAllocator]: " + func.name + ", livenessAnalysis");
         livenessAnalysis();
-        System.out.println("# [RegAllocator]: " + func.name + ", calcIntervals");
         calcIntervals();
     }
 

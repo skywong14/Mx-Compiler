@@ -168,7 +168,7 @@ public class ASMBuilder {
             }
         }
 
-        outputAllocaResult();
+//        outputAllocaResult();
 
         // init usedReg
         colloectUsedReg();
