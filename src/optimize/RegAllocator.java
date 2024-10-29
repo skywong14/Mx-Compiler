@@ -84,6 +84,101 @@ public class RegAllocator {
         }
     }
 
+    void livenessAnalysisPlus() {
+        liveIn = new ArrayList<>();
+        liveOut = new ArrayList<>();
+        // size + 1 for the boundary
+        for (int i = 0; i <= linearStmts.size(); i++) {
+            liveIn.add(new HashSet<>());
+            liveOut.add(new HashSet<>());
+        }
+        LivenessAnalysis util = new LivenessAnalysis();
+        ArrayList<HashSet<String>> blockUse = new ArrayList<>(), blockDef = new ArrayList<>();
+        for (int i = 0; i < linearOrder.size(); i++) {
+            blockUse.add(new HashSet<>());
+            blockDef.add(new HashSet<>());
+        }
+        // analyze [use] and [def] inside a block
+        for (int i = 0; i < linearOrder.size(); i++) {
+            IRBlock block = linearOrder.get(i);
+            HashSet<String> use = new HashSet<>(), def = new HashSet<>();
+            HashSet<String> curUse, curDef;
+            for (IRStmt stmt : block.stmts) {
+                curUse = util.getUse(stmt);
+                curDef = util.getDef(stmt);
+                def.addAll(curDef);
+                for (String reg : curUse)
+                    if (!def.contains(reg)) use.add(reg);
+            }
+            blockUse.set(i, use);
+            blockDef.set(i, def);
+        }
+        // worklist algorithm
+        ArrayList<HashSet<String>> blockLiveIn = new ArrayList<>(), blockLiveOut = new ArrayList<>();
+        for (int i = 0; i < linearOrder.size(); i++) {
+            blockLiveIn.add(new HashSet<>());
+            blockLiveOut.add(new HashSet<>());
+            blockLiveIn.get(i).addAll(blockUse.get(i));
+        }
+        boolean changeFlag = true;
+        while (changeFlag) {
+            changeFlag = false;
+            for (int i = linearOrder.size() - 1; i >= 0; i--) {
+                IRBlock block = linearOrder.get(i);
+                HashSet<String> curLiveOut = blockLiveOut.get(i);
+                // liveOut[s] = union liveIn[succ]
+                for (IRBlock succ : block.succ) {
+                    int succIndex = linearOrder.indexOf(succ);
+                    for (String reg : blockLiveIn.get(succIndex)) {
+                        if (curLiveOut.contains(reg)) continue;
+                        changeFlag = true;
+                        curLiveOut.add(reg);
+                    }
+                }
+                // liveIn[s] = use[s] + (liveOut[s] - def[s])
+                HashSet<String> curLiveIn = blockLiveIn.get(i);
+                for (String reg : curLiveOut) {
+                    if (blockDef.get(i).contains(reg)) continue;
+                    if (curLiveIn.contains(reg)) continue;
+                    changeFlag = true;
+                    curLiveIn.add(reg);
+                }
+            }
+        }
+
+        // update liveIn and liveOut in linearStmts
+        for (int i = 0; i < linearOrder.size(); i++) {
+            IRBlock block = linearOrder.get(i);
+            HashSet<String> curLiveOut = blockLiveOut.get(i);
+            ArrayList<IRStmt> stmts = new ArrayList<>(block.stmts);
+            if (block.isHead) {
+                stmts.add(0, new FuncHeadStmt(func));
+            }
+
+            int cnt = blockHeadNumber.get(block.label);
+            liveOut.get(cnt + stmts.size() - 1).addAll(curLiveOut);
+
+            // liveOut[s] = union liveIn[succ]
+            // liveIn[s] = use[s] + (liveOut[s] - def[s])
+            for (int j = stmts.size() - 1; j >= 0; j--) {
+                IRStmt stmt = stmts.get(j);
+                if (j != stmts.size() - 1) liveOut.get(cnt + j).addAll(liveIn.get(cnt + j + 1));
+                liveIn.get(cnt + j).addAll(util.getUse(stmt));
+                for (String reg : liveOut.get(cnt + j)) {
+                    if (util.getDef(stmt).contains(reg)) continue;
+                    liveIn.get(cnt + j).add(reg);
+                }
+            }
+        }
+
+        // debug
+//        for (int i = 0; i < linearStmts.size(); i++) {
+//            System.out.println("# [RegAllocator]: " + linearStmts.get(i));
+//            System.out.println("#    [RegAllocator]: liveIn: " + liveIn.get(i));
+//            System.out.println("#    [RegAllocator]: liveOut: " + liveOut.get(i));
+//        }
+    }
+
     void livenessAnalysis() {
         liveIn = new ArrayList<>();
         liveOut = new ArrayList<>();
@@ -105,18 +200,15 @@ public class RegAllocator {
         }
         HashSet<String> curLiveOut, curLiveIn;
         ArrayList<ArrayList<String>> newLiveIn = new ArrayList<>(), newLiveOut = new ArrayList<>();
-        ArrayList<ArrayList<String>> lstLiveIn = new ArrayList<>(), lstLiveOut = new ArrayList<>();
+        ArrayList<ArrayList<String>> lstLiveIn = new ArrayList<>();
         for (int i = 0; i < linearStmts.size(); i++) {
             newLiveIn.add(new ArrayList<>());
             for (String reg : liveIn.get(i))
                 newLiveIn.get(i).add(reg);
             lstLiveIn.add(newLiveIn.get(i));
             newLiveOut.add(new ArrayList<>());
-            lstLiveOut.add(newLiveOut.get(i));
         }
 
-//        System.out.println("# linearStmts size: " + linearStmts.size());
-//        System.out.println("# blockHeadNumber size: " + blockHeadNumber.size());
         while (changeFlag) {
             changeFlag = false;
 //            System.out.println("# [RegAllocator]: " + func.name + ", livenessAnalysis, round: " + (++cnt));
@@ -176,7 +268,6 @@ public class RegAllocator {
 
             for (int i = 0; i < linearStmts.size(); i++) {
                 lstLiveIn.set(i, newLiveIn.get(i));
-                lstLiveOut.set(i, newLiveOut.get(i));
                 newLiveIn.set(i, new ArrayList<>());
                 newLiveOut.set(i, new ArrayList<>());
             }
@@ -224,7 +315,8 @@ public class RegAllocator {
     void getLiveIntervals() {
         intervals = new HashMap<>();
         numberStmt();
-        livenessAnalysis();
+//        livenessAnalysis();
+        livenessAnalysisPlus();
         calcIntervals();
     }
 

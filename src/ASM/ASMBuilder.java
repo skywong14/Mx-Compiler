@@ -88,13 +88,6 @@ public class ASMBuilder {
 
     int calcOffset(IRFunction func) {
         int spOffset = 92; // 92 bytes for ra, a0 ~ a7, s0 ~ s11 ,tp, gp
-//        physicalReg.initOffset();
-//        for (int i = 0; i < 22; i++) {
-//            if (usedReg[i]) {
-//                spOffset += 4;
-//                physicalReg.setOffset(i, spOffset);
-//            }
-//        }
         for (String regName : regAllocator.intervals.keySet()) {
             if (regAllocator.hasReg(regName) != -1 || regAllocator.isSpilt(regName))
                 spOffset += 4;

@@ -15,6 +15,6 @@ public class FuncHeadStmt extends IRStmt {
 
     @Override
     public String toString() {
-        return "";
+        return "# FunctionHead: " + func.name;
     }
 }

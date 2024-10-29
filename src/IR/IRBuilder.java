@@ -74,11 +74,9 @@ public class IRBuilder  {
             } else if (stmt instanceof FunctionImplementStmt) {
                 irCode.addFunction((FunctionImplementStmt) stmt);
             } else if (stmt instanceof GlobalVariableDeclareStmt) {
-                irCode.globalVariables.add((GlobalVariableDeclareStmt) stmt); //todo
+                irCode.globalVariables.add((GlobalVariableDeclareStmt) stmt);
             } else if (stmt instanceof ClassTypeDefineStmt) {
-                irCode.classTypeDefineStmts.add((ClassTypeDefineStmt) stmt); // todo
-            } else {
-                throw new RuntimeException("Unknown IRStmt: " + stmt.toString());
+                irCode.classTypeDefineStmts.add((ClassTypeDefineStmt) stmt);
             }
         }
     }
