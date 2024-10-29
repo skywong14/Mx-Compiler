@@ -762,6 +762,7 @@ public class IRFunction extends IRStmt {
         // stupid optimize in Block
         // like: %2 = %1, %3 = %2 -> %3 = %1 (%2 used only once)
         // def is a moveStmt
+        // todo : check if [src] is modified between [def] and [use]
         HashMap<String, String> defTmpMap = new HashMap<>(), defMap = new HashMap<>();
         HashMap<String, Integer> defCnt = new HashMap<>();
         for (IRBlock block : blocks)
@@ -826,6 +827,15 @@ public class IRFunction extends IRStmt {
                 }
                 if (stmt instanceof ReturnStmt ret && ret.src != null) {
                     ret.src = getReplacedWith(ret.src, defMap);
+                }
+                if (stmt instanceof PhiStmt phi) {
+                    for (String key : phi.val.keySet()) {
+                        String val = phi.val.get(key);
+                        phi.val.put(key, getReplacedWith(val, defMap));
+                    }
+                }
+                if (stmt instanceof MoveStmt move) {
+                    move.src = getReplacedWith(move.src, defMap);
                 }
             }
     }
