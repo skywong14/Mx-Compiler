@@ -826,6 +826,7 @@ public class IRFunction extends IRStmt {
                     break;
                 }
         }
+        /*
         for (IRBlock block : blocks)
             for (int i = 0; i < block.stmts.size(); i++) {
                 IRStmt stmt = block.stmts.get(i);
@@ -876,7 +877,7 @@ public class IRFunction extends IRStmt {
                 if (stmt instanceof MoveStmt move) {
                     move.src = getReplacedWith(move.src, defMap);
                 }
-            }
+            }*/
     }
 
     public void constantPropagation() {
