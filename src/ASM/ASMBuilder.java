@@ -767,7 +767,6 @@ public class ASMBuilder {
             String fromReg = from.get(i), toReg = to.get(i);
             func.addInst(new MvInst(toReg, fromReg));
         }
-         dependency.debug();
     }
 
     void virtual2Physical(ArrayList<String> from_, ArrayList<String> to_, ASMFunc func, int stmtCnt) {

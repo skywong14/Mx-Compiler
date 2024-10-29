@@ -779,7 +779,6 @@ public class IRFunction extends IRStmt {
                     }
                 }
             }
-        System.out.println("# debugggggg: " + defCnt.get("%.g2l.j"));
         for (String key : defTmpMap.keySet())
             if (defCnt.get(key) == 1) defMap.put(key, defTmpMap.get(key));
         boolean flag = true;

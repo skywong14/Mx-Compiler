@@ -64,7 +64,7 @@ public class DependencyAnalysis {
         }
         graph.get(name2id.get(from_)).children.add(name2id.get(to_));
         graph.get(name2id.get(to_)).parentId = name2id.get(from_);
-        System.out.println("# [dependency] def: " + from_ + " -> " + to_);
+//        System.out.println("# [dependency] def: " + from_ + " -> " + to_);
     }
 
     void dfs(int cur, int idx) {
