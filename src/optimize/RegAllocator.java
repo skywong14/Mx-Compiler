@@ -129,7 +129,7 @@ public class RegAllocator {
             lstLiveIn.add(newLiveIn.get(i));
             newLiveOut.add(new ArrayList<>());
         }
-
+//        System.out.println("# [livenessAnalysisPlus]: start");
         boolean changeFlag = true;
         while (changeFlag) {
             changeFlag = false;
@@ -159,17 +159,22 @@ public class RegAllocator {
 
             for (int i = 0; i < linearOrder.size(); i++) {
                 lstLiveIn.set(i, newLiveIn.get(i));
-                newLiveIn.set(i, new ArrayList<>());
-                newLiveOut.set(i, new ArrayList<>());
+            }
+            newLiveIn = new ArrayList<>();
+            newLiveOut = new ArrayList<>();
+            for (int i = 0; i < linearOrder.size(); i++) {
+                newLiveIn.add(new ArrayList<>());
+                newLiveOut.add(new ArrayList<>());
             }
         }
-
+//        System.out.println("# [livenessAnalysisPlus]: end");
         // update liveIn and liveOut in linearStmts
         for (int i = 0; i < linearOrder.size(); i++) {
             IRBlock block = linearOrder.get(i);
             HashSet<String> curLiveOut = blockLiveOut.get(i);
-            ArrayList<IRStmt> stmts = new ArrayList<>(block.stmts);
+            ArrayList<IRStmt> stmts = block.stmts;
             if (block.isHead) {
+                stmts = new ArrayList<>(block.stmts);
                 stmts.add(0, new FuncHeadStmt(func));
             }
 
@@ -180,11 +185,12 @@ public class RegAllocator {
             // liveIn[s] = use[s] + (liveOut[s] - def[s])
             for (int j = stmts.size() - 1; j >= 0; j--) {
                 IRStmt stmt = stmts.get(j);
-                if (j != stmts.size() - 1) liveOut.get(cnt + j).addAll(liveIn.get(cnt + j + 1));
-                liveIn.get(cnt + j).addAll(util.getUse(stmt));
-                for (String reg : liveOut.get(cnt + j)) {
+                HashSet<String> curLiveIn = liveIn.get(cnt + j), curLiveOut2 = liveOut.get(cnt + j);
+                if (j != stmts.size() - 1) curLiveOut2.addAll(liveIn.get(cnt + j + 1));
+                curLiveIn.addAll(util.getUse(stmt));
+                for (String reg : curLiveOut2) {
                     if (util.getDef(stmt).contains(reg)) continue;
-                    liveIn.get(cnt + j).add(reg);
+                    curLiveIn.add(reg);
                 }
             }
         }
@@ -222,7 +228,6 @@ public class RegAllocator {
 
         while (changeFlag) {
             changeFlag = false;
-//            System.out.println("# [RegAllocator]: " + func.name + ", livenessAnalysis, round: " + (++cnt));
             for (int i = linearStmts.size() - 1; i >= 0; i--) {
                 IRStmt stmt = linearStmts.get(i);
                 curLiveOut = liveOut.get(i);
