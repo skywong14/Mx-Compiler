@@ -811,7 +811,7 @@ public class ASMBuilder {
         // store arguments to a0 ~ a7
         func.needPrologueBlock = true;
 
-        // on stack todo check correctness
+        // on stack
         for (int i = irStmt.args.size() - 1; i >= 8; i--) {
             int offset = (i - 8) * 4 + func.spOffset;
             String srcReg;

@@ -728,6 +728,12 @@ public class IRFunction extends IRStmt {
         };
     }
 
+
+    String getReplacedWith(String var, HashMap<String, String> defMap) {
+        if (defMap.containsKey(var)) return defMap.get(var);
+        return var;
+    }
+
     public void stupidOptimize() {
         // stupid binary/unary operation
         for (IRBlock block : blocks) {
@@ -755,7 +761,73 @@ public class IRFunction extends IRStmt {
         }
         // stupid optimize in Block
         // like: %2 = %1, %3 = %2 -> %3 = %1 (%2 used only once)
-        //todo
+        // def is a moveStmt
+        HashMap<String, String> defTmpMap = new HashMap<>(), defMap = new HashMap<>();
+        HashMap<String, Integer> defCnt = new HashMap<>();
+        for (IRBlock block : blocks)
+            for (IRStmt stmt : block.stmts)
+                if (stmt instanceof MoveStmt move) {
+                    if (!defTmpMap.containsKey(move.dest)) {
+                        defTmpMap.put(move.dest, move.src);
+                        defCnt.put(move.dest, 0);
+                    }
+                    defCnt.put(move.dest, defCnt.get(move.dest) + 1);
+                }
+        for (String key : defTmpMap.keySet())
+            if (defCnt.get(key) == 1) defMap.put(key, defTmpMap.get(key));
+        boolean flag = true;
+        while (flag) {
+            flag = false;
+            for (String key : defMap.keySet()) {
+                if (defMap.containsKey(defMap.get(key))) {
+                    defMap.put(key, defMap.get(defMap.get(key)));
+                    flag = true;
+                    break;
+                }
+            }
+        }
+        for (IRBlock block : blocks)
+            for (int i = 0; i < block.stmts.size(); i++) {
+                IRStmt stmt = block.stmts.get(i);
+                if (stmt instanceof MoveStmt move && defMap.containsKey(move.dest)) {
+                    block.stmts.remove(i);
+                    i--;
+                    continue;
+                }
+                if (stmt instanceof LoadStmt load) {
+                    load.pointer = getReplacedWith(load.pointer, defMap);
+                }
+                if (stmt instanceof StoreStmt store) {
+                    store.dest = getReplacedWith(store.dest, defMap);
+                    store.val = getReplacedWith(store.val, defMap);
+                }
+                if (stmt instanceof BinaryExprStmt binaryExpr) {
+                    binaryExpr.register1 = getReplacedWith(binaryExpr.register1, defMap);
+                    binaryExpr.register2 = getReplacedWith(binaryExpr.register2, defMap);
+                }
+                if (stmt instanceof GetElementPtrStmt getElementPtr) {
+                    getElementPtr.pointer = getReplacedWith(getElementPtr.pointer, defMap);
+                    getElementPtr.index = getReplacedWith(getElementPtr.index, defMap);
+                }
+                if (stmt instanceof SelectStmt select) {
+                    select.cond = getReplacedWith(select.cond, defMap);
+                    select.trueVal = getReplacedWith(select.trueVal, defMap);
+                    select.falseVal = getReplacedWith(select.falseVal, defMap);
+                }
+                if (stmt instanceof UnaryExprStmt unaryExpr) {
+                    unaryExpr.register = getReplacedWith(unaryExpr.register, defMap);
+                }
+                if (stmt instanceof CallStmt call) {
+                    for (int j = 0; j < call.args.size(); j++)
+                        call.args.set(j, getReplacedWith(call.args.get(j), defMap));
+                }
+                if (stmt instanceof BranchStmt branch && branch.condition != null) {
+                    branch.condition = getReplacedWith(branch.condition, defMap);
+                }
+                if (stmt instanceof ReturnStmt ret && ret.src != null) {
+                    ret.src = getReplacedWith(ret.src, defMap);
+                }
+            }
     }
 
     public void constantPropagation() {
@@ -773,19 +845,10 @@ public class IRFunction extends IRStmt {
         return false;
     }
 
-
-    private HashMap<String, String> replacedWith;
-
-    String getReplacedWith(String var) {
-        if (replacedWith.containsKey(var)) return replacedWith.get(var);
-        return var;
-    }
-
     public void global2local() {
         // if without funcCall, then replace globalVar with localVar
         if (hasCallStmt()) return;
         // collect all global variables
-        replacedWith = new HashMap<>();
         HashMap<String, BasicIRType> globalVarTypes = new HashMap<>();
         HashMap<String, HashSet<String>> defMap = new HashMap<>();
         for (IRBlock block : blocks)
@@ -794,7 +857,6 @@ public class IRFunction extends IRStmt {
                     globalVarTypes.put(load.pointer, load.type);
                     if (!defMap.containsKey(load.pointer)) defMap.put(load.pointer, new HashSet<>());
                     defMap.get(load.pointer).add(load.dest);
-                    replacedWith.put(load.dest, "%.g2l." + load.pointer.substring(1));
                 }
             }
         HashSet<String> isModified = new HashSet<>();
