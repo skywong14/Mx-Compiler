@@ -734,6 +734,31 @@ public class IRFunction extends IRStmt {
         return var;
     }
 
+    boolean checkModify(String dest, String src) {
+        // check if [src] is modified between [dest]'s [def] and [use]
+        // only check inside one block
+        LivenessAnalysis util = new LivenessAnalysis();
+        IRBlock defBlock = null;
+        boolean modifyFlag = false;
+        for (IRBlock block : blocks){
+            for (IRStmt stmt : block.stmts) {
+                HashSet<String> def = util.getDef(stmt);
+                if (def.contains(dest)) {
+                    defBlock = block;
+                    continue;
+                }
+                HashSet<String> use = util.getUse(stmt);
+                if (use.contains(dest) && defBlock != null && defBlock != block)
+                    return false; // other block [use]
+                if (use.contains(dest) && modifyFlag)
+                    return false; // [use] after [modify]
+                if (def.contains(src) && defBlock != null)
+                    modifyFlag = true;
+            }
+        }
+        return true;
+    }
+
     public void stupidOptimize() {
         // stupid binary/unary operation
         for (IRBlock block : blocks) {
@@ -762,7 +787,6 @@ public class IRFunction extends IRStmt {
         // stupid optimize in Block
         // like: %2 = %1, %3 = %2 -> %3 = %1 (%2 used only once)
         // def is a moveStmt
-        // todo : check if [src] is modified between [def] and [use]
         HashMap<String, String> defTmpMap = new HashMap<>(), defMap = new HashMap<>();
         HashMap<String, Integer> defCnt = new HashMap<>();
         LivenessAnalysis util = new LivenessAnalysis();
@@ -791,6 +815,16 @@ public class IRFunction extends IRStmt {
                     break;
                 }
             }
+        }
+        flag = true;
+        while (flag) {
+            flag = false;
+            for (String key : defMap.keySet())
+                if (checkModify(key, defMap.get(key))) {
+                    defMap.remove(key);
+                    flag = true;
+                    break;
+                }
         }
         for (IRBlock block : blocks)
             for (int i = 0; i < block.stmts.size(); i++) {
