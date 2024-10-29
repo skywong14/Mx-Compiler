@@ -765,15 +765,21 @@ public class IRFunction extends IRStmt {
         // todo : check if [src] is modified between [def] and [use]
         HashMap<String, String> defTmpMap = new HashMap<>(), defMap = new HashMap<>();
         HashMap<String, Integer> defCnt = new HashMap<>();
+        LivenessAnalysis util = new LivenessAnalysis();
         for (IRBlock block : blocks)
-            for (IRStmt stmt : block.stmts)
+            for (IRStmt stmt : block.stmts) {
                 if (stmt instanceof MoveStmt move) {
-                    if (!defTmpMap.containsKey(move.dest)) {
-                        defTmpMap.put(move.dest, move.src);
-                        defCnt.put(move.dest, 0);
-                    }
+                    if (!defTmpMap.containsKey(move.dest)) defTmpMap.put(move.dest, move.src);
+                    if (!defCnt.containsKey(move.dest)) defCnt.put(move.dest, 0);
                     defCnt.put(move.dest, defCnt.get(move.dest) + 1);
+                } else {
+                    for (String def : util.getDef(stmt)) {
+                        if (!defCnt.containsKey(def)) defCnt.put(def, 0);
+                        defCnt.put(def, defCnt.get(def) + 1);
+                    }
                 }
+            }
+        System.out.println("# debugggggg: " + defCnt.get("%.g2l.j"));
         for (String key : defTmpMap.keySet())
             if (defCnt.get(key) == 1) defMap.put(key, defTmpMap.get(key));
         boolean flag = true;
