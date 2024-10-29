@@ -787,6 +787,7 @@ public class IRFunction extends IRStmt {
         // stupid optimize in Block
         // like: %2 = %1, %3 = %2 -> %3 = %1 (%2 used only once)
         // def is a moveStmt
+        /*
         HashMap<String, String> defTmpMap = new HashMap<>(), defMap = new HashMap<>();
         HashMap<String, Integer> defCnt = new HashMap<>();
         LivenessAnalysis util = new LivenessAnalysis();
@@ -826,7 +827,6 @@ public class IRFunction extends IRStmt {
                     break;
                 }
         }
-        /*
         for (IRBlock block : blocks)
             for (int i = 0; i < block.stmts.size(); i++) {
                 IRStmt stmt = block.stmts.get(i);
