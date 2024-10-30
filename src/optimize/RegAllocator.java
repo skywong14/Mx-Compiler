@@ -139,6 +139,10 @@ public class RegAllocator {
                 // liveOut[s] = union liveIn[succ]
                 for (IRBlock succ : block.succ) {
                     int succIndex = succ.topoIndex;
+                    if (succIndex == -1) {
+                        // debug
+                        continue;
+                    }
                     for (String reg : lstLiveIn.get(succIndex)) {
                         if (curLiveOut.contains(reg)) continue;
                         changeFlag = true;
