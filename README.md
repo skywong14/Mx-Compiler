@@ -1,7 +1,7 @@
 # Mx-Compiler
 
 ### Development Timeline
-From **July 24, 2018** to **October 30, 2024**.
+From **July 24, 2024** to **October 30, 2024**.
 
 ---
 
