@@ -881,8 +881,6 @@ public class IRFunction extends IRStmt {
     }
 
     public void constantPropagation() {
-
-
         //todo
     }
 

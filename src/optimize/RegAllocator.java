@@ -171,7 +171,6 @@ public class RegAllocator {
                 newLiveOut.add(new ArrayList<>());
             }
         }
-//        System.out.println("# [livenessAnalysisPlus]: end");
         // update liveIn and liveOut in linearStmts
         for (int i = 0; i < linearOrder.size(); i++) {
             IRBlock block = linearOrder.get(i);
@@ -196,100 +195,6 @@ public class RegAllocator {
                     if (util.getDef(stmt).contains(reg)) continue;
                     curLiveIn.add(reg);
                 }
-            }
-        }
-    }
-
-    void livenessAnalysis() {
-        liveIn = new ArrayList<>();
-        liveOut = new ArrayList<>();
-        // size + 1 for the boundary
-        for (int i = 0; i <= linearStmts.size(); i++) {
-            liveIn.add(new HashSet<>());
-            liveOut.add(new HashSet<>());
-        }
-
-        boolean changeFlag = true;
-        LivenessAnalysis util = new LivenessAnalysis();
-        int cnt = 0;
-        // init all use and def
-        ArrayList<HashSet<String>> use = new ArrayList<>(), def = new ArrayList<>();
-        for (int i = 0; i < linearStmts.size(); i++) {
-            use.add(util.getUse(linearStmts.get(i)));
-            def.add(util.getDef(linearStmts.get(i)));
-            liveIn.get(i).addAll(use.get(i));
-        }
-        HashSet<String> curLiveOut, curLiveIn;
-        ArrayList<ArrayList<String>> newLiveIn = new ArrayList<>(), newLiveOut = new ArrayList<>();
-        ArrayList<ArrayList<String>> lstLiveIn = new ArrayList<>();
-        for (int i = 0; i < linearStmts.size(); i++) {
-            newLiveIn.add(new ArrayList<>());
-            for (String reg : liveIn.get(i))
-                newLiveIn.get(i).add(reg);
-            lstLiveIn.add(newLiveIn.get(i));
-            newLiveOut.add(new ArrayList<>());
-        }
-
-        while (changeFlag) {
-            changeFlag = false;
-            for (int i = linearStmts.size() - 1; i >= 0; i--) {
-                IRStmt stmt = linearStmts.get(i);
-                curLiveOut = liveOut.get(i);
-                // liveOut[s] = union liveIn[succ]
-                if (stmt instanceof BranchStmt branchStmt) {
-                    if (branchStmt.condition != null) {
-                        int succIndex = blockHeadNumber.get(branchStmt.trueLabel);
-                        for (String reg : lstLiveIn.get(succIndex)) {
-                            if (curLiveOut.contains(reg)) continue;
-                            changeFlag = true;
-                            curLiveOut.add(reg);
-                            newLiveOut.get(i).add(reg);
-                        }
-                        // newLiveOut.addAll(liveIn.get(succIndex));
-                        succIndex = blockHeadNumber.get(branchStmt.falseLabel);
-                        for (String reg : lstLiveIn.get(succIndex)) {
-                            if (curLiveOut.contains(reg)) continue;
-                            changeFlag = true;
-                            curLiveOut.add(reg);
-                            newLiveOut.get(i).add(reg);
-                        }
-                        // newLiveOut.addAll(liveIn.get(succIndex));
-                    } else {
-                        int succIndex = blockHeadNumber.get(branchStmt.trueLabel);
-                        // newLiveOut.addAll(liveIn.get(succIndex));
-                        for (String reg : lstLiveIn.get(succIndex)) {
-                            if (curLiveOut.contains(reg)) continue;
-                            changeFlag = true;
-                            curLiveOut.add(reg);
-                            newLiveOut.get(i).add(reg);
-                        }
-                    }
-                } else if (stmt instanceof ReturnStmt) {
-                    // do nothing
-                } else {
-                    // newLiveOut.addAll(liveIn.get(i + 1));
-                    for (String reg : lstLiveIn.get(i + 1)) {
-                        if (curLiveOut.contains(reg)) continue;
-                        changeFlag = true;
-                        curLiveOut.add(reg);
-                        newLiveOut.get(i).add(reg);
-                    }
-                }
-                // liveIn[s] = use[s] + (liveOut[s] - def[s])
-                curLiveIn = liveIn.get(i);
-                for (String reg : newLiveOut.get(i)) {
-                    if (def.get(i).contains(reg)) continue;
-                    if (curLiveIn.contains(reg)) continue;
-                    changeFlag = true;
-                    curLiveIn.add(reg);
-                    newLiveIn.get(i).add(reg);
-                }
-            }
-
-            for (int i = 0; i < linearStmts.size(); i++) {
-                lstLiveIn.set(i, newLiveIn.get(i));
-                newLiveIn.set(i, new ArrayList<>());
-                newLiveOut.set(i, new ArrayList<>());
             }
         }
     }
@@ -402,21 +307,7 @@ public class RegAllocator {
         while (!freeIntervals.isEmpty()) {
             Interval curInterval = freeIntervals.get(0);
             freeIntervals.remove(0);
-            // 尝试接合
-            /*
-            todo
-            if (linearStmts.get(curInterval.start) instanceof MoveStmt moveStmt) // dest = src
-                if (intervals.get(moveStmt.src).end == curInterval.start) {
-                    Interval prevInterval = intervals.get(moveStmt.src);
-                    if (prevInterval.useReg != -1) { // 如果src的区间已经分配了寄存器
-                        curInterval.useReg = prevInterval.useReg;
-                        tempMap.put(curInterval, prevInterval.useReg);
-                        occupiedIntervals.add(curInterval);
-                        occupiedIntervals.remove(prevInterval);
-                        continue;
-                    }
-                }
-             */
+            // optional: 接合
             // 释放过期的寄存器
             for (int i = 0; i < occupiedIntervals.size(); i++)
                 if (occupiedIntervals.get(i).end <= curInterval.start) {
@@ -424,7 +315,6 @@ public class RegAllocator {
                     occupiedIntervals.remove(i);
                     i--;
                 }
-
             if (freeRegs.isEmpty()) {
                 trySpill(curInterval);
             } else {
@@ -446,11 +336,6 @@ public class RegAllocator {
 
         // analyze live intervals
         getLiveIntervals();
-
-        // output intervals
-//        for (String regName : intervals.keySet()) {
-//            System.out.println("# [interval] " + regName + ": " + intervals.get(regName).start + ", " + intervals.get(regName).end);
-//        }
 
         // allocate registers
         allocateRegisters();
