@@ -35,6 +35,8 @@ public class NewClassStmt extends IRStmt{
         callStmt = new CallStmt(new BasicIRType("void"), className + "." + className, argTypes, args, null); // className, dest
     }
 
+    @Override
+    public String getDest() { return dest; }
 
     @Override
     public String toString() {

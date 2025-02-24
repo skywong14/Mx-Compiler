@@ -28,6 +28,9 @@ public class CallStmt extends IRStmt {
     }
 
     @Override
+    public String getDest() { return dest; }
+
+    @Override
     public String toString() {
         if (retType.typeName.equals("void")) {
             // call void @<FunctionName>(<arguments>)

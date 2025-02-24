@@ -695,39 +695,6 @@ public class IRFunction extends IRStmt {
         };
     }
 
-    int simplifyBinaryStmt(String operator, int val1, int val2) {
-        return switch (operator) {
-            case "add" -> val1 + val2;
-            case "sub" -> val1 - val2;
-            case "mul" -> val1 * val2;
-            case "sdiv" -> val1 / val2;
-            case "srem" -> val1 % val2;
-            case "and" -> val1 & val2;
-            case "or" -> val1 | val2;
-            case "xor" -> val1 ^ val2;
-            case "shl" -> val1 << val2;
-            case "ashr" -> val1 >> val2;
-            case "icmp eq" -> val1 == val2 ? 1 : 0;
-            case "icmp ne" -> val1 != val2 ? 1 : 0;
-            case "icmp slt" -> val1 < val2 ? 1 : 0;
-            case "icmp sgt" -> val1 > val2 ? 1 : 0;
-            case "icmp sle" -> val1 <= val2 ? 1 : 0;
-            case "icmp sge" -> val1 >= val2 ? 1 : 0;
-            default -> 0;
-        };
-    }
-
-    int simplifyUnaryStmt(String operator, int val) {
-        return switch (operator) {
-            case "!" -> val^1;
-            case "~" -> ~val;
-            case "-" -> -val;
-            case "++" -> val + 1;
-            case "--" -> val - 1;
-            default -> 0;
-        };
-    }
-
 
     String getReplacedWith(String var, HashMap<String, String> defMap) {
         if (defMap.containsKey(var)) return defMap.get(var);
@@ -757,131 +724,6 @@ public class IRFunction extends IRStmt {
             }
         }
         return true;
-    }
-
-    public void stupidOptimize() {
-        // stupid binary/unary operation
-        for (IRBlock block : blocks) {
-            for (int i = 0; i < block.stmts.size(); i++) {
-                IRStmt stmt = block.stmts.get(i);
-                if (stmt instanceof BinaryExprStmt binaryExpr) {
-                    if (binaryExpr.register1.startsWith("@") || binaryExpr.register1.startsWith("%")) continue;
-                    if (binaryExpr.register2.startsWith("@") || binaryExpr.register2.startsWith("%")) continue;
-                    int val1 = resolveValue(binaryExpr.register1);
-                    int val2 = resolveValue(binaryExpr.register2);
-                    if (binaryExpr.operator.equals("sdiv") && val2 == 0) {
-                        continue; // divided by zero
-                    }
-                    int ret = simplifyBinaryStmt(binaryExpr.operator, val1, val2);
-                    block.stmts.remove(i);
-                    block.stmts.add(i, new MoveStmt(binaryExpr.dest, String.valueOf(ret)));
-                } else if (stmt instanceof UnaryExprStmt unaryExpr) {
-                    if (unaryExpr.register.startsWith("@") || unaryExpr.register.startsWith("%")) continue;
-                    int val = resolveValue(unaryExpr.register);
-                    int ret = simplifyUnaryStmt(unaryExpr.operator, val);
-                    block.stmts.remove(i);
-                    block.stmts.add(i, new MoveStmt(unaryExpr.dest, String.valueOf(ret)));
-                }
-            }
-        }
-        // stupid optimize in Block
-        // like: %2 = %1, %3 = %2 -> %3 = %1 (%2 used only once)
-        // def is a moveStmt
-        /*
-        HashMap<String, String> defTmpMap = new HashMap<>(), defMap = new HashMap<>();
-        HashMap<String, Integer> defCnt = new HashMap<>();
-        LivenessAnalysis util = new LivenessAnalysis();
-        for (IRBlock block : blocks)
-            for (IRStmt stmt : block.stmts) {
-                if (stmt instanceof MoveStmt move) {
-                    if (!defTmpMap.containsKey(move.dest)) defTmpMap.put(move.dest, move.src);
-                    if (!defCnt.containsKey(move.dest)) defCnt.put(move.dest, 0);
-                    defCnt.put(move.dest, defCnt.get(move.dest) + 1);
-                } else {
-                    for (String def : util.getDef(stmt)) {
-                        if (!defCnt.containsKey(def)) defCnt.put(def, 0);
-                        defCnt.put(def, defCnt.get(def) + 1);
-                    }
-                }
-            }
-        for (String key : defTmpMap.keySet())
-            if (defCnt.get(key) == 1) defMap.put(key, defTmpMap.get(key));
-        boolean flag = true;
-        while (flag) {
-            flag = false;
-            for (String key : defMap.keySet()) {
-                if (defMap.containsKey(defMap.get(key))) {
-                    defMap.put(key, defMap.get(defMap.get(key)));
-                    flag = true;
-                    break;
-                }
-            }
-        }
-        flag = true;
-        while (flag) {
-            flag = false;
-            for (String key : defMap.keySet())
-                if (checkModify(key, defMap.get(key))) {
-                    defMap.remove(key);
-                    flag = true;
-                    break;
-                }
-        }
-        for (IRBlock block : blocks)
-            for (int i = 0; i < block.stmts.size(); i++) {
-                IRStmt stmt = block.stmts.get(i);
-                if (stmt instanceof MoveStmt move && defMap.containsKey(move.dest)) {
-                    block.stmts.remove(i);
-                    i--;
-                    continue;
-                }
-                if (stmt instanceof LoadStmt load) {
-                    load.pointer = getReplacedWith(load.pointer, defMap);
-                }
-                if (stmt instanceof StoreStmt store) {
-                    store.dest = getReplacedWith(store.dest, defMap);
-                    store.val = getReplacedWith(store.val, defMap);
-                }
-                if (stmt instanceof BinaryExprStmt binaryExpr) {
-                    binaryExpr.register1 = getReplacedWith(binaryExpr.register1, defMap);
-                    binaryExpr.register2 = getReplacedWith(binaryExpr.register2, defMap);
-                }
-                if (stmt instanceof GetElementPtrStmt getElementPtr) {
-                    getElementPtr.pointer = getReplacedWith(getElementPtr.pointer, defMap);
-                    getElementPtr.index = getReplacedWith(getElementPtr.index, defMap);
-                }
-                if (stmt instanceof SelectStmt select) {
-                    select.cond = getReplacedWith(select.cond, defMap);
-                    select.trueVal = getReplacedWith(select.trueVal, defMap);
-                    select.falseVal = getReplacedWith(select.falseVal, defMap);
-                }
-                if (stmt instanceof UnaryExprStmt unaryExpr) {
-                    unaryExpr.register = getReplacedWith(unaryExpr.register, defMap);
-                }
-                if (stmt instanceof CallStmt call) {
-                    for (int j = 0; j < call.args.size(); j++)
-                        call.args.set(j, getReplacedWith(call.args.get(j), defMap));
-                }
-                if (stmt instanceof BranchStmt branch && branch.condition != null) {
-                    branch.condition = getReplacedWith(branch.condition, defMap);
-                }
-                if (stmt instanceof ReturnStmt ret && ret.src != null) {
-                    ret.src = getReplacedWith(ret.src, defMap);
-                }
-                if (stmt instanceof PhiStmt phi) {
-                    for (String key : phi.val.keySet()) {
-                        String val = phi.val.get(key);
-                        phi.val.put(key, getReplacedWith(val, defMap));
-                    }
-                }
-                if (stmt instanceof MoveStmt move) {
-                    move.src = getReplacedWith(move.src, defMap);
-                }
-            }*/
-    }
-
-    public void constantPropagation() {
-        //todo
     }
 
     // -------------------------
@@ -966,6 +808,9 @@ public class IRFunction extends IRStmt {
     }
 
     // -------------------------
+    @Override
+    public String getDest() { return null; }
+
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();

@@ -37,6 +37,9 @@ public class Block extends IRStmt {
     }
 
     @Override
+    public String getDest() { return null; }
+
+    @Override
     public String toString() {
         updateBlock();
         StringBuilder sb = new StringBuilder();

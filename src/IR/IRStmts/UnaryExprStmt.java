@@ -13,6 +13,9 @@ public class UnaryExprStmt extends IRStmt{
     }
 
     @Override
+    public String getDest() { return dest; }
+
+    @Override
     public String toString() {
         if (operator.equals("~")) {
             return dest + " = not " + type.toString() + " " + register;

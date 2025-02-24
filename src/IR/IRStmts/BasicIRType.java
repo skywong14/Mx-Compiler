@@ -42,6 +42,9 @@ public class BasicIRType extends IRType {
     }
 
     @Override
+    public String getDest() { return null; }
+
+    @Override
     public String toString() {
         return this.typeName;
     }

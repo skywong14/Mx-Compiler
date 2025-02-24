@@ -2,6 +2,8 @@ package optimize;
 
 import IR.IRBuilder;
 import IR.IRStmts.*;
+import optimize.earlyOptimization.EarlyOptim;
+import optimize.redundancyElimination.CommonSubexpr;
 
 import java.util.ArrayList;
 
@@ -82,17 +84,13 @@ public class IRCode{
             func.addPhi();
         }
 
-        // stupid optimize
-        for (int i = 0; i < funcStmts.size(); i++) {
-            IRFunction func = funcStmts.get(i);
-            func.stupidOptimize();
-        }
-        inlineInitCall();
+        // early optimize
+        new EarlyOptim().optimize(this);
 
-        // constant propagation in IR
-        for (IRFunction func : funcStmts) {
-            func.constantPropagation();
-        }
+        // CommonSubexpr in IR
+        new CommonSubexpr().optimize(this);
+
+        inlineInitCall(); // only inline __Mx_global_var_init__ function to main function
 
         // dead code elimination in IR
         for (IRFunction func : funcStmts) {
@@ -113,10 +111,6 @@ public class IRCode{
     public void erasePhi() {
         for (IRFunction func : funcStmts) {
             func.erasePhi();
-        }
-
-        for (IRFunction function : funcStmts) {
-            function.stupidOptimize();
         }
     }
 }

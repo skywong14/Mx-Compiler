@@ -35,6 +35,9 @@ public class PhiStmt extends IRStmt {
     }
 
     @Override
+    public String getDest() { return dest; }
+
+    @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append(dest).append(" = phi ").append(type).append(" ");

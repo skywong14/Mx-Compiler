@@ -58,6 +58,9 @@ public class IRBlock extends IRStmt {
     }
 
     @Override
+    public String getDest() { return null; }
+
+    @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
             sb.append(label).append(":\n");

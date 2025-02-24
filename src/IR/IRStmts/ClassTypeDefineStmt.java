@@ -30,6 +30,9 @@ public class ClassTypeDefineStmt extends IRStmt{
     public HashMap<String, Integer> getFieldIndex() { return fieldIndex; }
 
     @Override
+    public String getDest() { return null; }
+
+    @Override
     public String toString() {
         StringBuilder ret = new StringBuilder("%class." + typeName + " = type {");
         for (int i = 0; i < fields.size(); i++) {

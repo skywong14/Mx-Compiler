@@ -10,6 +10,9 @@ public class AllocaStmt extends IRStmt {
     }
 
     @Override
+    public String getDest() { return dest; }
+
+    @Override
     public String toString() {
         return dest + " = alloca " + type.toString();
     }

@@ -6,6 +6,9 @@ import java.io.IOException;
 
 public class DeclarationStmt extends IRStmt {
     @Override
+    public String getDest() { return null; }
+
+    @Override
     public String toString() {
         String file = "./src/IR/IRStmts/irDeclaration.txt";
         String content = "";

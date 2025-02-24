@@ -13,6 +13,9 @@ public class StoreStmt extends IRStmt {
     }
 
     @Override
+    public String getDest() { return dest; }
+
+    @Override
     public String toString() {
         return "store " + type.toString() + " " + val + ", ptr " + dest;
     }

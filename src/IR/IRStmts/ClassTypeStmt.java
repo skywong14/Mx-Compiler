@@ -11,6 +11,9 @@ public class ClassTypeStmt extends IRType{
     }
 
     @Override
+    public String getDest() { return null; }
+
+    @Override
     public String toString() {
         return "%class." + className;
     }

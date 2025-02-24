@@ -13,6 +13,9 @@ public class LoadStmt extends IRStmt{
     }
 
     @Override
+    public String getDest() { return dest; }
+
+    @Override
     public String toString() {
         return dest + " = load " + type.toString() + ", ptr " + pointer;
     }

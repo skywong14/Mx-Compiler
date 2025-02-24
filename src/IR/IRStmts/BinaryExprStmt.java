@@ -14,6 +14,9 @@ public class BinaryExprStmt extends IRStmt{
     }
 
     @Override
+    public String getDest() { return dest; }
+
+    @Override
     public String toString() {
         return dest + " = " + operator + " " + type.toString() + " " + register1 + ", " + register2;
     }

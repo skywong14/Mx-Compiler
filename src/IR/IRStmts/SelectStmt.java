@@ -16,6 +16,9 @@ public class SelectStmt extends IRStmt {
     }
 
     @Override
+    public String getDest() { return dest; }
+
+    @Override
     public String toString() {
         return dest + " = select i1 " + cond + ", " + type.toString() + " " + trueVal + ", " + type.toString() + " " + falseVal;
     }

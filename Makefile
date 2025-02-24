@@ -1,10 +1,12 @@
 .PHONY: build
 build:
 	find src -name '*.java' | xargs javac -d bin -cp /ulib/antlr-4.13.2-complete.jar
+
 .PHONY: run
 run:
 	java -cp /ulib/antlr-4.13.2-complete.jar:bin Main -emit-llvm
-.PhONY: asm_output
+
+.PHONY: asm_output
 asm_output:
 	java -cp /ulib/antlr-4.13.2-complete.jar:bin Main < test.mx > test.s -emit-llvm
 
@@ -22,7 +24,7 @@ ir_all:
 
 .PHONY: asm_single
 asm_single:
-	testcases/codegen/scripts/test_asm.bash 'java -cp /ulib/antlr-4.13.2-complete.jar:bin Main -S' testcases/codegen/t22.mx src/IR/builtin/builtin.s
+	testcases/codegen/scripts/test_asm.bash 'java -cp /ulib/antlr-4.13.2-complete.jar:bin Main -S' testcases/codegen/t11.mx src/IR/builtin/builtin.s
 
 .PHONY: mytest
 mytest:
@@ -47,3 +49,7 @@ debug:
 .PHONY: oj_test # same condition as Online Judge
 oj_test:
 	testcases/codegen/scripts/test_asm_all.bash 'java -cp /ulib/antlr-4.13.2-complete.jar:bin Main -S' testcases/codegen  src/IR/builtin/empty.s
+
+.PHONY: hidden_asm_test
+hidden_asm_test:
+	testcases/codegen/scripts/test_asm.bash 'java -cp /ulib/antlr-4.13.2-complete.jar:bin Main -S' testcases/optim-hidden/case2.mx src/IR/builtin/builtin.s

@@ -795,7 +795,7 @@ public class ASMBuilder {
     boolean isTailRecursion(CallStmt irStmt, IRStmt nxtStmt, ASMFunc func) {
         if (!irStmt.funcName.equals(func.name)) return false;
         if (nxtStmt instanceof ReturnStmt ret
-            && (ret.src == null || ret.src.equals(irStmt.dest))) return true;
+                && (ret.src == null || ret.src.equals(irStmt.dest))) return true;
         return false;
     }
 
@@ -890,7 +890,7 @@ public class ASMBuilder {
                 if (irStmt.liveOutPhyReg.contains(i)) {
                     if (!useFreeReg.containsKey("a" + i))
                         func.addInst(Lw("a" + i, func.spOffset - 36 + (7 - i) * 4, "sp"));
-                     else
+                    else
                         func.addInst(new MvInst("a" + i, useFreeReg.get("a" + i)));
                 }
             func.addInst(new CommentInst(""));

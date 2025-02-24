@@ -80,6 +80,9 @@ public class NewArrayStmt extends IRStmt{
     }
 
     @Override
+    public String getDest() { return dest; }
+
+    @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
         boolean isFirst = true;

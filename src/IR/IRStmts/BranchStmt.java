@@ -20,6 +20,9 @@ public class BranchStmt extends IRStmt {
     }
 
     @Override
+    public String getDest() { return null; }
+
+    @Override
     public String toString() {
         if (condition == null) {
             return "br label %" + trueLabel;

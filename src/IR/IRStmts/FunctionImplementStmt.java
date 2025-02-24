@@ -37,6 +37,9 @@ public class FunctionImplementStmt extends IRStmt {
     }
 
     @Override
+    public String getDest() { return null; }
+
+    @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append("define ").append(returnType.toString()).append(" @").append(name).append("(");

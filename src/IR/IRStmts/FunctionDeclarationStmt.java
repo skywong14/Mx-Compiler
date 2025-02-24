@@ -43,6 +43,8 @@ public class FunctionDeclarationStmt extends IRStmt {
         }
     }
 
+    @Override
+    public String getDest() { return null; }
 
     @Override
     public String toString() {

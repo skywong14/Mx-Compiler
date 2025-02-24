@@ -8,6 +8,9 @@ public class LabelStmt extends IRStmt {
     }
 
     @Override
+    public String getDest() { return null; }
+
+    @Override
     public String toString() {
         return label + ":";
     }
