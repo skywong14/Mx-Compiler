@@ -12,7 +12,7 @@ import java.util.HashSet;
 public class FunctionInline {
     // const parameter: max_inline_depth, max_inline_length
     IRCode irCode = null;
-    static final int max_inline_depth = 3, max_inline_length = 20, max_parameter_length = 4;
+    static final int max_inline_depth = 2, max_inline_length = 20, max_parameter_length = 4;
 
     ArrayList<IRBlock> newBlocks;
     IRBlock curBlock;
@@ -73,8 +73,10 @@ public class FunctionInline {
         if (stmt instanceof PhiStmt phi) {
             PhiStmt newPhi = new PhiStmt(renameReg(phi.dest, argMap, ilHead), phi.type);
             newPhi.setDest(renameReg(phi.dest, argMap, ilHead));
-            for (String key: phi.val.keySet())
+            for (String key: phi.val.keySet()) {
+                debug("{replaceName}: " + key + " -> " + renameLabel(key, funcName, ilHead) + ", in " + phi.toString() );
                 newPhi.addVal(renameReg(phi.val.get(key), argMap, ilHead), renameLabel(key, funcName, ilHead));
+            }
             return newPhi;
         } else if (stmt instanceof StoreStmt store) {
             return new StoreStmt(store.type, renameReg(store.val, argMap, ilHead), renameReg(store.dest, argMap, ilHead));
@@ -111,12 +113,11 @@ public class FunctionInline {
             throw new RuntimeException("IRFunction: clearDeadStmt: unknown stmt");
     }
 
-    void inlineBody(CallStmt callStmt, IRFunction func, int inlineCnt, String parentName) {
-        debug("Inlining (" + callStmt.funcName + ") in " + parentName);
+    void inlineBody(CallStmt callStmt, IRFunction func, int inlineCnt, String prefixName, String funcName) {
         HashMap<String, String> argMap = new HashMap<>();
         HashMap<String, String> result = new HashMap<>(); // block label -> return value
-        String inlineHead = ".IL" + inlineCnt + "_";
-        String endBlock = "IL" + inlineCnt + ".phi";
+        String inlineHead = "." + prefixName + inlineCnt + funcName + "_";
+        String endBlock = prefixName + inlineCnt + funcName + ".phi";
         beginBlockLabel = curBlock.label;
 
         // need_phi (has more than one return stmt)
@@ -171,21 +172,61 @@ public class FunctionInline {
         }
     }
 
-    ArrayList<IRBlock> inlineFunction(IRFunction func) {
+    IRStmt copyStmt(IRStmt stmt) {
+        if (stmt instanceof PhiStmt phi) {
+            PhiStmt newPhi = new PhiStmt(phi.dest, phi.type);
+            newPhi.setDest(phi.dest);
+            for (String key: phi.val.keySet())
+                newPhi.addVal(phi.val.get(key), key);
+            return newPhi;
+        } else if (stmt instanceof StoreStmt store) {
+            return new StoreStmt(store.type, store.val, store.dest);
+        } else if (stmt instanceof MoveStmt move) {
+            return new MoveStmt(move.dest, move.src);
+        } else if (stmt instanceof LoadStmt load) {
+            return new LoadStmt(load.type, load.pointer, load.dest);
+        } else if (stmt instanceof ReturnStmt ret) {
+            return new ReturnStmt(ret.type, ret.src);
+        } else if (stmt instanceof CallStmt call) {
+            CallStmt newCall = new CallStmt(call.retType, call.funcName, call.argTypes, new ArrayList<>(), call.dest);
+            for (String arg: call.args)
+                newCall.args.add(arg);
+            return newCall;
+        } else if (stmt instanceof BinaryExprStmt binExpr) {
+            return new BinaryExprStmt(binExpr.operator, binExpr.type, binExpr.register1, binExpr.register2, binExpr.dest);
+        } else if (stmt instanceof GetElementPtrStmt eleStmt) {
+            return new GetElementPtrStmt(eleStmt.type, eleStmt.pointer, eleStmt.index, eleStmt.dest, eleStmt.hasZero);
+        } else if (stmt instanceof SelectStmt select) {
+            return new SelectStmt(select.type, select.cond, select.trueVal, select.falseVal, select.dest);
+        } else if (stmt instanceof BranchStmt branch) {
+            if (branch.condition != null) {
+                return new BranchStmt(branch.condition, branch.trueLabel, branch.falseLabel);
+            } else {
+                return new BranchStmt(branch.trueLabel);
+            }
+        } else if (stmt instanceof UnaryExprStmt unaryExpr) {
+            return new UnaryExprStmt(unaryExpr.operator, unaryExpr.type, unaryExpr.register, unaryExpr.dest);
+        } else
+            throw new RuntimeException("IRFunction: clearDeadStmt: unknown stmt");
+    }
+
+    ArrayList<IRBlock> inlineFunction(IRFunction func,String prefixName) {
         int inlineCnt = 0;
         newBlocks = new ArrayList<>();
+        HashSet<String> oldBlocks = new HashSet<>();
         curBlock = null;
         phiModifyTable = new ArrayList<>();
 
         for (IRBlock originBlock: func.blocks) {
+            oldBlocks.add(originBlock.label);
             curBlock = new IRBlock(originBlock.label);
             for (IRStmt stmt: originBlock.stmts)
                 if (stmt instanceof CallStmt callStmt
                         && inlineMap.contains(callStmt.funcName)) {
                     // inline
-                    inlineBody(callStmt, funcMap.get(callStmt.funcName), inlineCnt++, func.name);
+                    inlineBody(callStmt, funcMap.get(callStmt.funcName), inlineCnt++, prefixName, func.name);
                 } else {
-                    curBlock.stmts.add(stmt);
+                    curBlock.stmts.add(copyStmt(stmt));
                 }
             newBlocks.add(curBlock);
 
@@ -223,27 +264,32 @@ public class FunctionInline {
     public void optimize(IRCode irCode_) {
         // initialize
         irCode = irCode_;
-        funcMap = new HashMap<>();
-        inlineMap = new HashSet<>();
-        for (IRFunction func : irCode.funcStmts) {
-            funcMap.put(func.name, func);
-            if (shouldInline(func))
-                inlineMap.add(func.name);
-        }
-
-        // inline
-        ArrayList<ArrayList<IRBlock>> funcBodys = new ArrayList<>();
+        ArrayList<ArrayList<IRBlock>> funcBodys;
         int inline_depth = 0;
+        String prefixName = "IL";
+        // inline
         while (inline_depth < max_inline_depth) {
             inline_depth++;
+
+            funcMap = new HashMap<>();
+            inlineMap = new HashSet<>();
+            for (IRFunction func : irCode.funcStmts) {
+                funcMap.put(func.name, func);
+                if (shouldInline(func))
+                    inlineMap.add(func.name);
+            }
+            funcBodys = new ArrayList<>();
+
             for (IRFunction func: irCode.funcStmts)
-                funcBodys.add(inlineFunction(func));
+                funcBodys.add(inlineFunction(func, prefixName));
+
             for (int i = 0; i < irCode.funcStmts.size(); i++){
                 IRFunction func = irCode.funcStmts.get(i);
                 func.blocks = funcBodys.get(i);
                 func.updateBlockMap();
                 func.updatePredAndSucc();
             }
+            prefixName = "I" + prefixName;
         }
     }
 }

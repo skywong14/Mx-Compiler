@@ -588,6 +588,11 @@ public class IRFunction extends IRStmt {
                 for (String blockLabel : phiStmt.val.keySet()) {
                     String val = phiStmt.val.get(blockLabel);
                     IRBlock block = blockMap.get(blockLabel);
+                    if (block == null) {
+                        System.out.println("{{}}blockLabel: " + blockLabel);
+                        throw new RuntimeException("block not found");
+                        //todo
+                    }
                     if (!assignInBlock.containsKey(block)) assignInBlock.put(block, new ArrayList<>());
                     assignInBlock.get(block).add(new AssignStmt(phiStmt.dest, val));
                 }

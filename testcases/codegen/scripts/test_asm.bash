@@ -126,7 +126,7 @@ fi
 EXPECTED_EXIT_CODE=$(grep "ExitCode:" $TESTCASE | awk '{print $2}')
 
 # 4. Execute the code with reimu
-reimu -i="$TEMPDIR/test.in" -o="$TEMPDIR/test.out" -f="$TEMPDIR/output.s",$BUILTIN -p="$TEMPDIR/ravel_output.txt" --silent --stack=64K
+reimu -i="$TEMPDIR/test.in" -o="$TEMPDIR/test.out" -f="$TEMPDIR/output.s",$BUILTIN -p="$TEMPDIR/ravel_output.txt" --silent --stack=128K
 if [ $? -ne 0 ]; then
     cat << EOF >&2
 Error: Ravel exits with a non-zero value.
