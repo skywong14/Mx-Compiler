@@ -1,4 +1,4 @@
-package optimize.earlyOptimization;
+package optimize.optimizations;
 
 import IR.IRStmts.BinaryExprStmt;
 import IR.IRStmts.IRStmt;

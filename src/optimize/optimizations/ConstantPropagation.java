@@ -1,4 +1,4 @@
-package optimize.earlyOptimization;
+package optimize.optimizations;
 
 public class ConstantPropagation {
 }

@@ -1,6 +1,7 @@
 import ASM.ASMBuilder;
 import IR.IRBuilder;
 import optimize.IRCode;
+import optimize.IRFunction;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
@@ -76,6 +77,9 @@ public class Main {
             // transfer IR form, for the upcoming optimization
             IRCode irCode = new IRCode();
             ir.toString(irCode);
+
+            // mem2reg, add phi
+            irCode.mem2reg();
 
             // optimization
              irCode.optimize();

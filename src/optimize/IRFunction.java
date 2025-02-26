@@ -16,22 +16,11 @@ public class IRFunction extends IRStmt {
     public HashMap<String, IRBlock> blockMap = new HashMap<>(); // string(Name) -> IRBlock
 
     private HashMap<String, BasicIRType> allocaVarType = new HashMap<>();// alloca出来的函数名字和对应类型
-    class StringPair {
-        String block;
-        String value;
-        public StringPair(String block, String value) {
-            this.block = block;
-            this.value = value;
-        }
-    }
-    private HashMap<String, ArrayList<StringPair>> phiMap = new HashMap<>(); // phi函数的名字和对应的块和值
 
     private void debug(String msg) {
-        System.out.println("; [Func: " + name + "] " + msg);
+        System.out.println("# [Func: " + name + "] " + msg);
     }
     private void debugCFG(int status) {
-        boolean flag = true;
-//        if (flag) return;
         // 0: print idom
         if (status == 0) {
             System.out.println("---idom---");
@@ -70,7 +59,7 @@ public class IRFunction extends IRStmt {
         }
     }
 
-    void updatePredAndSucc() {
+    public void updatePredAndSucc() {
         for (IRBlock block : blocks) {
             block.pred = new ArrayList<>();
             block.succ = new ArrayList<>();
@@ -140,7 +129,6 @@ public class IRFunction extends IRStmt {
             for (int i = 0; i < func.allocaStmts.size(); i++) {
                 AllocaStmt allocaStmt = func.allocaStmts.get(i);
                 allocaVarType.put(allocaStmt.dest, func.allocaStmts.get(i).type);
-                phiMap.put(allocaStmt.dest, new ArrayList<>());
             }
         }
         // 复制每个Block
@@ -183,7 +171,7 @@ public class IRFunction extends IRStmt {
         for (IRBlock block : blocks) {
             for (int i = 0; i < block.stmts.size(); i++) {
                 IRStmt stmt = block.stmts.get(i);
-                if (stmt instanceof BinaryExprStmt binaryExpr &&binaryExpr.dest == null) {
+                if (stmt instanceof BinaryExprStmt binaryExpr && binaryExpr.dest == null) {
                     block.stmts.remove(i);
                     i--;
                 }
@@ -333,7 +321,6 @@ public class IRFunction extends IRStmt {
                     tmp.xor(curBlock.dom);
 
                     if (tmp.cardinality() == 1 && tmp.get(i)) {
-                        curBlock.idom = j;
                         curBlock.idomBlock = blocks.get(j);
                         blocks.get(j).domChildren.add(curBlock);
                         break;
@@ -567,7 +554,7 @@ public class IRFunction extends IRStmt {
 
     // -------------------------
 
-    void updateBlockMap() {
+    public void updateBlockMap() {
         blockMap.clear();
         for (IRBlock block : blocks)
             blockMap.put(block.label, block);
@@ -583,7 +570,8 @@ public class IRFunction extends IRStmt {
     }
 
     public void erasePhi() {
-        updateBlockMap();
+        updateBlockMap(); //todo modify
+        updatePredAndSucc();
         for (IRBlock curBlock : blocks) {
             ArrayList<PhiStmt> phiList = new ArrayList<>();
             HashMap<IRBlock, ArrayList<AssignStmt>> assignInBlock = new HashMap<>();
@@ -682,6 +670,7 @@ public class IRFunction extends IRStmt {
                 PhiStmt phiStmt = block.phiStmts.get(phi);
                 block.stmts.add(0, phiStmt);
             }
+            block.phiStmts.clear();
         }
     }
 

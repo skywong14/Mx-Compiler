@@ -1,9 +1,9 @@
 package optimize;
 
-import IR.IRBuilder;
 import IR.IRStmts.*;
-import optimize.earlyOptimization.EarlyOptim;
-import optimize.redundancyElimination.CommonSubexpr;
+import optimize.optimizations.ConstantFolding;
+import optimize.optimizations.CommonSubexpr;
+import optimize.optimizations.FunctionInline;
 
 import java.util.ArrayList;
 
@@ -19,8 +19,7 @@ public class IRCode{
     public ArrayList<ClassTypeDefineStmt> classTypeDefineStmts = new ArrayList<>();
     public ArrayList<GlobalVariableDeclareStmt> globalVariables = new ArrayList<>();
 
-    public IRCode() {
-    }
+    public IRCode() {}
 
     public void initDeclaration(DeclarationStmt declaration) {
         declarationStmt = declaration;
@@ -57,40 +56,23 @@ public class IRCode{
         return sb.toString();
     }
 
-    void inlineInitCall() {
-        IRFunction initCallFunc = null;
-        IRFunction mainFunc = null;
-        for (IRFunction func : funcStmts)
-            if (func.name.equals("__Mx_global_var_init__"))
-                initCallFunc = func;
-            else if (func.name.equals("main"))
-                mainFunc = func;
-        if (initCallFunc == null || mainFunc == null) throw new RuntimeException("No main function / __Mx_global_var_init__ function found");
-        if (initCallFunc.blocks.size() == 1 && initCallFunc.blocks.get(0).stmts.size() == 1) {
-            funcStmts.remove(initCallFunc);
-            for (IRStmt stmt : mainFunc.blocks.get(0).stmts)
-                if (stmt instanceof CallStmt callStmt && callStmt.funcName.equals("__Mx_global_var_init__")) {
-                    mainFunc.blocks.get(0).stmts.remove(stmt);
-                    break;
-            }
-            return;
-        }
-    }
-
-    public void optimize() {
+    public void mem2reg() {
         // mem2reg in IR, add phi_stmts
         for (IRFunction func : funcStmts) {
             func.mem2reg();
             func.addPhi();
         }
+    }
 
-        // early optimize
-        new EarlyOptim().optimize(this);
+    public void optimize() {
+        // Constant Folding
+        new ConstantFolding().optimize(this);
 
-        // CommonSubexpr in IR
+        // CommonSubexpr Elimination
         new CommonSubexpr().optimize(this);
 
-        inlineInitCall(); // only inline __Mx_global_var_init__ function to main function
+        // Function Inline
+         new FunctionInline().optimize(this);
 
         // dead code elimination in IR
         for (IRFunction func : funcStmts) {

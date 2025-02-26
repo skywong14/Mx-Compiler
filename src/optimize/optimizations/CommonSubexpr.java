@@ -1,4 +1,4 @@
-package optimize.redundancyElimination;
+package optimize.optimizations;
 
 import IR.IRStmts.BinaryExprStmt;
 import IR.IRStmts.IRStmt;
@@ -9,7 +9,6 @@ import optimize.IRFunction;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Vector;
 
 public class CommonSubexpr {
     private static void debug(String msg) {
@@ -68,7 +67,7 @@ public class CommonSubexpr {
     }
 
     void localCSE_Block(IRBlock irBlock) {
-        debug("CSE Block begin: " + irBlock.label);
+//        debug("CSE Block begin: " + irBlock.label);
         // record Available Expression
         ArrayList<String> tmpList = null;
         AEBank = new HashMap<>();

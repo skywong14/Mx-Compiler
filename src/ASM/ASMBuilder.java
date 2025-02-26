@@ -124,11 +124,11 @@ public class ASMBuilder {
     }
 
     void buildFunction(IRFunction func, int funcCnt) {
-        debug("function begin: " + func.name);
+//        debug("[function begin] " + func.name);
 
         regAllocator = new RegAllocator(func); // allocate virtual registers to physical registers
 
-        debug("allocate finish: " + func.name);
+//        debug("[allocate finish] " + func.name);
 
         ASMFunc asmFunc = new ASMFunc(func.name, funcCnt);
 
@@ -216,7 +216,6 @@ public class ASMBuilder {
         asmFunc.setEpilogue(epilogue);
 
         // func body
-        boolean firstBlock = true;
         int stmtCnt = -1;
         for (IRBlock irBlock : regAllocator.linearOrder) {
             if (irBlock.label.equals(asmFunc.name))
@@ -442,7 +441,7 @@ public class ASMBuilder {
         if (regName.startsWith("%")) {
             AllocaState state = allocaStateMap.get(regName);
             if (state == null) {
-                throw new RuntimeException("resolveRegister: regName is not in allocaStateMap: " + regName);
+                throw new RuntimeException("resolveRegister in (" + func.name + "), regName is not in allocaStateMap: " + regName);
             }
             if (state.state == 0) {
                 // in physical register
@@ -452,7 +451,7 @@ public class ASMBuilder {
                 func.addInst(Lw(tempReg, state.offset, "sp"));
                 return tempReg;
             } else
-                throw new RuntimeException("resolveRegister: regName is not in allocaStateMap: " + regName);
+                throw new RuntimeException("resolveRegister in (" + func.name + "), regName is not in allocaStateMap: " + regName);
         } else if (regName.startsWith("@")) {
             func.addInst(new LaInst(tempReg, regName.substring(1)));
             return tempReg;

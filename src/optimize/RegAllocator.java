@@ -13,11 +13,11 @@ public class RegAllocator {
     IRFunction func;
 
     public ArrayList<IRBlock> linearOrder;
-    boolean[] visited;
+    HashSet<String> visited;
 
     void topoSort(IRBlock block) {
-        if (visited[block.indexInFunc]) return;
-        visited[block.indexInFunc] = true;
+        if (visited.contains(block.label)) return;
+        visited.add(block.label);
         for (IRBlock child : block.succ)
             topoSort(child);
         linearOrder.add(block);
@@ -25,14 +25,13 @@ public class RegAllocator {
 
     void linearize() {
         linearOrder = new ArrayList<>();
-        visited = new boolean[func.blocks.size()];
+        visited = new HashSet<>();
         topoSort(func.blocks.get(0));
         for (int i = 0; i < func.blocks.size(); i++) {
-            if (!visited[i]) {
+            if (!visited.contains(func.blocks.get(i).label)) {
                 func.blocks.remove(i);
                 i--;
                 continue;
-                // throw new RuntimeException("[linearize]: block not connected: " + func.blocks.get(i).label);
             }
             linearOrder.get(i).topoIndex = i;
         }
@@ -61,6 +60,11 @@ public class RegAllocator {
         @Override
         public int compareTo(Interval other) {
             return Integer.compare(this.start, other.start); // 按start值升序排列
+        }
+
+        @Override
+        public String toString() {
+            return regName + ": [" + start + ", " + end + ")";
         }
     }
 
@@ -178,7 +182,7 @@ public class RegAllocator {
             ArrayList<IRStmt> stmts = block.stmts;
             if (block.isHead) {
                 stmts = new ArrayList<>(block.stmts);
-                stmts.add(0, new FuncHeadStmt(func));
+                stmts.add(0, new FuncHeadStmt(func)); // add the function head for [def]
             }
 
             int cnt = blockHeadNumber.get(block.label);
@@ -240,7 +244,6 @@ public class RegAllocator {
     void getLiveIntervals() {
         intervals = new HashMap<>();
         numberStmt();
-//        livenessAnalysis();
         livenessAnalysisPlus();
         calcIntervals();
     }
@@ -307,7 +310,6 @@ public class RegAllocator {
         while (!freeIntervals.isEmpty()) {
             Interval curInterval = freeIntervals.get(0);
             freeIntervals.remove(0);
-            // optional: 接合
             // 释放过期的寄存器
             for (int i = 0; i < occupiedIntervals.size(); i++)
                 if (occupiedIntervals.get(i).end <= curInterval.start) {
