@@ -73,10 +73,8 @@ public class FunctionInline {
         if (stmt instanceof PhiStmt phi) {
             PhiStmt newPhi = new PhiStmt(renameReg(phi.dest, argMap, ilHead), phi.type);
             newPhi.setDest(renameReg(phi.dest, argMap, ilHead));
-            for (String key: phi.val.keySet()) {
-                debug("{replaceName}: " + key + " -> " + renameLabel(key, funcName, ilHead) + ", in " + phi.toString() );
+            for (String key: phi.val.keySet())
                 newPhi.addVal(renameReg(phi.val.get(key), argMap, ilHead), renameLabel(key, funcName, ilHead));
-            }
             return newPhi;
         } else if (stmt instanceof StoreStmt store) {
             return new StoreStmt(store.type, renameReg(store.val, argMap, ilHead), renameReg(store.dest, argMap, ilHead));
@@ -147,7 +145,6 @@ public class FunctionInline {
                     curBlock.stmts.add(replaceName(stmt, argMap, inlineHead, func.name));
                 }
             }
-
         }
 
         // epilogue
@@ -189,8 +186,7 @@ public class FunctionInline {
             return new ReturnStmt(ret.type, ret.src);
         } else if (stmt instanceof CallStmt call) {
             CallStmt newCall = new CallStmt(call.retType, call.funcName, call.argTypes, new ArrayList<>(), call.dest);
-            for (String arg: call.args)
-                newCall.args.add(arg);
+            newCall.args.addAll(call.args);
             return newCall;
         } else if (stmt instanceof BinaryExprStmt binExpr) {
             return new BinaryExprStmt(binExpr.operator, binExpr.type, binExpr.register1, binExpr.register2, binExpr.dest);
@@ -286,10 +282,12 @@ public class FunctionInline {
             for (int i = 0; i < irCode.funcStmts.size(); i++){
                 IRFunction func = irCode.funcStmts.get(i);
                 func.blocks = funcBodys.get(i);
-                func.updateBlockMap();
-                func.updatePredAndSucc();
             }
             prefixName = "I" + prefixName;
+        }
+        for (IRFunction func: irCode.funcStmts) {
+            func.updateBlockMap();
+            func.updatePredAndSucc();
         }
     }
 }

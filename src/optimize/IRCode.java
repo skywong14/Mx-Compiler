@@ -1,9 +1,7 @@
 package optimize;
 
 import IR.IRStmts.*;
-import optimize.optimizations.ConstantFolding;
-import optimize.optimizations.CommonSubexpr;
-import optimize.optimizations.FunctionInline;
+import optimize.optimizations.*;
 
 import java.util.ArrayList;
 
@@ -74,20 +72,11 @@ public class IRCode{
         // Function Inline
          new FunctionInline().optimize(this);
 
-        // dead code elimination in IR
-        for (IRFunction func : funcStmts) {
-            func.DCE();
-        }
+        // Dead Code Elimination
+        new DCE().optimize(this);
 
-        // aggressive dead code elimination
-        for (IRFunction func : funcStmts) {
-            func.aggressiveDCE();
-        }
-
-        // global2local in IR
-        for (IRFunction func : funcStmts) {
-            func.global2local();
-        }
+        // Global2Local
+        new Global2Local().optimize(this);
     }
 
     public void erasePhi() {

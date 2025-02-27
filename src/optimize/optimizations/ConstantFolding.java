@@ -64,15 +64,13 @@ public class ConstantFolding {
                             continue; // divided by zero
                         }
                         int ret = simplifyBinaryStmt(binaryExpr.operator, val1, val2);
-                        block.stmts.remove(i);
-                        block.stmts.add(i, new MoveStmt(binaryExpr.dest, String.valueOf(ret)));
+                        block.stmts.set(i, new MoveStmt(binaryExpr.dest, String.valueOf(ret)));
                     }
                 } else if (stmt instanceof UnaryExprStmt unaryExpr) {
                     if (isConstant(unaryExpr.register)) {
                         int val = resolveValue(unaryExpr.register);
                         int ret = simplifyUnaryStmt(unaryExpr.operator, val);
-                        block.stmts.remove(i);
-                        block.stmts.add(i, new MoveStmt(unaryExpr.dest, String.valueOf(ret)));
+                        block.stmts.set(i, new MoveStmt(unaryExpr.dest, String.valueOf(ret)));
                     }
                 }
             }
