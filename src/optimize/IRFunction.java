@@ -20,44 +20,6 @@ public class IRFunction extends IRStmt {
     private void debug(String msg) {
         System.out.println("# [Func: " + name + "] " + msg);
     }
-    private void debugCFG(int status) {
-        // 0: print idom
-        if (status == 0) {
-            System.out.println("---idom---");
-            if (status == 0) {
-                for (IRBlock block : blocks) {
-                    if (block.idomBlock == null)
-                        System.out.println("   " + block.label + " -> null");
-                    else
-                        System.out.println("   " + block.label + " -> " + block.idomBlock.label);
-                }
-            }
-            System.out.println("-------");
-        }
-        if (status == 1) {
-            System.out.println("---domFrontier---");
-            for (IRBlock block : blocks) {
-                System.out.print(block.label + ": ");
-                for (IRBlock frontier : block.domFrontier) {
-                    System.out.print(frontier.label + " ");
-                }
-                System.out.println();
-            }
-            System.out.println("-------");
-        }
-        if (status == 2) {
-            System.out.println("---dom---");
-            for (int i = 0; i < blocks.size(); i++) {
-                System.out.print(blocks.get(i).label + ": ");
-                for (int j = 0; j < blocks.size(); j++) {
-                    if (blocks.get(i).dom.get(j))
-                        System.out.print(blocks.get(j).label + " ");
-                }
-                System.out.println();
-            }
-            System.out.println("-------");
-        }
-    }
 
     public void updatePredAndSucc() {
         for (IRBlock block : blocks) {
@@ -588,11 +550,6 @@ public class IRFunction extends IRStmt {
                 for (String blockLabel : phiStmt.val.keySet()) {
                     String val = phiStmt.val.get(blockLabel);
                     IRBlock block = blockMap.get(blockLabel);
-                    if (block == null) {
-                        System.out.println("{{}}blockLabel: " + blockLabel);
-                        throw new RuntimeException("block not found");
-                        //todo
-                    }
                     if (!assignInBlock.containsKey(block)) assignInBlock.put(block, new ArrayList<>());
                     assignInBlock.get(block).add(new AssignStmt(phiStmt.dest, val));
                 }
@@ -617,8 +574,6 @@ public class IRFunction extends IRStmt {
         }
     }
 
-    // -------------------------
-
     public void addPhi() {
         for (IRBlock block : blocks) {
             if (block.phiStmts.isEmpty()) continue;
@@ -630,48 +585,6 @@ public class IRFunction extends IRStmt {
         }
     }
 
-    // -------------------------
-
-    int resolveValue(String name) {
-        return switch (name) {
-            case "true" -> 1;
-            case "false", "null" -> 0;
-            default -> Integer.parseInt(name);
-        };
-    }
-
-
-    String getReplacedWith(String var, HashMap<String, String> defMap) {
-        if (defMap.containsKey(var)) return defMap.get(var);
-        return var;
-    }
-
-    boolean checkModify(String dest, String src) {
-        // check if [src] is modified between [dest]'s [def] and [use]
-        // only check inside one block
-        LivenessAnalysis util = new LivenessAnalysis();
-        IRBlock defBlock = null;
-        boolean modifyFlag = false;
-        for (IRBlock block : blocks){
-            for (IRStmt stmt : block.stmts) {
-                HashSet<String> def = util.getDef(stmt);
-                if (def.contains(dest)) {
-                    defBlock = block;
-                    continue;
-                }
-                HashSet<String> use = util.getUse(stmt);
-                if (use.contains(dest) && defBlock != null && defBlock != block)
-                    return false; // other block [use]
-                if (use.contains(dest) && modifyFlag)
-                    return false; // [use] after [modify]
-                if (def.contains(src) && defBlock != null)
-                    modifyFlag = true;
-            }
-        }
-        return true;
-    }
-
-    // -------------------------
     @Override
     public String getDest() { return null; }
 

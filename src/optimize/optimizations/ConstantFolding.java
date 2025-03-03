@@ -1,52 +1,13 @@
 package optimize.optimizations;
 
-import IR.IRStmts.BinaryExprStmt;
-import IR.IRStmts.IRStmt;
-import IR.IRStmts.MoveStmt;
-import IR.IRStmts.UnaryExprStmt;
+import IR.IRStmts.*;
 import optimize.IRBlock;
 import optimize.IRCode;
 import optimize.IRFunction;
+import optimize.utils.ValueSimplify;
 
 public class ConstantFolding {
-    int simplifyBinaryStmt(String operator, int val1, int val2) {
-        return switch (operator) {
-            case "add" -> val1 + val2;
-            case "sub" -> val1 - val2;
-            case "mul" -> val1 * val2;
-            case "sdiv" -> val1 / val2;
-            case "srem" -> val1 % val2;
-            case "and" -> val1 & val2;
-            case "or" -> val1 | val2;
-            case "xor" -> val1 ^ val2;
-            case "shl" -> val1 << val2;
-            case "ashr" -> val1 >> val2;
-            case "icmp eq" -> val1 == val2 ? 1 : 0;
-            case "icmp ne" -> val1 != val2 ? 1 : 0;
-            case "icmp slt" -> val1 < val2 ? 1 : 0;
-            case "icmp sgt" -> val1 > val2 ? 1 : 0;
-            case "icmp sle" -> val1 <= val2 ? 1 : 0;
-            case "icmp sge" -> val1 >= val2 ? 1 : 0;
-            default -> 0;
-        };
-    }
-    int simplifyUnaryStmt(String operator, int val) {
-        return switch (operator) {
-            case "!" -> val^1;
-            case "~" -> ~val;
-            case "-" -> -val;
-            case "++" -> val + 1;
-            case "--" -> val - 1;
-            default -> 0;
-        };
-    }
-    int resolveValue(String name) {
-        return switch (name) {
-            case "true" -> 1;
-            case "false", "null" -> 0;
-            default -> Integer.parseInt(name);
-        };
-    }
+    ValueSimplify simplify = new ValueSimplify();
 
     boolean isConstant(String str) {
         return !str.startsWith("@") && !str.startsWith("%");
@@ -58,19 +19,28 @@ public class ConstantFolding {
                 IRStmt stmt = block.stmts.get(i);
                 if (stmt instanceof BinaryExprStmt binaryExpr) {
                     if (isConstant(binaryExpr.register1) && isConstant(binaryExpr.register2)) {
-                        int val1 = resolveValue(binaryExpr.register1);
-                        int val2 = resolveValue(binaryExpr.register2);
+                        int val1 = simplify.resolveValue(binaryExpr.register1);
+                        int val2 = simplify.resolveValue(binaryExpr.register2);
                         if (binaryExpr.operator.equals("sdiv") && val2 == 0) {
                             continue; // divided by zero
                         }
-                        int ret = simplifyBinaryStmt(binaryExpr.operator, val1, val2);
+                        int ret = simplify.simplifyBinaryStmt(binaryExpr.operator, val1, val2);
                         block.stmts.set(i, new MoveStmt(binaryExpr.dest, String.valueOf(ret)));
                     }
                 } else if (stmt instanceof UnaryExprStmt unaryExpr) {
                     if (isConstant(unaryExpr.register)) {
-                        int val = resolveValue(unaryExpr.register);
-                        int ret = simplifyUnaryStmt(unaryExpr.operator, val);
+                        int val = simplify.resolveValue(unaryExpr.register);
+                        int ret = simplify.simplifyUnaryStmt(unaryExpr.operator, val);
                         block.stmts.set(i, new MoveStmt(unaryExpr.dest, String.valueOf(ret)));
+                    }
+                } else if (stmt instanceof SelectStmt select) {
+                    if (isConstant(select.cond)) {
+                        int val = simplify.resolveValue(select.cond);
+                        if (val == 1) {
+                            block.stmts.set(i, new MoveStmt(select.dest, select.trueVal));
+                        } else {
+                            block.stmts.set(i, new MoveStmt(select.dest, select.falseVal));
+                        }
                     }
                 }
             }

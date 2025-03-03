@@ -70,13 +70,21 @@ public class IRCode{
         new CommonSubexpr().optimize(this);
 
         // Function Inline
-         new FunctionInline().optimize(this);
+        new FunctionInline().optimize(this);
+
+        // Dead Code Elimination
+        new DCE().optimize(this);
+
+        // Sparse Conditional Constant Propagation (SCCP)
+        new ConstantPropagation().optimize(this); // need SSA form
 
         // Dead Code Elimination
         new DCE().optimize(this);
 
         // Global2Local
-        new Global2Local().optimize(this);
+        new Global2Local().optimize(this); // ATTENTION: G2L will change the SSA form
+
+        System.out.println(commentType(toString()));
     }
 
     public void erasePhi() {
@@ -84,4 +92,13 @@ public class IRCode{
             func.erasePhi();
         }
     }
+
+    public static String commentType(String s) {
+        StringBuilder sb = new StringBuilder();
+        String[] lines = s.split("\n");
+        for (String line : lines) {
+            sb.append("# ").append(line).append("\n");
+        }
+        return sb.toString();
+    } // for debug
 }

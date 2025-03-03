@@ -13,7 +13,7 @@ public class StoreStmt extends IRStmt {
     }
 
     @Override
-    public String getDest() { return dest; }
+    public String getDest() { return null; }
 
     @Override
     public String toString() {
