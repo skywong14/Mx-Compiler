@@ -33,7 +33,7 @@ public class DCE {
         return ret;
     }
 
-    void DCE(IRFunction func) {
+    void DCEinFunc(IRFunction func) {
         // all variables in the function
         LivenessAnalysis util = new LivenessAnalysis();
         HashSet<String> workTable = collectAllVariables(func);
@@ -62,7 +62,7 @@ public class DCE {
 
     public void optimize(IRCode irCode) {
         for (IRFunction func : irCode.funcStmts) {
-            DCE(func);
+            DCEinFunc(func);
         }
     }
 }
